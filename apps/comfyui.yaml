@@ -1,0 +1,13 @@
+id: comfyui
+name: ComfyUI
+category: image
+runtime: python
+description: Workflows visuales para imagen.
+platforms:
+  - mac-arm64
+recommended: true
+default_port: 8188
+studio_home_subdir: tools/comfyui
+installed_if:
+  - source/.git
+  - venv

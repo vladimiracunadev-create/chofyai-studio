@@ -1,0 +1,243 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f1115;
+  color: #f5f7fb;
+}
+
+* { box-sizing: border-box; }
+body, html, #root { margin: 0; min-height: 100vh; background: #0f1115; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  background: #12151b;
+  padding: 24px 18px;
+}
+
+.brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7c5cff, #36d7b7);
+  font-weight: 800;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  color: #a8b0c2;
+  font-size: 0.9rem;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-item {
+  text-align: left;
+  background: transparent;
+  color: #d6deef;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  background: rgba(124,92,255,0.16);
+  border-color: rgba(124,92,255,0.36);
+}
+
+.content {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card {
+  background: #151922;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+
+.hero h2, .card h3 {
+  margin: 0 0 10px;
+}
+
+.hero p, .card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.badge, .pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(54,215,183,0.14);
+  color: #8ff3dd;
+  border: 1px solid rgba(54,215,183,0.28);
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+}
+
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #a8b0c2;
+  font-size: 0.9rem;
+}
+
+.grid.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.kv-list, .tool-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.kv-list div, .tool-meta div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 12px;
+}
+
+.kv-list dt, .tool-meta dt {
+  color: #9aa6bf;
+}
+
+.kv-list dd, .tool-meta dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.check-list, .check-zone ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #c8d2e7;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.muted { color: #9aa6bf; }
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.settings-row input {
+  background: #0f1115;
+  color: #f5f7fb;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tool-card {
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #11151c;
+  padding: 18px;
+}
+
+.tool-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.tool-head h4 {
+  margin: 0;
+}
+
+.tool-head p {
+  margin: 6px 0 0;
+  color: #9aa6bf;
+}
+
+.check-zone {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.tool-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+button {
+  border: 1px solid rgba(124,92,255,0.35);
+  background: rgba(124,92,255,0.22);
+  color: #f5f7fb;
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+button.secondary {
+  background: transparent;
+  border-color: rgba(255,255,255,0.1);
+}
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .grid.two, .tool-grid { grid-template-columns: 1fr; }
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -1,0 +1,31 @@
+id: qwen3-tts
+name: Qwen3-TTS
+category: voice
+runtime: python
+description: TTS y clonación de voz con backend MLX para Apple Silicon.
+platforms:
+  - mac-arm64
+recommended: true
+default_port: 7860
+studio_home_subdir: tools/qwen3-tts
+install_script: scripts/mac/install-qwen3-tts.sh
+install:
+  - git clone https://github.com/Blizaine/Qwen3-TTS-MLX-WebUI-Enhanced.git launcher
+  - git clone https://github.com/blizaine/qwen3-tts-apple-silicon.git app
+  - python3.10 -m venv app/env
+  - app/env/bin/pip install -U pip uv setuptools wheel
+models:
+  - mlx-community/Qwen3-TTS-12Hz-0.6B-Base-8bit
+  - mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit
+  - mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-8bit
+run:
+  command: cd app && env/bin/python -m uvicorn server:app --host 127.0.0.1 --port 7860
+healthcheck:
+  type: http
+  url: http://127.0.0.1:7860
+installed_if:
+  - launcher/.git
+  - app/env
+  - app/models
+notes:
+  - Fijar Python 3.10 en producción para evitar choques de dependencias en Apple Silicon.

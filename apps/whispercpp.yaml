@@ -1,0 +1,17 @@
+id: whispercpp
+name: whisper.cpp
+category: asr
+runtime: binary
+description: ASR local y transcripción con foco en Apple Silicon.
+platforms:
+  - mac-arm64
+recommended: true
+default_port: 8178
+studio_home_subdir: tools/whispercpp
+install_script: scripts/mac/install-whispercpp.sh
+run:
+  command: source/build/bin/whisper-server --host 127.0.0.1 --port 8178 -m models/ggml-base.en.bin
+installed_if:
+  - source/.git
+  - source/build/bin/whisper-cli
+  - models/ggml-base.en.bin

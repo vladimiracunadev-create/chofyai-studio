@@ -1,0 +1,31 @@
+{
+  "name": "chofyai-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "preview": "vite preview",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:build:app": "tauri build --bundles app",
+    "tauri:build:dmg": "tauri build --bundles dmg",
+    "tauri:build:mac": "tauri build --config src-tauri/tauri.macos.conf.json --bundles app,dmg",
+    "package:mac": "bash scripts/mac/build-release.sh",
+    "preflight:mac": "bash scripts/mac/preflight-build.sh"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "latest",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

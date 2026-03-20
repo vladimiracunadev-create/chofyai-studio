@@ -1,0 +1,16 @@
+id: facefusion
+name: FaceFusion
+category: video
+runtime: python
+description: Face swap y utilidades de video/cara.
+platforms:
+  - mac-arm64
+recommended: true
+studio_home_subdir: tools/facefusion
+install_script: scripts/mac/install-facefusion.sh
+run:
+  command: source env/bin/activate && cd source && python facefusion.py run --open-browser
+installed_if:
+  - source/.git
+  - env
+  - source/facefusion.py

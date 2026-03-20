@@ -1,0 +1,17 @@
+id: aceforge
+name: AceForge
+category: music
+runtime: python
+description: Workstation musical local-first para Apple Silicon basada en ACE-Step.
+platforms:
+  - mac-arm64
+recommended: true
+default_port: 5056
+studio_home_subdir: tools/aceforge
+install_script: scripts/mac/install-aceforge.sh
+run:
+  command: source env/bin/activate && cd source && python music_forge_ui.py
+installed_if:
+  - source/.git
+  - env
+  - source/music_forge_ui.py

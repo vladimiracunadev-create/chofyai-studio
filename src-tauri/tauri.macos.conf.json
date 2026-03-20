@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "bundleVersion": "1",
+      "dmg": {
+        "windowSize": {
+          "width": 720,
+          "height": 440
+        },
+        "appPosition": {
+          "x": 210,
+          "y": 210
+        },
+        "applicationFolderPosition": {
+          "x": 510,
+          "y": 210
+        }
+      }
+    }
+  }
+}

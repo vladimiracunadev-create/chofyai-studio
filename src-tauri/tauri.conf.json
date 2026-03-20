@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ChofyAI Studio",
+  "mainBinaryName": "ChofyAI Studio",
+  "version": "0.1.0",
+  "identifier": "cl.vladimiracuna.chofyai.studio",
+  "build": {
+    "beforeDevCommand": "npm run dev:web",
+    "beforeBuildCommand": "npm run build:web",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ChofyAI Studio",
+        "width": 1400,
+        "height": 920,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 1100,
+        "minHeight": 760
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "category": "DeveloperTool",
+    "shortDescription": "Orquestador local para voz, video/cara, música y herramientas creativas en Apple Silicon.",
+    "longDescription": "ChofyAI Studio unifica instalación, ejecución, logs, salud y rutas de herramientas creativas locales como Qwen3-TTS, whisper.cpp, FaceFusion y AceForge sobre Apple Silicon.",
+    "copyright": "© Vladimir Acuña",
+    "license": "MIT",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "resources": [
+      "../apps",
+      "../docs",
+      "../scripts/mac",
+      "../storage/state/settings.json"
+    ]
+  }
+}
