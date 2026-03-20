@@ -67,6 +67,7 @@ flowchart TD
 ## 5. Dirección futura
 
 La evolución natural del proyecto es pasar de scripts básicos a:
+
 - control de procesos
 - health checks
 - sidecars más robustos

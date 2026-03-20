@@ -114,10 +114,12 @@ src-tauri/target/release/bundle/dmg/
 ## Recomendaciones de ruta
 
 Usa preferentemente:
+
 - SSD interno
 - volumen APFS
 
 Evita:
+
 - exFAT
 - discos que generen problemas con `._*`
 - rutas inestables o volúmenes no montados

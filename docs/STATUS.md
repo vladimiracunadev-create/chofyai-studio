@@ -9,6 +9,7 @@
 ## Funciones reales disponibles
 
 ### UI
+
 - ver resumen del sistema
 - ver `studio_home`
 - guardar `studio_home`
@@ -20,6 +21,7 @@
 - abrir log de herramienta
 
 ### Backend Rust
+
 - `get_system_summary`
 - `save_studio_home`
 - `list_tools`
@@ -29,12 +31,14 @@
 - `open_tool_log`
 
 ### Herramientas con integracion operativa
+
 - Qwen3-TTS
 - whisper.cpp
 - FaceFusion
 - AceForge
 
 ### Herramientas no operativas aun
+
 - ComfyUI
 
 ## Limitaciones actuales
@@ -50,6 +54,7 @@
 ## Estado de empaquetado
 
 El repo si quedo preparado para:
+
 - `npm run tauri:build:app`
 - `npm run tauri:build:dmg`
 - `npm run package:mac`
@@ -58,6 +63,7 @@ En desarrollo, los settings viven en `storage/state/settings.json`.
 En una app empaquetada, los settings pasan al directorio de datos de usuario de Tauri.
 
 Pero esos builds deben ejecutarse en un **Mac real** con:
+
 - Xcode / Xcode Command Line Tools
 - Rust / cargo
 - Node.js / npm
@@ -65,6 +71,7 @@ Pero esos builds deben ejecutarse en un **Mac real** con:
 ## Recomendacion practica
 
 Usar este repositorio como:
+
 - base tecnica
 - repo de producto
 - orquestador local controlado

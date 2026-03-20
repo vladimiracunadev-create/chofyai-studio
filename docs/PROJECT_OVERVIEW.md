@@ -15,12 +15,14 @@ Está pensado para un entorno como un **Mac mini M4 con 64 GB de RAM**, donde ti
 ## Qué problema intenta resolver
 
 Muchos launchers externos:
+
 - ocultan demasiado el estado real de instalación
 - mezclan UI con runtime
 - no dejan claro qué está instalado y qué no
 - pueden romperse por rutas, permisos, discos externos o installers ambiguos
 
 ChofyAI Studio intenta resolver eso con:
+
 - manifests YAML legibles
 - scripts explícitos por herramienta
 - checks de instalación definidos por archivos reales

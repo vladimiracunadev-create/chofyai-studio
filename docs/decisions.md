@@ -97,4 +97,3 @@ Cada herramienta se describe en un archivo YAML (`apps/<id>.yaml`) con campos ob
 
 - **Positivas**: estado de instalación siempre auditable manualmente, fácil de extender sin tocar código Rust, documentación y configuración co-localizadas.
 - **Negativas**: requiere mantener los manifests sincronizados con los scripts de instalación; un cambio de ruta en el script que no se refleje en el manifest rompe la detección.
-

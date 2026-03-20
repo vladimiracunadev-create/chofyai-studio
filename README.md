@@ -17,7 +17,7 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
 
 ## Estado real del proyecto
 
-**Lo que ya está implementado**
+### Lo que ya está implementado
 
 - shell de escritorio con **Tauri 2 + Rust + React/TypeScript**
 - lectura de manifests YAML desde `apps/`
@@ -36,7 +36,7 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
   - **AceForge**
 - preparación de empaquetado macOS (`.app` / `.dmg`) con Tauri
 
-**Lo que todavía no está terminado**
+### Lo que todavía no está terminado
 
 - firma y notarización Apple
 - flujo de actualización automática
@@ -110,7 +110,6 @@ chofyai-studio/
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Cómo contribuir al proyecto |
 | [`SECURITY.md`](SECURITY.md) | Política de seguridad y reporte de vulnerabilidades |
 
-
 ## Instalación en tu Mac
 
 ### 1. Clonar o descomprimir el proyecto
@@ -163,6 +162,7 @@ Ejemplo:
 ```
 
 Se recomienda:
+
 - **SSD interno** o volumen **APFS**
 - evitar exFAT u otros volúmenes que puedan meter archivos `._*`
 

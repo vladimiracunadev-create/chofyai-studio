@@ -103,7 +103,7 @@ Añade la herramienta a `docs/TOOLS.md` con su rol, script, checks de instalaci�
 
 Usamos el formato **Conventional Commits**:
 
-```
+```text
 feat: añadir integración de ComfyUI
 fix: corregir detección de puerto ocupado en whisper.cpp
 docs: actualizar MANIFEST_SPEC con campo optional_port

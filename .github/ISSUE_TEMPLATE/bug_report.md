@@ -29,7 +29,7 @@ assignees: ''
 
 <!-- Pega el contenido relevante del log de la herramienta si aplica: -->
 
-```
+```text
 $STUDIO_HOME/logs/<tool_id>.log
 ```
 

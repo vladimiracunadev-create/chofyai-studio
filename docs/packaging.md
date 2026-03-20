@@ -67,7 +67,8 @@ Actualmente, el workflow `.github/workflows/release.yml` solo crea las notas de 
 
 Para automatizar esto sin costo, **es necesario registrar tu Mac Mini física como un "Self-Hosted Runner" de GitHub**.
 
-### Pasos a futuro:
+### Pasos a futuro
+
 1. En GitHub, ve a **Settings > Actions > Runners > New self-hosted runner**.
 2. Selecciona **macOS** y **ARM64**.
 3. Sigue las instrucciones para descargar e instalar el agente en tu Mac Mini.
@@ -78,10 +79,13 @@ Con esto, cada vez que dispares un Release desde GitHub, **tu Mac Mini** recibir
 ## Distribución interna vs distribución profesional
 
 ### Interna / pruebas personales
+
 Puedes generar `.app` / `.dmg` y probarlo localmente.
 
 ### Profesional / terceros
+
 Necesitarás:
+
 - cuenta Apple Developer
 - firma (Developer ID Application)
 - notarización alcatraz/notarytool
