@@ -1,8 +1,10 @@
 # Estado actual del proyecto
 
-## Version del repositorio
+> Última actualización: **2026-03-20** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
 
-Estado funcional de referencia: **MVP operativo + fase 2 base de robustez**.
+## Versión del repositorio
+
+**v0.2.0** — Estado funcional de referencia: MVP operativo + base de robustez (Fase 2 iniciada).
 
 ## Funciones reales disponibles
 

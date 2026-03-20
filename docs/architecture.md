@@ -13,15 +13,34 @@ Su responsabilidad es:
 
 ## 2. Capas
 
+```mermaid
+flowchart TD
+    UI["🖥️ UI\nReact + TypeScript + Vite"]
+    Core["⚙️ Core\nTauri 2 + Rust"]
+    Scripts["📜 Scripts\nBash por herramienta"]
+    Tools["🤖 Herramientas IA\nQwen3-TTS / whisper.cpp / FaceFusion / AceForge"]
+    Storage["💾 Storage\nstudio_home en APFS"]
+
+    UI -->|"invoke commands"| Core
+    Core -->|"spawn"| Scripts
+    Scripts -->|"instala / arranca en"| Storage
+    Scripts -->|"lanza proceso"| Tools
+    Tools -->|"HTTP :puerto"| UI
+    Core -->|"lee manifests + settings"| Storage
+```
+
 ### UI
+
 - React + TypeScript
 - Dashboard y panel básico de herramientas
 
 ### Core
+
 - Tauri 2
 - comandos Rust para settings, manifests y acciones de sistema
 
 ### Integraciones
+
 - scripts Bash por herramienta
 - `venv` o binarios externos cuando aplica
 - rutas controladas dentro de `studio_home`

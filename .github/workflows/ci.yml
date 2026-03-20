@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Detectar qué cambió para no correr todo en cada push
+  # Patrón tomado de: microsistemas/ci.yml
+  # ─────────────────────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+      src: ${{ steps.filter.outputs.src }}
+      manifests: ${{ steps.filter.outputs.manifests }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - '**.md'
+              - 'docs/**'
+            src:
+              - 'src/**'
+              - 'src-tauri/**'
+              - 'package.json'
+              - 'tsconfig.json'
+            manifests:
+              - 'apps/**'
+
+  # ─────────────────────────────────────────────
+  # Lint de Markdown
+  # Patrón tomado de: microsistemas/ci.yml → lint-docs
+  # ─────────────────────────────────────────────
+  lint-docs:
+    name: "Lint Markdown"
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Markdown Lint
+        uses: davidanson/markdownlint-cli2-action@v16
+        with:
+          config: .markdownlint.json
+          globs: "**/*.md"
+
+  # ─────────────────────────────────────────────
+  # TypeScript typecheck (sin build real de Tauri)
+  # Específico de chofyai-studio: TypeScript + React
+  # ─────────────────────────────────────────────
+  typecheck:
+    name: "TypeScript typecheck"
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  # ─────────────────────────────────────────────
+  # Validación de manifests YAML
+  # Específico de chofyai-studio: apps/*.yaml
+  # ─────────────────────────────────────────────
+  validate-manifests:
+    name: "Validate YAML manifests"
+    needs: changes
+    if: ${{ needs.changes.outputs.manifests == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Validate all manifests
+        run: |
+          python - << 'EOF'
+          import yaml, sys, os, pathlib
+
+          REQUIRED_FIELDS = ["id", "name", "category", "runtime", "description",
+                             "platforms", "studio_home_subdir", "install_script",
+                             "run", "installed_if"]
+          errors = []
+          for f in pathlib.Path("apps").glob("*.yaml"):
+              with open(f) as fh:
+                  data = yaml.safe_load(fh)
+              for field in REQUIRED_FIELDS:
+                  if field not in data:
+                      errors.append(f"{f.name}: campo obligatorio faltante: '{field}'")
+          if errors:
+              for e in errors:
+                  print(f"ERROR: {e}")
+              sys.exit(1)
+          print(f"OK: {len(list(pathlib.Path('apps').glob('*.yaml')))} manifests válidos")
+          EOF
+
+  # ─────────────────────────────────────────────
+  # Secret scanning — TruffleHog
+  # Patrón tomado de: microsistemas/secret-scanning.yml
+  # ─────────────────────────────────────────────
+  secret-scanning:
+    name: "Secret Scanning (TruffleHog)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@v3.63.1
+        with:
+          path: ./
+          base: ""
+          head: HEAD
+          extra_args: --debug --only-verified

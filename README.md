@@ -1,5 +1,10 @@
 # ChofyAI Studio
 
+[![CI](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?logo=apple)](docs/INSTALL_MAC.md)
+[![Versión](https://img.shields.io/badge/versión-0.2.0-indigo)](CHANGELOG.md)
+
 ChofyAI Studio es una **aplicación de escritorio local para macOS Apple Silicon** orientada a centralizar la instalación, arranque y organización de herramientas creativas de IA.
 
 Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un **orquestador controlado** para un conjunto concreto de herramientas:
@@ -49,14 +54,15 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
 
 ## Herramientas incluidas en esta fase
 
-### Operativas desde la UI
-- **Qwen3-TTS**
-- **whisper.cpp**
-- **FaceFusion**
-- **AceForge**
+| Herramienta | Categoría | Puerto | Estado | Script |
+|---|---|---|---|---|
+| **Qwen3-TTS** | voz / TTS | 7860 | ✅ Operativa | `install-qwen3-tts.sh` |
+| **whisper.cpp** | ASR | 8178 | ✅ Operativa | `install-whispercpp.sh` |
+| **FaceFusion** | video / cara | — | ✅ Operativa | `install-facefusion.sh` |
+| **AceForge** | música | 5056 | ✅ Operativa | `install-aceforge.sh` |
+| **ComfyUI** | imagen | — | 🚧 Declarada | — |
 
-### Declarada pero no integrada en esta fase
-- **ComfyUI**
+> Ver especificación completa de manifests en [`docs/MANIFEST_SPEC.md`](docs/MANIFEST_SPEC.md).
 
 ## Estructura del repositorio
 
@@ -75,15 +81,35 @@ chofyai-studio/
 
 ## Documentación incluida
 
-- `docs/PROJECT_OVERVIEW.md` → visión general
-- `docs/STATUS.md` → estado actual del repositorio
-- `docs/INSTALL_MAC.md` → instalación y ejecución en tu Mac
-- `docs/TOOLS.md` → herramientas integradas y sus requisitos
-- `docs/TROUBLESHOOTING.md` → problemas comunes
-- `docs/packaging.md` → empaquetado `.app` / `.dmg`
-- `docs/architecture.md` → arquitectura general
-- `docs/decisions.md` → decisiones de diseño
-- `ROADMAP.md` → siguientes fases
+### Proyecto
+
+| Archivo | Contenido |
+|---|---|
+| [`docs/PROJECT_OVERVIEW.md`](docs/PROJECT_OVERVIEW.md) | Visión general y filosofía |
+| [`docs/STATUS.md`](docs/STATUS.md) | Estado actual (v0.2.0) |
+| [`docs/architecture.md`](docs/architecture.md) | Arquitectura por capas con diagrama |
+| [`docs/decisions.md`](docs/decisions.md) | Architecture Decision Records (ADR-001…ADR-005) |
+| [`ROADMAP.md`](ROADMAP.md) | Fases futuras |
+| [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones |
+
+### Operación
+
+| Archivo | Contenido |
+|---|---|
+| [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md) | Instalación completa en macOS |
+| [`docs/TOOLS.md`](docs/TOOLS.md) | Herramientas integradas y requisitos |
+| [`docs/SCRIPTS_REFERENCE.md`](docs/SCRIPTS_REFERENCE.md) | Referencia completa de scripts |
+| [`docs/MANIFEST_SPEC.md`](docs/MANIFEST_SPEC.md) | Especificación del formato YAML |
+| [`docs/packaging.md`](docs/packaging.md) | Empaquetado `.app` / `.dmg` |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Problemas comunes |
+
+### Contribución y seguridad
+
+| Archivo | Contenido |
+|---|---|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Cómo contribuir al proyecto |
+| [`SECURITY.md`](SECURITY.md) | Política de seguridad y reporte de vulnerabilidades |
+
 
 ## Instalación en tu Mac
 
@@ -166,6 +192,22 @@ Salidas esperadas:
 src-tauri/target/release/bundle/macos/
 src-tauri/target/release/bundle/dmg/
 ```
+
+> Ver detalles en [`docs/packaging.md`](docs/packaging.md).
+
+## CI/CD
+
+Este repositorio incluye GitHub Actions configurados en `.github/workflows/`:
+
+| Workflow | Trigger | Qué hace |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | push / PR a `main` | Lint Markdown, TypeScript typecheck, validación de manifests YAML, secret scanning |
+| [`release.yml`](.github/workflows/release.yml) | `workflow_dispatch` | Crea tag + GitHub Release con notas desde `CHANGELOG.md` |
+
+## Contribuir
+
+¿Quieres añadir una herramienta, reportar un bug o proponer una mejora?
+Lee [`CONTRIBUTING.md`](CONTRIBUTING.md) para el flujo completo.
 
 ## Licencia
 

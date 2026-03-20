@@ -1,0 +1,91 @@
+name: Release
+
+# ─────────────────────────────────────────────────────────
+# Disparo manual desde GitHub UI o API.
+# El build real (.app / .dmg) DEBE ejecutarse en un Mac real
+# con Xcode, Rust, Tauri CLI y Node.js instalados.
+# Este workflow prepara la release y documenta los pasos.
+#
+# Patrón inspirado en: proyectos-aws/despliegue.yml
+# ─────────────────────────────────────────────────────────
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a liberar (ej: v0.2.1)'
+        required: true
+        type: string
+      prerelease:
+        description: '¿Es una pre-release?'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  prepare-release:
+    name: "Preparar release ${{ github.event.inputs.version }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar formato de versión
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "ERROR: versión '$VERSION' no tiene formato semántico (ej: v0.2.1)"
+            exit 1
+          fi
+          echo "VERSION_OK=$VERSION"
+
+      - name: Extraer notas de release desde CHANGELOG.md
+        id: changelog
+        run: |
+          VERSION_RAW="${{ github.event.inputs.version }}"
+          VERSION="${VERSION_RAW#v}"
+          # Extrae el bloque entre el header de la versión y el siguiente header o EOF
+          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="Ver [CHANGELOG.md](./CHANGELOG.md) para detalles."
+          fi
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Crear tag de release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
+          git push origin "${{ github.event.inputs.version }}"
+
+      - name: Crear GitHub Release (sin binarios)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: "ChofyAI Studio ${{ github.event.inputs.version }}"
+          body: |
+            ## ChofyAI Studio ${{ github.event.inputs.version }}
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
+
+            ### Instalación
+
+            > Los binarios `.app` y `.dmg` para macOS Apple Silicon deben generarse en un Mac real.
+            > Consulta [`docs/packaging.md`](docs/packaging.md) y [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md).
+
+            ```bash
+            git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
+            cd chofyai-studio
+            git checkout ${{ github.event.inputs.version }}
+            npm ci
+            npm run package:mac
+            ```
+
+            ### Plataforma
+            - macOS 13+ Apple Silicon (M1/M2/M3/M4)
+          prerelease: ${{ github.event.inputs.prerelease }}
+          draft: false
