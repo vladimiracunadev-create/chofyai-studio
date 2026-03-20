@@ -36,6 +36,7 @@
 
 ## Fase 4 - Producto instalable
 - [x] Base de empaquetado `.app` / `.dmg`
+- [ ] **Configurar Mac Mini como Self-Hosted Runner para GitHub Actions**
 - [ ] Build validado en macOS real
 - [ ] Branding e iconografía final
 - [ ] Firma Apple

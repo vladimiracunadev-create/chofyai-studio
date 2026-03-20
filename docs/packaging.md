@@ -61,6 +61,20 @@ src-tauri/target/release/bundle/dmg/
 - no notariza la app
 - no publica releases automáticamente
 
+## Tarea Pendiente: Automatización CI/CD con tu Mac Mini
+
+Actualmente, el workflow `.github/workflows/release.yml` solo crea las notas de release, pero **no genera el binario `.app/.dmg`**, ya que eso requiere un entorno macOS Apple Silicon.
+
+Para automatizar esto sin costo, **es necesario registrar tu Mac Mini física como un "Self-Hosted Runner" de GitHub**.
+
+### Pasos a futuro:
+1. En GitHub, ve a **Settings > Actions > Runners > New self-hosted runner**.
+2. Selecciona **macOS** y **ARM64**.
+3. Sigue las instrucciones para descargar e instalar el agente en tu Mac Mini.
+4. Modifica `.github/workflows/release.yml` para usar `runs-on: self-hosted` y añadir los pasos de `npm run package:mac`.
+
+Con esto, cada vez que dispares un Release desde GitHub, **tu Mac Mini** recibirá la orden, compilará la app en 1-2 minutos (usando su caché local) y subirá el `.dmg` al release automáticamente.
+
 ## Distribución interna vs distribución profesional
 
 ### Interna / pruebas personales
@@ -69,5 +83,5 @@ Puedes generar `.app` / `.dmg` y probarlo localmente.
 ### Profesional / terceros
 Necesitarás:
 - cuenta Apple Developer
-- firma
-- notarización
+- firma (Developer ID Application)
+- notarización alcatraz/notarytool
