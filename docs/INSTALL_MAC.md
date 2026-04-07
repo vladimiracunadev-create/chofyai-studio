@@ -64,10 +64,11 @@ Edita `storage/state/settings.json` con la ruta donde quieres que las herramient
 }
 ```
 
-> **Recomendaciones de ruta:**
-> - Preferir SSD interno o volumen APFS
-> - Evitar exFAT (genera archivos `._*` que interfieren con git)
-> - Evitar rutas con espacios
+**Recomendaciones de ruta:**
+
+- Preferir SSD interno o volumen APFS
+- Evitar exFAT (genera archivos `._*` que interfieren con git)
+- Evitar rutas con espacios
 
 ### 4. Crear la estructura del Studio Home
 

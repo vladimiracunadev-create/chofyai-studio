@@ -23,7 +23,7 @@
 
 ## Studio Home configurado
 
-```
+```text
 /Volumes/ORICO/ChofyIA/ChofyAIStudio
 ```
 

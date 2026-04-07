@@ -36,13 +36,15 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
   - **AceForge**
 - preparación de empaquetado macOS (`.app` / `.dmg`) con Tauri
 
-### Lo que todavía no está terminado
+### Pendiente — Fase 3 y 4
 
-- firma y notarización Apple
-- flujo de actualización automática
-- cola de instalaciones
-- stop / restart / health checks avanzados desde UI
-- integración operativa de **ComfyUI**
+- **ComfyUI**: declarada en manifest, sin script de instalación aún
+- **Stop / Restart / Health checks**: control de procesos desde la UI
+- **Cola de instalaciones**: instalación secuencial con progreso visible
+- **Flujo de actualización automática**: actualizaciones de herramientas desde la UI
+- **Firma y notarización Apple**: necesario para distribución pública
+
+> Ver hoja de ruta completa en [ROADMAP.md](ROADMAP.md)
 
 ## Stack técnico
 

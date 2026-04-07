@@ -1,0 +1,5 @@
+._*
+docs/._*
+.github/ISSUE_TEMPLATE/._*
+node_modules/
+src-tauri/target/
