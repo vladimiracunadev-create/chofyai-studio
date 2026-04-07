@@ -22,12 +22,13 @@
 
 ## Fase 2 - Robustez del launcher
 
-- [ ] Stop / Restart por herramienta
-- [ ] Health checks reales por proceso / puerto
-- [ ] Detección de puertos ocupados
-- [ ] Cola de instalación con progreso
-- [ ] Reintentos y limpieza automática
-- [ ] Registro interno de herramientas instaladas
+- [x] Stop / Restart por herramienta
+- [x] Health checks reales por proceso / puerto
+- [x] Cola de instalación con progreso y streaming
+- [x] Registro interno de herramientas instaladas (ProcessRegistry)
+- [x] Flujo de actualización automática (`update_tool`)
+- [ ] Detección de puertos ocupados antes de iniciar
+- [ ] Reintentos y limpieza automática ante fallos
 
 ## Fase 3 - UX y operación
 

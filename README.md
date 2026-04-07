@@ -3,7 +3,7 @@
 [![CI](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?logo=apple)](docs/INSTALL_MAC.md)
-[![Versión](https://img.shields.io/badge/versión-0.2.0-indigo)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.3.0--dev-indigo)](CHANGELOG.md)
 
 ChofyAI Studio es una **aplicación de escritorio local para macOS Apple Silicon** orientada a centralizar la instalación, arranque y organización de herramientas creativas de IA.
 
@@ -19,29 +19,28 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
 
 ### Lo que ya está implementado
 
-- shell de escritorio con **Tauri 2 + Rust + React/TypeScript**
-- lectura de manifests YAML desde `apps/`
-- guardado de `studio_home` en `storage/state/settings.json` durante desarrollo
-- guardado de `studio_home` en el directorio de datos de la app cuando esta empaquetada
-- detección de instalación por archivos/carpetas declarados en `installed_if`
-- botones desde la UI para:
-  - **Instalar**
-  - **Iniciar**
-  - **Abrir carpeta**
-  - **Abrir log**
-- scripts reales de instalación para:
-  - **Qwen3-TTS**
-  - **whisper.cpp**
-  - **FaceFusion**
-  - **AceForge**
-- preparación de empaquetado macOS (`.app` / `.dmg`) con Tauri
+- Shell de escritorio con **Tauri 2 + Rust + React/TypeScript**
+- Lectura de manifests YAML desde `apps/`
+- Guardado de `studio_home` en `storage/state/settings.json` durante desarrollo
+- Guardado de `studio_home` en el directorio de datos de la app cuando está empaquetada
+- Detección de instalación por archivos/carpetas declarados en `installed_if`
+- Botones desde la UI para:
+  - **Instalar** — con salida en tiempo real (streaming stdout)
+  - **Actualizar** — re-ejecuta el script de instalación sobre una herramienta ya instalada
+  - **Iniciar** — registra PID en `ProcessRegistry`
+  - **Detener** — envía SIGTERM al proceso activo
+  - **Reiniciar** — stop + start en secuencia
+  - **Abrir carpeta** / **Abrir log**
+- **Cola de instalaciones**: encola múltiples herramientas e instala una a una
+- **Health check visual**: punto verde pulsante cuando la herramienta responde en su puerto TCP
+- Scripts reales de instalación para:
+  - **Qwen3-TTS**, **whisper.cpp**, **FaceFusion**, **AceForge**
+- Preparación de empaquetado macOS (`.app` / `.dmg`) con Tauri
 
 ### Pendiente — Fase 3 y 4
 
 - **ComfyUI**: declarada en manifest, sin script de instalación aún
-- **Stop / Restart / Health checks**: control de procesos desde la UI
-- **Cola de instalaciones**: instalación secuencial con progreso visible
-- **Flujo de actualización automática**: actualizaciones de herramientas desde la UI
+- **Settings avanzados**: `models_dir`, `outputs_dir`, `cache_dir`
 - **Firma y notarización Apple**: necesario para distribución pública
 
 > Ver hoja de ruta completa en [ROADMAP.md](ROADMAP.md)

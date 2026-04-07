@@ -32,3 +32,21 @@ pub struct ToolSummary {
 pub struct AppSettings {
     pub studio_home: String,
 }
+
+/// Resultado de un health check sobre una herramienta.
+#[derive(Debug, Clone, Serialize)]
+pub struct HealthResult {
+    pub tool_id: String,
+    /// El PID está registrado (el proceso fue iniciado desde la app).
+    pub running: bool,
+    /// El puerto TCP responde (el servidor HTTP está activo).
+    pub port_open: bool,
+    pub pid: Option<u32>,
+}
+
+/// Evento de progreso emitido línea a línea durante la instalación.
+#[derive(Debug, Clone, Serialize)]
+pub struct InstallEvent {
+    pub tool_id: String,
+    pub line: String,
+}

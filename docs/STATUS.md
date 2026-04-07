@@ -1,10 +1,10 @@
 # Estado actual del proyecto
 
-> Última actualización: **2026-04-07** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
+> Última actualización: **2026-04-06** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
 
 ## Versión del repositorio
 
-**v0.2.0** — MVP operativo + base de robustez (Fase 2 iniciada).
+**v0.3.0-dev** — Fase 3 implementada: control de procesos, cola de instalaciones y flujo de actualización.
 
 ## Entorno verificado
 
@@ -27,48 +27,55 @@
 /Volumes/ORICO/ChofyIA/ChofyAIStudio
 ```
 
-## Funciones reales disponibles
+## Funciones disponibles
 
 ### UI
 
-- ver resumen del sistema
-- ver y guardar `studio_home`
-- listar herramientas desde manifests
-- ver si una herramienta está instalada según checks
-- instalar herramienta desde botón (con backend Tauri activo)
-- iniciar herramienta desde botón
-- abrir carpeta de herramienta
-- abrir log de herramienta
+- Ver resumen del sistema
+- Ver y guardar `studio_home`
+- Listar herramientas desde manifests YAML
+- Detectar si una herramienta está instalada según `installed_if`
+- **Instalar** herramienta con progreso en tiempo real (streaming stdout)
+- **Actualizar** herramienta ya instalada (re-ejecuta script de instalación)
+- **Iniciar** herramienta desde botón
+- **Detener** herramienta en ejecución (SIGTERM)
+- **Reiniciar** herramienta (stop + start automático)
+- **Cola de instalaciones**: encola múltiples herramientas e instala una a una
+- **Health check visual**: indicador pulsante verde cuando la herramienta responde en su puerto
+- Abrir carpeta de herramienta
+- Abrir log de herramienta
 
-### Backend Rust
+### Backend Rust (comandos Tauri)
 
 - `get_system_summary`
 - `save_studio_home`
 - `list_tools`
-- `install_tool`
-- `start_tool`
+- `install_tool` — con streaming de salida vía eventos `install-progress` / `install-done`
+- `update_tool` — re-instala sobre una herramienta existente
+- `start_tool` — registra PID en `ProcessRegistry`
+- `stop_tool` — envía SIGTERM y elimina PID del registro
+- `restart_tool` — stop + start en secuencia
+- `health_check_tool` — verifica PID vivo + puerto TCP abierto
 - `open_tool_directory`
 - `open_tool_log`
 
 ### Herramientas con integración operativa
 
-- ✅ Qwen3-TTS — requiere python3.10, uv
+- ✅ Qwen3-TTS — requiere python 3.10, uv
 - ✅ whisper.cpp — requiere cmake, curl
-- ✅ FaceFusion — requiere ffmpeg, python3.x
-- ✅ AceForge — requiere ffmpeg, python3.x
+- ✅ FaceFusion — requiere ffmpeg, python 3.x
+- ✅ AceForge — requiere ffmpeg, python 3.x
 
 ### Herramientas no operativas aún
 
-- 🚧 ComfyUI — declarada, sin script de instalación
+- 🚧 ComfyUI — declarada en manifest, sin script de instalación
 
 ## Limitaciones actuales
 
-- no hay stop / restart desde backend
-- no hay health check de red o proceso desde backend
-- no hay cola de instalaciones
-- no hay manejo avanzado de procesos huérfanos
+- No hay manejo avanzado de procesos huérfanos entre reinicios de la app
 - ComfyUI sigue declarada pero sin integración operativa
-- firma y notarización Apple no incluidas
+- Firma y notarización Apple no incluidas
+- Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) pendientes
 
 ## Nota sobre modo web vs modo Tauri
 

@@ -34,3 +34,26 @@ export type ActionResult = {
   log_path?: string | null;
   opened_url?: string | null;
 };
+
+export type HealthResult = {
+  tool_id: string;
+  running: boolean;
+  port_open: boolean;
+  pid?: number | null;
+};
+
+export type InstallEvent = {
+  tool_id: string;
+  line: string;
+};
+
+/** Estado de un ítem en la cola de instalación. */
+export type QueueStatus = 'pending' | 'installing' | 'done' | 'failed';
+
+export type QueueItem = {
+  toolId: string;
+  name: string;
+  status: QueueStatus;
+  message?: string;
+  lines: string[];
+};

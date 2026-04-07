@@ -241,3 +241,63 @@ button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* ── Cola de instalación ── */
+.queue-trigger {
+  margin-top: auto;
+  border-color: rgba(54,215,183,0.35);
+  background: rgba(54,215,183,0.12);
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.queue-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #0f1115;
+}
+
+.queue-pending  { border-color: rgba(255,255,255,0.08); }
+.queue-installing { border-color: rgba(124,92,255,0.4); background: rgba(124,92,255,0.06); }
+.queue-done     { border-color: rgba(54,215,183,0.35); background: rgba(54,215,183,0.05); }
+.queue-failed   { border-color: rgba(255,80,80,0.35); background: rgba(255,80,80,0.05); }
+
+.queue-icon { font-size: 1.2rem; line-height: 1.4; }
+
+.queue-info { flex: 1; min-width: 0; }
+.queue-info strong { display: block; margin-bottom: 4px; }
+.queue-last-line {
+  font-family: monospace;
+  font-size: 0.78rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #7c8ea8;
+}
+
+/* ── Pill verde para herramienta activa ── */
+.pill-green {
+  background: rgba(54,215,183,0.14);
+  color: #8ff3dd;
+  border-color: rgba(54,215,183,0.28);
+}
+
+/* ── Tool actions: wrap en pantallas pequeñas ── */
+.tool-actions {
+  flex-wrap: wrap;
+}
+
+/* ── Sidebar con cola al fondo ── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+}

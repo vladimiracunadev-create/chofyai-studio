@@ -9,30 +9,35 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
+### Added (Fase 3 — control de procesos y cola de instalaciones)
+
+- **Stop / Restart por herramienta** desde la UI: botones dinámicos que aparecen sólo cuando la herramienta está en ejecución
+- **Health checks en tiempo real**: sondeo de PID vivo + puerto TCP cada 5 s, con indicador visual (punto verde pulsante)
+- **Cola de instalaciones**: instalación secuencial de múltiples herramientas con progreso visible por ítem
+- **Streaming de salida de instalación**: cada línea de stdout del script llega en tiempo real al frontend vía eventos Tauri (`install-progress` / `install-done`)
+- **Flujo de actualización automática** (`update_tool`): re-ejecuta el script de instalación sobre una herramienta ya instalada para actualizar versión / modelos
+- **`ProcessRegistry`** en backend Rust: `Mutex<HashMap<String, u32>>` para rastrear PIDs activos entre invocaciones
+- **`HealthResult`** y **`InstallEvent`** structs en `models.rs` serializados al frontend
+- **Nuevos comandos Tauri**: `stop_tool`, `restart_tool`, `health_check_tool`, `update_tool`
+- **`.markdownlint-cli2.jsonc`** para ignorar archivos `._*` de macOS en volúmenes exFAT y mantener CI de documentación limpio
+- **CI `validate-manifests`** reescrito: valida campos requeridos, categorías y runtimes; `install_script`/`run` como condicional (permite `comfyui.yaml` sin script aún)
+
+### Added (entorno y robustez)
 
 - Despliegue local verificado en disco externo ORICO `/Volumes/ORICO/ChofyIA/chofyai-studio`
-- `Studio Home` configurado en `/Volumes/ORICO/ChofyIA/ChofyAIStudio` con estructura de directorios creada
+- `Studio Home` configurado en `/Volumes/ORICO/ChofyIA/ChofyAIStudio`
 - `.npmrc` con registry público `registry.npmjs.org` para evitar registros corporativos hardcodeados
-- `._*` añadido a `.gitignore` para evitar archivos de recursos macOS en volúmenes exFAT
-- `common.sh` inyecta `PATH=/opt/homebrew/bin:...` para que los scripts funcionen cuando son lanzados desde Tauri/Rust (entorno sin shell interactivo)
-- Dependencias del sistema instaladas y verificadas: Homebrew 5.0.14, cmake 4.3.1, ffmpeg 8.1, python 3.10.20, python 3.11.15, rust 1.94.1, uv 0.11.3
-- `docs/INSTALL_MAC.md` reescrito con tabla completa de dependencias, pasos exactos y advertencia sobre modo web vs modo Tauri
-- `docs/STATUS.md` actualizado con tabla de entorno verificado y nota clara sobre limitaciones de modo web
+- `._*` añadido a `.gitignore` para archivos de recursos macOS en volúmenes exFAT
+- `common.sh` inyecta `PATH=/opt/homebrew/bin:...` para scripts lanzados desde Tauri/Rust
+- Dependencias del sistema verificadas: Homebrew 5.0.14, cmake 4.3.1, ffmpeg 8.1, python 3.10.20 / 3.11.15, rust 1.94.1, uv 0.11.3
 
 ### Fixed
 
 - `package-lock.json` regenerado desde `registry.npmjs.org` (el anterior apuntaba a un registro interno inaccesible)
-- `package.json` version alineada a `0.2.0` para coincidir con `CHANGELOG.md` y `docs/STATUS.md`
-- `storage/state/settings.json` corregido (eliminado placeholder `CHANGE_ME`, apunta a ruta real)
-
-### Planned (Fase 2 / Fase 3)
-
-- Stop / Restart por herramienta desde la UI
-- Health checks reales por proceso y puerto
-- Cola de instalaciones con progreso visible
-- Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`)
-- Integración operativa de ComfyUI
+- `package.json` version alineada a `0.2.0`
+- `storage/state/settings.json` corregido (eliminado placeholder `CHANGE_ME`)
+- CI `lint-docs` ahora descubre `.markdownlint-cli2.jsonc` automáticamente (sin parámetro `config` explícito)
+- MD032 en `docs/INSTALL_MAC.md` y MD040 en `docs/STATUS.md` corregidos
 
 ---
 
