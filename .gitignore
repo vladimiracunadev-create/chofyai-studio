@@ -2,6 +2,7 @@ node_modules/
 dist/
 .vite/
 .DS_Store
+._*
 src-tauri/target/
 *.log
 storage/state/settings.local.json

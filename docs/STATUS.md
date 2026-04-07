@@ -1,6 +1,6 @@
 # Estado actual del proyecto
 
-> Última actualización: **2026-03-20** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
+> Última actualización: **2026-04-06** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
 
 ## Versión del repositorio
 

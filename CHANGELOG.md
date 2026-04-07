@@ -9,6 +9,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Despliegue local verificado en disco externo ORICO (macOS Apple Silicon)
+- `.npmrc` con registro público `registry.npmjs.org` para evitar registros corporativos hardcodeados
+- `._*` añadido a `.gitignore` para evitar archivos de recursos macOS en exFAT
+
+### Fixed
+
+- `package-lock.json` regenerado desde `registry.npmjs.org` (el anterior apuntaba a un registro interno inaccesible)
+- `package.json` version alineada a `0.2.0` para coincidir con `CHANGELOG.md` y `docs/STATUS.md`
+
 ### Planned (Fase 2 / Fase 3)
 
 - Stop / Restart por herramienta desde la UI
