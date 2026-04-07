@@ -112,37 +112,57 @@ chofyai-studio/
 
 ## Instalación en tu Mac
 
-### 1. Clonar o descomprimir el proyecto
+### 0. Instalar dependencias del sistema
 
 ```bash
-git clone <TU-REPO>.git
+brew install node rust cmake ffmpeg python@3.10 python@3.11 uv git
+```
+
+> Ver tabla completa en [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md)
+
+### 1. Clonar el proyecto
+
+```bash
+git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
 cd chofyai-studio
 ```
 
-### 2. Verificar prerequisitos
+### 2. Instalar dependencias del frontend
 
 ```bash
-bash scripts/mac/bootstrap.sh
-bash scripts/mac/preflight-build.sh
-```
-
-### 3. Instalar dependencias del frontend
-
-```bash
+# El .npmrc del proyecto fija registry a npmjs.org automáticamente
 npm install
 ```
 
-### 4. Ejecutar en modo desarrollo web
+### 3. Configurar Studio Home
 
-```bash
-npm run dev:web
+Editar `storage/state/settings.json`:
+
+```json
+{
+  "studio_home": "/Volumes/ORICO/ChofyIA/ChofyAIStudio"
+}
 ```
 
-### 5. Ejecutar como app de escritorio
+Crear la estructura de directorios:
 
 ```bash
+mkdir -p /Volumes/ORICO/ChofyIA/ChofyAIStudio/{tools,logs,models,cache}
+```
+
+### 4. Ejecutar en modo desarrollo
+
+```bash
+export PATH="/opt/homebrew/bin:$PATH"
+
+# Solo frontend (los botones de herramientas NO funcionan en este modo)
+npm run dev:web
+
+# App de escritorio completa — botones de instalar/iniciar SÍ funcionan
 npm run tauri:dev
 ```
+
+> ⚠️ **Importante:** `npm run dev:web` solo muestra la UI. Para que los botones de **Instalar**, **Iniciar**, **Carpeta** y **Logs** funcionen de verdad, hay que correr `npm run tauri:dev` (requiere Rust instalado).
 
 ## Studio Home
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Asegurar que Homebrew está en el PATH cuando el script
+# es lanzado desde Tauri/Rust (entorno sin shell interactivo)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:$PATH"
+
 read_studio_home_from_settings() {
   local settings_file="$1"
 

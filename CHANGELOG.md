@@ -11,14 +11,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Despliegue local verificado en disco externo ORICO (macOS Apple Silicon)
-- `.npmrc` con registro público `registry.npmjs.org` para evitar registros corporativos hardcodeados
-- `._*` añadido a `.gitignore` para evitar archivos de recursos macOS en exFAT
+- Despliegue local verificado en disco externo ORICO `/Volumes/ORICO/ChofyIA/chofyai-studio`
+- `Studio Home` configurado en `/Volumes/ORICO/ChofyIA/ChofyAIStudio` con estructura de directorios creada
+- `.npmrc` con registry público `registry.npmjs.org` para evitar registros corporativos hardcodeados
+- `._*` añadido a `.gitignore` para evitar archivos de recursos macOS en volúmenes exFAT
+- `common.sh` inyecta `PATH=/opt/homebrew/bin:...` para que los scripts funcionen cuando son lanzados desde Tauri/Rust (entorno sin shell interactivo)
+- Dependencias del sistema instaladas y verificadas: Homebrew 5.0.14, cmake 4.3.1, ffmpeg 8.1, python 3.10.20, python 3.11.15, rust 1.94.1, uv 0.11.3
+- `docs/INSTALL_MAC.md` reescrito con tabla completa de dependencias, pasos exactos y advertencia sobre modo web vs modo Tauri
+- `docs/STATUS.md` actualizado con tabla de entorno verificado y nota clara sobre limitaciones de modo web
 
 ### Fixed
 
 - `package-lock.json` regenerado desde `registry.npmjs.org` (el anterior apuntaba a un registro interno inaccesible)
 - `package.json` version alineada a `0.2.0` para coincidir con `CHANGELOG.md` y `docs/STATUS.md`
+- `storage/state/settings.json` corregido (eliminado placeholder `CHANGE_ME`, apunta a ruta real)
 
 ### Planned (Fase 2 / Fase 3)
 
