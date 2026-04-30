@@ -1,0 +1,5 @@
+# Mover el directorio de build de Cargo fuera del disco externo.
+# En volúmenes que no son APFS macOS crea archivos AppleDouble (._*) que
+# rompen la build de Tauri al ser parseados como TOML/UTF-8.
+[build]
+target-dir = "/tmp/chofyai-target"

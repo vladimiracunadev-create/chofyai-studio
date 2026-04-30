@@ -13,6 +13,7 @@ export type ToolManifest = {
   installed: boolean;
   installed_checks: string[];
   missing_checks: string[];
+  relocated?: boolean;
 };
 
 export type SystemSummary = {
@@ -21,11 +22,15 @@ export type SystemSummary = {
   os: string;
   arch: string;
   studio_home: string;
+  studio_home_effective: string;
+  using_fallback: boolean;
   settings_file: string;
 };
 
 export type AppSettings = {
   studio_home: string;
+  tool_overrides?: Record<string, string>;
+  fallback_home?: string | null;
 };
 
 export type ActionResult = {
@@ -47,7 +52,6 @@ export type InstallEvent = {
   line: string;
 };
 
-/** Estado de un ítem en la cola de instalación. */
 export type QueueStatus = 'pending' | 'installing' | 'done' | 'failed';
 
 export type QueueItem = {
@@ -56,4 +60,26 @@ export type QueueItem = {
   status: QueueStatus;
   message?: string;
   lines: string[];
+};
+
+export type VolumeCandidate = {
+  path: string;
+  label: string;
+  kind: 'home' | 'external' | 'custom';
+  mounted: boolean;
+  writable: boolean;
+  free_bytes?: number | null;
+  total_bytes?: number | null;
+};
+
+export type SystemStats = {
+  cpu_usage: number;
+  cpu_cores: number;
+  mem_used_bytes: number;
+  mem_total_bytes: number;
+  disk_free_bytes: number;
+  disk_total_bytes: number;
+  disk_path: string;
+  uptime_secs: number;
+  load_avg_1m: number;
 };

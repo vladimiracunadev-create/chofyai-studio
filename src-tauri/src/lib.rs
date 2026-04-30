@@ -9,8 +9,7 @@ use system::ProcessRegistry;
 pub fn run() {
     tauri::Builder::default()
         .manage(ProcessRegistry(Mutex::new(HashMap::new())))
-        .setup(|app| {
-            let _window = app.get_webview_window("main");
+        .setup(|_app| {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -24,7 +23,11 @@ pub fn run() {
             system::restart_tool,
             system::health_check_tool,
             system::open_tool_directory,
-            system::open_tool_log
+            system::open_tool_log,
+            system::list_volume_candidates,
+            system::relocate_module,
+            system::clear_module_override,
+            system::get_system_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

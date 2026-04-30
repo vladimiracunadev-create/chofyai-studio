@@ -2,12 +2,16 @@ id: comfyui
 name: ComfyUI
 category: image
 runtime: python
-description: Workflows visuales para imagen.
+description: Workflows visuales para imagen (Stable Diffusion, Flux, etc.) con MPS/Apple Silicon.
 platforms:
   - mac-arm64
 recommended: true
 default_port: 8188
 studio_home_subdir: tools/comfyui
+install_script: scripts/mac/install-comfyui.sh
+run:
+  command: source venv/bin/activate && cd source && python main.py --listen 127.0.0.1 --port 8188
 installed_if:
   - source/.git
-  - venv
+  - source/main.py
+  - venv/bin/python

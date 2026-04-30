@@ -4,6 +4,8 @@ dist/
 .DS_Store
 ._*
 src-tauri/target/
+src-tauri/gen/
+/tmp/chofyai-target/
 *.log
 storage/state/settings.local.json
 storage/state/runtime/

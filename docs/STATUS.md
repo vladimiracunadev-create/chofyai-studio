@@ -1,18 +1,18 @@
 # Estado actual del proyecto
 
-> Última actualización: **2026-04-06** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
+> Última actualización: **2026-04-30** · Ver [CHANGELOG.md](../CHANGELOG.md) para historial completo · Ver [ROADMAP.md](../ROADMAP.md) para fases futuras
 
 ## Versión del repositorio
 
-**v0.3.0-dev** — Fase 3 implementada: control de procesos, cola de instalaciones y flujo de actualización.
+**v0.4.0-dev** — Fase 4 implementada: disco dual, zona de módulos, stats en vivo, ComfyUI operativo y empaquetado `.app` ad-hoc.
 
 ## Entorno verificado
 
 | Dependencia | Versión instalada | Estado |
 |---|---|---|
 | Homebrew | 5.0.14 | ✅ |
-| Node.js | 25.6.0 | ✅ |
-| npm | 11.8.0 | ✅ |
+| Node.js | 22.21.1 | ✅ |
+| npm | 10.9.4 | ✅ |
 | Rust / cargo | 1.94.1 | ✅ |
 | cmake | 4.3.1 | ✅ |
 | ffmpeg | 8.1 | ✅ |
@@ -24,72 +24,76 @@
 ## Studio Home configurado
 
 ```text
-/Volumes/ORICO/ChofyIA/ChofyAIStudio
+Solicitado:  /Volumes/ORICO/ChofyIA/ChofyAIStudio
+Efectivo:    /Volumes/ORICO/ChofyIA/ChofyAIStudio  (fallback: ~/ChofyAIStudio si el volumen no está disponible)
 ```
 
 ## Funciones disponibles
 
 ### UI
 
-- Ver resumen del sistema
-- Ver y guardar `studio_home`
-- Listar herramientas desde manifests YAML
-- Detectar si una herramienta está instalada según `installed_if`
-- **Instalar** herramienta con progreso en tiempo real (streaming stdout)
-- **Actualizar** herramienta ya instalada (re-ejecuta script de instalación)
-- **Iniciar** herramienta desde botón
-- **Detener** herramienta en ejecución (SIGTERM)
-- **Reiniciar** herramienta (stop + start automático)
-- **Cola de instalaciones**: encola múltiples herramientas e instala una a una
-- **Health check visual**: indicador pulsante verde cuando la herramienta responde en su puerto
-- Abrir carpeta de herramienta
-- Abrir log de herramienta
+- Resumen del sistema con `studio_home` solicitado vs. efectivo y bandera de fallback.
+- **Selector de volúmenes**: lista `~` y todos los `/Volumes/*` con espacio libre y permisos.
+- Guardar `studio_home` con un clic o con ruta personalizada.
+- Listar herramientas desde manifests YAML, con detección de instalación por `installed_if`.
+- **Instalar** / **Actualizar** / **Iniciar** / **Detener** / **Reiniciar** herramientas.
+- **Cola de instalaciones** secuencial con progreso por ítem.
+- **Health check visual**: indicador pulsante cuando la herramienta responde en su puerto TCP.
+- **📍 Mover** herramienta a `studio_home/modules/<id>` (o cualquier ruta absoluta) y **↺ Reset ruta** para quitar el override.
+- Abrir carpeta / log de herramienta.
+- **Barra inferior fija** con CPU%, RAM, disco libre, uptime y load average — refresco cada 3 s.
 
 ### Backend Rust (comandos Tauri)
 
-- `get_system_summary`
-- `save_studio_home`
-- `list_tools`
-- `install_tool` — con streaming de salida vía eventos `install-progress` / `install-done`
-- `update_tool` — re-instala sobre una herramienta existente
-- `start_tool` — registra PID en `ProcessRegistry`
-- `stop_tool` — envía SIGTERM y elimina PID del registro
-- `restart_tool` — stop + start en secuencia
-- `health_check_tool` — verifica PID vivo + puerto TCP abierto
-- `open_tool_directory`
-- `open_tool_log`
+| Comando | Función |
+|---|---|
+| `get_system_summary` | Resumen + studio_home solicitado/efectivo + flag fallback |
+| `get_system_stats` | CPU/RAM/disco/uptime/load (barra inferior) |
+| `list_volume_candidates` | Volúmenes home + externos para el selector |
+| `save_studio_home` | Persiste el path solicitado |
+| `list_tools` | Manifests + estado de instalación (incluye `relocated`) |
+| `install_tool` | Ejecuta script con streaming `install-progress` / `install-done` |
+| `update_tool` | Re-ejecuta script sobre instalación existente |
+| `start_tool` | Lanza proceso y registra PID en `ProcessRegistry` |
+| `stop_tool` | SIGTERM + elimina del registro |
+| `restart_tool` | Stop + Start con espera de 800 ms |
+| `health_check_tool` | PID vivo (`kill -0`) + puerto TCP |
+| `relocate_module` | Mueve directorio + registra `tool_overrides` |
+| `clear_module_override` | Quita override (no mueve archivos) |
+| `open_tool_directory` | Abre Finder en la carpeta del tool |
+| `open_tool_log` | Abre log de install/run con app por defecto |
 
 ### Herramientas con integración operativa
 
-- ✅ Qwen3-TTS — requiere python 3.10, uv
-- ✅ whisper.cpp — requiere cmake, curl
+- ✅ Qwen3-TTS — requiere python 3.10, uv (puerto 7860)
+- ✅ whisper.cpp — requiere cmake, curl (puerto 8178)
 - ✅ FaceFusion — requiere ffmpeg, python 3.x
-- ✅ AceForge — requiere ffmpeg, python 3.x
-
-### Herramientas no operativas aún
-
-- 🚧 ComfyUI — declarada en manifest, sin script de instalación
+- ✅ AceForge — requiere ffmpeg, python 3.x (puerto 5056)
+- ✅ **ComfyUI** — requiere python 3.11/3.10, PyTorch MPS (puerto 8188)
 
 ## Limitaciones actuales
 
-- No hay manejo avanzado de procesos huérfanos entre reinicios de la app
-- ComfyUI sigue declarada pero sin integración operativa
-- Firma y notarización Apple no incluidas
-- Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) pendientes
+- No hay cleanup automático de procesos huérfanos entre reinicios de la app (el `ProcessRegistry` vive solo en memoria).
+- No se verifica si el puerto declarado está ocupado antes de iniciar.
+- Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) declarados en manifests pero sin controles UI.
+- Firma y notarización Apple no incluidas — el `.app` se ejecuta ad-hoc en este equipo (click derecho → Abrir la primera vez).
 
 ## Nota sobre modo web vs modo Tauri
 
 | Modo | Comando | Botones de herramientas |
 |---|---|---|
-| Web (solo frontend) | `npm run dev:web` | ❌ No funcionan (sin backend) |
-| Escritorio completo | `npm run tauri:dev` | ✅ Funcionan (Rust activo) |
+| Web (solo frontend) | `npm run dev:web` | ❌ Sin backend (degrada limpio, no lanza errores) |
+| Escritorio completo | `npm run tauri:dev` | ✅ Todo funciona (Rust activo) |
+| `.app` instalada | doble clic en `/Applications` | ✅ Todo funciona |
 
 ## Estado de empaquetado
 
-El repo está preparado para:
+| Comando | Salida |
+|---|---|
+| `npm run tauri:build:app` | `/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app` |
+| `npm run tauri:build:dmg` | `/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg` |
+| `npm run package:mac` | Pipeline completo `bash scripts/mac/build-release.sh` |
 
-- `npm run tauri:build:app`
-- `npm run tauri:build:dmg`
-- `npm run package:mac`
+`target-dir` está redirigido a `/tmp/chofyai-target` por `.cargo/config.toml` para evitar archivos AppleDouble (`._*`) en volúmenes externos no-APFS. Si reaparecen, ejecuta `bash scripts/mac/clean-appledouble.sh`.
 
-Requiere ejecutarse en Mac real con Rust + Xcode CLT instalados.
+Build verificado el **2026-04-30** sin Apple Developer ID — funcional para uso personal en este equipo.

@@ -185,13 +185,50 @@ bash scripts/mac/install-aceforge.sh
 
 ---
 
+### `install-comfyui.sh`
+
+| Campo | Valor |
+|---|---|
+| **Herramienta** | ComfyUI |
+| **Categoría** | image |
+| **Runtime** | python |
+| **Directorio** | `tools/comfyui/` |
+| **Puerto** | `8188` |
+| **Requiere** | Python 3.11/3.10, git |
+
+```bash
+bash scripts/mac/install-comfyui.sh
+```
+
+**Qué instala**: clona ComfyUI, crea `venv`, instala PyTorch con MPS (Apple Silicon) y los `requirements.txt`. Crea symlinks `source/{models,inputs,outputs,custom_nodes}` hacia las carpetas externas para sobrevivir a reubicaciones.
+
+**Tiempo estimado**: 5-15 min (sin modelos; estos se copian aparte a `models/checkpoints/`).
+
+---
+
+### `clean-appledouble.sh`
+
+| Campo | Valor |
+|---|---|
+| **Función** | Borra archivos `._*` (AppleDouble) del repo |
+| **Cuándo usarlo** | Antes de `cargo build` cuando el repo vive en exFAT/HFS+ |
+
+```bash
+bash scripts/mac/clean-appledouble.sh
+```
+
+**Por qué**: macOS crea archivos AppleDouble en volúmenes no-APFS. Tauri intenta leerlos como TOML/JSON y la build falla con `stream did not contain valid UTF-8`. El repo ya redirige `target-dir` a `/tmp/chofyai-target` vía `.cargo/config.toml`; este script ataca el problema en el árbol de fuentes (capabilities, schemas, etc.).
+
+---
+
 ## Variables de entorno comunes
 
 Todos los scripts de instalación respetan las siguientes variables:
 
 | Variable | Default | Descripción |
 |---|---|---|
-| `STUDIO_HOME` | Leído desde `storage/state/settings.json` | Directorio raíz de trabajo. |
+| `CHOFYAI_STUDIO_HOME` | Leído desde `storage/state/settings.json` (o app data dir si está empaquetada) | Directorio raíz efectivo (post-fallback). Tauri la inyecta antes de spawnar cada script. |
+| `STUDIO_HOME` | Alias compatible con `CHOFYAI_STUDIO_HOME` | Honrado por `common.sh::resolve_studio_home`. |
 | `LOG_DIR` | `$STUDIO_HOME/logs` | Donde se escriben los logs de instalación. |
 
 ---

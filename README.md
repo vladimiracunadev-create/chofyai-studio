@@ -3,7 +3,7 @@
 [![CI](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-black?logo=apple)](docs/INSTALL_MAC.md)
-[![Versión](https://img.shields.io/badge/versión-0.3.0--dev-indigo)](CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.4.0--dev-indigo)](CHANGELOG.md)
 
 ChofyAI Studio es una **aplicación de escritorio local para macOS Apple Silicon** orientada a centralizar la instalación, arranque y organización de herramientas creativas de IA.
 
@@ -33,15 +33,19 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
   - **Abrir carpeta** / **Abrir log**
 - **Cola de instalaciones**: encola múltiples herramientas e instala una a una
 - **Health check visual**: punto verde pulsante cuando la herramienta responde en su puerto TCP
-- Scripts reales de instalación para:
-  - **Qwen3-TTS**, **whisper.cpp**, **FaceFusion**, **AceForge**
-- Preparación de empaquetado macOS (`.app` / `.dmg`) con Tauri
+- Scripts reales de instalación para las **5 herramientas**: Qwen3-TTS, whisper.cpp, FaceFusion, AceForge **y ComfyUI**
+- **Resolución dual de disco**: `studio_home` solicitado vs. efectivo. Si el volumen externo está desmontado o sin permisos, fallback automático a `~/ChofyAIStudio`. UI muestra indicador de fallback.
+- **Selector de volúmenes**: lista `~` y todos los `/Volumes/*` con espacio libre. Cambia el `studio_home` con un clic.
+- **Zona de módulos / reubicación**: cada herramienta puede moverse a una ruta absoluta arbitraria (`relocate_module`). El override se guarda en `tool_overrides` dentro de `settings.json`. Reset desactiva el override sin mover archivos.
+- **Barra de stats inferior**: CPU%, RAM usada/total, disco libre, uptime, load average — refresco cada 3 s.
+- Empaquetado macOS (`.app` / `.dmg`) con Tauri — funciona ad-hoc sin Apple Developer ID.
 
-### Pendiente — Fase 3 y 4
+### Pendiente — Fase 5+
 
-- **ComfyUI**: declarada en manifest, sin script de instalación aún
-- **Settings avanzados**: `models_dir`, `outputs_dir`, `cache_dir`
-- **Firma y notarización Apple**: necesario para distribución pública
+- **Settings avanzados** en UI: `models_dir`, `outputs_dir`, `cache_dir` declarados en manifest pero sin controles aún.
+- **Firma y notarización Apple**: requerida para distribución pública (no necesaria para uso personal).
+- **Detección de puertos ocupados** antes de iniciar.
+- **Cleanup de procesos huérfanos** al reiniciar la app.
 
 > Ver hoja de ruta completa en [ROADMAP.md](ROADMAP.md)
 
@@ -61,7 +65,7 @@ Su objetivo no es ser un launcher genérico para cualquier repositorio, sino un 
 | **whisper.cpp** | ASR | 8178 | ✅ Operativa | `install-whispercpp.sh` |
 | **FaceFusion** | video / cara | — | ✅ Operativa | `install-facefusion.sh` |
 | **AceForge** | música | 5056 | ✅ Operativa | `install-aceforge.sh` |
-| **ComfyUI** | imagen | — | 🚧 Declarada | — |
+| **ComfyUI** | imagen | 8188 | ✅ Operativa | `install-comfyui.sh` |
 
 > Ver especificación completa de manifests en [`docs/MANIFEST_SPEC.md`](docs/MANIFEST_SPEC.md).
 
@@ -137,19 +141,22 @@ npm install
 
 ### 3. Configurar Studio Home
 
-Editar `storage/state/settings.json`:
+Hay **tres formas equivalentes**:
 
-```json
-{
-  "studio_home": "/Volumes/ORICO/ChofyIA/ChofyAIStudio"
-}
-```
+- **Desde la UI** (recomendado): el panel "Studio Home" lista volúmenes disponibles con espacio libre; un clic sobre `~` o cualquier `/Volumes/*` lo guarda.
+- **Editando** `storage/state/settings.json`:
 
-Crear la estructura de directorios:
+  ```json
+  {
+    "studio_home": "/Volumes/ORICO/ChofyIA/ChofyAIStudio",
+    "tool_overrides": {},
+    "fallback_home": null
+  }
+  ```
 
-```bash
-mkdir -p /Volumes/ORICO/ChofyIA/ChofyAIStudio/{tools,logs,models,cache}
-```
+- **Sin tocar nada**: si `studio_home` no es escribible, ChofyAI usa `~/ChofyAIStudio` como fallback automático y lo indica en la barra inferior.
+
+La estructura `tools/`, `modules/`, `logs/`, `models/`, `cache/` se crea sola al primer uso.
 
 ### 4. Ejecutar en modo desarrollo
 
@@ -165,27 +172,52 @@ npm run tauri:dev
 
 > ⚠️ **Importante:** `npm run dev:web` solo muestra la UI. Para que los botones de **Instalar**, **Iniciar**, **Carpeta** y **Logs** funcionen de verdad, hay que correr `npm run tauri:dev` (requiere Rust instalado).
 
-## Studio Home
+## Studio Home y resolución dual de disco
 
 La ruta principal de trabajo se guarda en:
 
 ```text
 Desarrollo: storage/state/settings.json
-App empaquetada: directorio de datos de Tauri + /state/settings.json
+App empaquetada: ~/Library/Application Support/cl.vladimiracuna.chofyai.studio/state/settings.json
 ```
 
-Ejemplo:
+Esquema completo:
 
 ```json
 {
-  "studio_home": "/Users/tu_usuario/ChofyAIStudio"
+  "studio_home": "/Volumes/ORICO/ChofyIA/ChofyAIStudio",
+  "tool_overrides": {
+    "comfyui": "/Volumes/Externo2/ComfyModels/source"
+  },
+  "fallback_home": null
 }
 ```
 
-Se recomienda:
+### Cómo se elige la ruta efectiva
 
-- **SSD interno** o volumen **APFS**
-- evitar exFAT u otros volúmenes que puedan meter archivos `._*`
+1. Si `studio_home` apunta a un volumen montado y escribible → se usa.
+2. Si no (volumen ausente, sin permisos) → cae al `fallback_home` o a `~/ChofyAIStudio`.
+3. El `SystemSummary` expone `studio_home`, `studio_home_effective` y `using_fallback` para que la UI lo refleje.
+
+### Recomendaciones
+
+- **Volumen APFS** (interno o externo). En exFAT/HFS+ macOS crea archivos `._*` que rompen `cargo build`; el repo ya redirige `target/` a `/tmp/chofyai-target` para mitigarlo.
+- Para descargas grandes (modelos), un volumen externo dedicado libera tu SSD principal.
+
+## Zona de módulos / reubicación
+
+Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **moverla** a:
+
+- `studio_home/modules/<id>` (sugerido por defecto al pulsar **📍 Mover**).
+- Cualquier otra ruta absoluta — útil para mover modelos pesados a un volumen distinto.
+
+El traslado:
+
+- Usa `rename` cuando origen y destino están en el mismo volumen (instantáneo).
+- Cae a copia recursiva + borrado cuando son volúmenes diferentes.
+- Registra el override en `tool_overrides`, de modo que `install/start/restart` futuros respetan la nueva ruta sin tocar el manifest.
+
+**Reset ruta** quita el override (no mueve archivos automáticamente).
 
 ## Scripts útiles
 
@@ -195,7 +227,9 @@ bash scripts/mac/install-qwen3-tts.sh
 bash scripts/mac/install-whispercpp.sh
 bash scripts/mac/install-facefusion.sh
 bash scripts/mac/install-aceforge.sh
+bash scripts/mac/install-comfyui.sh
 bash scripts/mac/cleanup-tool.sh "/ruta/studio_home" "tool_id"
+bash scripts/mac/clean-appledouble.sh   # borra ._* en discos no-APFS
 ```
 
 ## Empaquetado macOS
@@ -207,14 +241,14 @@ npm ci
 npm run package:mac
 ```
 
-Salidas esperadas:
+Salidas esperadas (el `target-dir` está redirigido por `.cargo/config.toml` para evitar archivos `._*` en volúmenes externos):
 
 ```text
-src-tauri/target/release/bundle/macos/
-src-tauri/target/release/bundle/dmg/
+/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app
+/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg
 ```
 
-> Ver detalles en [`docs/packaging.md`](docs/packaging.md).
+> Ver detalles en [`docs/packaging.md`](docs/packaging.md). Build ad-hoc (sin Apple Developer ID) funciona para uso local: en el primer arranque, click derecho → Abrir.
 
 ## CI/CD
 

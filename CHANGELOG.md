@@ -9,6 +9,34 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added (Fase 4 — disco dual, zona de módulos, stats y empaquetado ad-hoc)
+
+- **Resolución dual de `studio_home`**: `resolve_effective_home` decide en runtime si el path solicitado es usable; si el volumen externo está desmontado o sin permisos, fallback automático a `~/ChofyAIStudio` (configurable vía `fallback_home`). El `SystemSummary` expone `studio_home`, `studio_home_effective` y `using_fallback`.
+- **Selector de volúmenes**: nuevo comando `list_volume_candidates` devuelve home + todos los `/Volumes/*` con `free_bytes`, `total_bytes` y flag `writable`. UI lista los candidatos y permite cambiar `studio_home` con un clic.
+- **Zona de módulos / reubicación**: nuevos comandos `relocate_module(tool_id, target_dir)` y `clear_module_override(tool_id)`. `AppSettings` extendido con `tool_overrides: HashMap<String, String>` (tool_id → ruta absoluta). `manifest_install_dir` honra el override en install/start/restart/open. La UI sugiere `studio_home/modules/<id>` como destino por defecto.
+- **Traslado cross-volumen**: `relocate_module` usa `rename` cuando origen y destino comparten volumen (instantáneo); cae a copia recursiva (incluyendo symlinks) + borrado en cross-device.
+- **Barra inferior de stats del equipo**: nuevo comando `get_system_stats` lee CPU% (`top -l 1`), RAM (`vm_stat` + `sysctl hw.memsize`), disco del `studio_home_effective` (`df -k`), uptime (`sysctl kern.boottime`) y load average. UI con barra fija inferior, refresco cada 3 s, sin dependencias Rust extra.
+- **ComfyUI operativo**: `apps/comfyui.yaml` con `install_script` + `run.command`. Nuevo `scripts/mac/install-comfyui.sh` que clona ComfyUI, crea venv Python 3.11/3.10, instala PyTorch con MPS y enlaza simbólicamente `models/`, `inputs/`, `outputs/`, `custom_nodes/` a la zona externa.
+- **Detección runtime de Tauri**: el frontend detecta `__TAURI_INTERNALS__` y degrada limpio en `npm run dev:web` (sin backend) sin lanzar errores en cada botón.
+- **`.cargo/config.toml`** con `target-dir = /tmp/chofyai-target` para evitar archivos AppleDouble (`._*`) que rompen `cargo build` cuando el repo vive en exFAT/HFS+.
+- **`scripts/mac/clean-appledouble.sh`** — utilidad para borrar `._*` cuando reaparezcan.
+- **`QUICKSTART.md`** en raíz con guía rápida de arranque, fallback, módulos y empaquetado.
+- **Build `.app` ad-hoc** verificado sin Apple Developer ID (uso personal): `npm run tauri:build:app`.
+
+### Changed
+
+- `@tauri-apps/api` actualizado a `^2.11.0` para alinear con el crate `tauri 2.11`.
+- `lib.rs::setup` simplificado (eliminada llamada `get_webview_window` no compatible con `&mut tauri::App`).
+- `ToolSummary` añade campo `relocated: bool` para que la UI marque herramientas con override.
+
+### Fixed
+
+- Build de Tauri en disco externo no-APFS — antes fallaba con `stream did not contain valid UTF-8` al leer archivos `._default.toml` / `._default.json`.
+
+---
+
+## [0.3.0] — 2026-04-06
+
 ### Added (Fase 3 — control de procesos y cola de instalaciones)
 
 - **Stop / Restart por herramienta** desde la UI: botones dinámicos que aparecen sólo cuando la herramienta está en ejecución
@@ -82,6 +110,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `install-whispercpp.sh`: compilación desde fuente con CMake + Metal
 - `install-facefusion.sh`: face swap y procesamiento facial + venv
 
-[Unreleased]: https://github.com/vladimiracunadev-create/chofyai-studio/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/vladimiracunadev-create/chofyai-studio/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/vladimiracunadev-create/chofyai-studio/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/vladimiracunadev-create/chofyai-studio/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/vladimiracunadev-create/chofyai-studio/releases/tag/v0.1.0

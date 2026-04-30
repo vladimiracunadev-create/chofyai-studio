@@ -301,3 +301,110 @@ button:disabled {
   display: flex;
   flex-direction: column;
 }
+
+/* ── Layout con barra inferior ── */
+.layout {
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "sidebar content"
+    "statusbar statusbar";
+}
+.sidebar { grid-area: sidebar; }
+.content { grid-area: content; padding-bottom: 56px; }
+
+/* ── Status bar inferior ── */
+.statusbar {
+  grid-area: statusbar;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+  background: rgba(15, 17, 21, 0.92);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.78rem;
+  color: #c8d2e7;
+  z-index: 50;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.statusbar .stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.statusbar .stat-label {
+  color: #7c8ea8;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.statusbar .stat-bar {
+  width: 60px;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+.statusbar .stat-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #36d7b7, #7c5cff);
+  transition: width 0.4s ease;
+}
+.statusbar .stat-bar-fill.warn { background: linear-gradient(90deg, #f5a623, #ff5050); }
+.statusbar .sep { color: rgba(255,255,255,0.1); }
+.statusbar .badge-fb {
+  background: rgba(255, 165, 0, 0.18);
+  color: #ffcd80;
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+}
+
+/* ── Volume picker / Studio Home ── */
+.volume-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.volume-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #0f1115;
+  cursor: pointer;
+}
+.volume-item:hover { border-color: rgba(124,92,255,0.4); }
+.volume-item.active { border-color: rgba(54,215,183,0.5); background: rgba(54,215,183,0.06); }
+.volume-item .vol-icon { font-size: 1.2rem; }
+.volume-item .vol-info { flex: 1; min-width: 0; }
+.volume-item .vol-info strong { display: block; }
+.volume-item .vol-info small { color: #7c8ea8; }
+.volume-item.disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Relocate dialog ── */
+.relocate-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+.relocate-row input {
+  background: #0f1115;
+  color: #f5f7fb;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 0.85rem;
+}

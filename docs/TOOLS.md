@@ -112,15 +112,31 @@ scripts/mac/install-aceforge.sh
 
 ### Estado
 
-Manifest declarado, **no integrado operativamente** en esta fase.
+✅ **Integrada operativamente** desde la Fase 4.
 
-### Archivo
+### Archivos
 
 ```text
 apps/comfyui.yaml
+scripts/mac/install-comfyui.sh
 ```
 
-### Nota
+### Función
 
-Se dejó fuera a propósito para no aumentar peso ni complejidad del MVP.
+Workflows visuales para generación de imagen (Stable Diffusion, Flux, etc.) con backend PyTorch sobre MPS / Apple Silicon.
+
+### Requisitos
+
+- Python 3.11 o 3.10
+- git
+- ~5 GB libres para PyTorch + dependencias (los modelos van aparte y pueden pesar muchos GB).
+
+### Puerto esperado
+
+- `8188`
+
+### Observaciones
+
+- El script crea symlinks desde `source/{models,inputs,outputs,custom_nodes}` hacia las carpetas externas en `studio_home/tools/comfyui/`. Cambiar `studio_home` o reubicar el módulo no rompe los modelos descargados.
+- No descarga modelos automáticamente — cópialos a `studio_home/tools/comfyui/models/checkpoints/` (o la subcarpeta correspondiente).
 

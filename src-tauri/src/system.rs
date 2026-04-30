@@ -1,4 +1,7 @@
-use crate::models::{AppSettings, HealthResult, InstallEvent, SystemSummary, ToolSummary};
+use crate::models::{
+    AppSettings, HealthResult, InstallEvent, SystemStats, SystemSummary, ToolSummary,
+    VolumeCandidate,
+};
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -15,7 +18,6 @@ use walkdir::WalkDir;
 
 // ─── Registro de PIDs ────────────────────────────────────────────────────────
 
-/// Estado compartido que guarda el PID de cada herramienta en ejecución.
 pub struct ProcessRegistry(pub Mutex<HashMap<String, u32>>);
 
 // ─── Estructuras internas ─────────────────────────────────────────────────────
@@ -101,11 +103,70 @@ fn script_path(app: &AppHandle, relative: &str) -> Result<PathBuf, String> {
     resolve_resource_path(app, relative)
 }
 
+fn home_dir() -> PathBuf {
+    PathBuf::from(
+        env::var("HOME")
+            .or_else(|_| env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".to_string()),
+    )
+}
+
 fn default_studio_home() -> String {
-    let home = env::var("HOME")
-        .or_else(|_| env::var("USERPROFILE"))
-        .unwrap_or_else(|_| "~".to_string());
-    format!("{}/ChofyAIStudio", home)
+    home_dir().join("ChofyAIStudio").display().to_string()
+}
+
+fn fallback_home_for(settings: &AppSettings) -> String {
+    settings
+        .fallback_home
+        .clone()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(default_studio_home)
+}
+
+/// Comprueba si un path apunta a un volumen montado y se puede escribir.
+fn path_is_usable(path: &Path) -> bool {
+    // Si el path existe y es directorio escribible → ok.
+    if path.exists() {
+        return is_writable_dir(path);
+    }
+    // Si no existe, mira si su padre montado existe y es escribible (lo crearemos).
+    let mut p = path.to_path_buf();
+    while let Some(parent) = p.parent() {
+        if parent.exists() {
+            return is_writable_dir(parent);
+        }
+        p = parent.to_path_buf();
+    }
+    false
+}
+
+fn is_writable_dir(path: &Path) -> bool {
+    if !path.is_dir() {
+        return false;
+    }
+    let probe = path.join(".chofyai-write-probe");
+    match fs::write(&probe, b"") {
+        Ok(_) => {
+            let _ = fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+/// Resuelve el `studio_home` efectivo: si el path solicitado es válido, lo usa;
+/// si no (volumen desmontado, no escribible), cae al fallback (~/ChofyAIStudio).
+/// Crea el directorio si no existe.
+fn resolve_effective_home(settings: &AppSettings) -> String {
+    let requested = PathBuf::from(&settings.studio_home);
+    if path_is_usable(&requested) {
+        let _ = fs::create_dir_all(&requested);
+        return settings.studio_home.clone();
+    }
+    let fallback = fallback_home_for(settings);
+    let fb_path = PathBuf::from(&fallback);
+    let _ = fs::create_dir_all(&fb_path);
+    fallback
 }
 
 fn load_settings(app: &AppHandle) -> Result<AppSettings, String> {
@@ -115,7 +176,21 @@ fn load_settings(app: &AppHandle) -> Result<AppSettings, String> {
             return Ok(parsed);
         }
     }
-    Ok(AppSettings { studio_home: default_studio_home() })
+    Ok(AppSettings {
+        studio_home: default_studio_home(),
+        tool_overrides: HashMap::new(),
+        fallback_home: None,
+    })
+}
+
+fn save_settings_to_disk(app: &AppHandle, settings: &AppSettings) -> Result<(), String> {
+    let path = settings_path(app)?;
+    ensure_parent(&path)?;
+    fs::write(
+        &path,
+        serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn ensure_parent(path: &Path) -> Result<(), String> {
@@ -153,7 +228,21 @@ fn find_manifest(app: &AppHandle, tool_id: &str) -> Result<(String, RawManifest)
         .ok_or_else(|| format!("No se encontro manifest para {}", tool_id))
 }
 
-fn manifest_install_dir(manifest: &RawManifest, studio_home: &Path) -> PathBuf {
+/// Devuelve la ruta de instalación final de una herramienta:
+/// 1. Si hay override en settings → respeta ruta absoluta.
+/// 2. Si no, studio_home_effective + studio_home_subdir (o tools/{id} por defecto).
+fn manifest_install_dir(
+    manifest: &RawManifest,
+    studio_home: &Path,
+    overrides: &HashMap<String, String>,
+) -> PathBuf {
+    if let Some(override_path) = overrides.get(&manifest.id) {
+        let p = PathBuf::from(override_path);
+        if p.is_absolute() {
+            return p;
+        }
+        return studio_home.join(p);
+    }
     let relative_dir = manifest
         .studio_home_subdir
         .clone()
@@ -178,7 +267,6 @@ fn open_in_system(target: &Path) -> Result<(), String> {
     }
 }
 
-/// Comprueba si un PID sigue vivo (solo envía señal 0).
 fn pid_is_alive(pid: u32) -> bool {
     Command::new("kill")
         .args(["-0", &pid.to_string()])
@@ -187,7 +275,6 @@ fn pid_is_alive(pid: u32) -> bool {
         .unwrap_or(false)
 }
 
-/// Lógica compartida para ejecutar un script de instalación con streaming de progreso.
 fn run_install_script(
     app: &AppHandle,
     tool_id: &str,
@@ -216,7 +303,6 @@ fn run_install_script(
         .spawn()
         .map_err(|e| e.to_string())?;
 
-    // — Stream stdout línea a línea via evento Tauri —
     let stdout = child.stdout.take().expect("stdout piped");
     let app_handle = app.clone();
     let tid = tool_id.to_string();
@@ -249,7 +335,6 @@ fn run_install_script(
     let log_path = logs.join(format!("{}-install.log", tool_id));
     fs::write(&log_path, combined.as_bytes()).map_err(|e| e.to_string())?;
 
-    // — Emitir evento de finalización —
     let _ = app.emit("install-done", InstallEvent {
         tool_id: tool_id.to_string(),
         line: if status.success() {
@@ -275,11 +360,143 @@ fn run_install_script(
     }
 }
 
+// ─── Stats del sistema (sin dependencias extra) ───────────────────────────────
+
+fn run_capture(cmd: &str, args: &[&str]) -> Option<String> {
+    Command::new(cmd)
+        .args(args)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+}
+
+fn read_cpu_cores() -> u32 {
+    run_capture("sysctl", &["-n", "hw.ncpu"])
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+fn read_mem_total() -> u64 {
+    run_capture("sysctl", &["-n", "hw.memsize"])
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+/// Lee uso de memoria con vm_stat (devuelve bytes usados).
+fn read_mem_used() -> u64 {
+    let total = read_mem_total();
+    let out = match run_capture("vm_stat", &[]) {
+        Some(s) => s,
+        None => return 0,
+    };
+    let mut page_size: u64 = 16384; // default Apple Silicon
+    let mut free: u64 = 0;
+    let mut inactive: u64 = 0;
+    let mut speculative: u64 = 0;
+    for line in out.lines() {
+        if let Some(rest) = line.strip_prefix("Mach Virtual Memory Statistics: (page size of ") {
+            if let Some(num) = rest.split(' ').next() {
+                if let Ok(n) = num.parse::<u64>() { page_size = n; }
+            }
+        } else if let Some(v) = line.strip_prefix("Pages free:") {
+            free = parse_pages(v);
+        } else if let Some(v) = line.strip_prefix("Pages inactive:") {
+            inactive = parse_pages(v);
+        } else if let Some(v) = line.strip_prefix("Pages speculative:") {
+            speculative = parse_pages(v);
+        }
+    }
+    let available = (free + inactive + speculative) * page_size;
+    total.saturating_sub(available)
+}
+
+fn parse_pages(s: &str) -> u64 {
+    s.trim().trim_end_matches('.').replace(',', "").parse().unwrap_or(0)
+}
+
+/// Uso de CPU 0..100 leyendo `top -l 2` (segunda muestra para que sea instantáneo real).
+fn read_cpu_usage() -> f32 {
+    let out = match run_capture("top", &["-l", "1", "-n", "0"]) {
+        Some(s) => s,
+        None => return 0.0,
+    };
+    for line in out.lines() {
+        if let Some(rest) = line.strip_prefix("CPU usage:") {
+            // "CPU usage: 5.12% user, 8.20% sys, 86.67% idle"
+            if let Some(idle_part) = rest.split(',').find(|p| p.contains("idle")) {
+                let num = idle_part.trim().split('%').next().unwrap_or("0").trim();
+                if let Ok(idle) = num.parse::<f32>() {
+                    return (100.0 - idle).max(0.0).min(100.0);
+                }
+            }
+        }
+    }
+    0.0
+}
+
+fn read_load_avg() -> f32 {
+    run_capture("sysctl", &["-n", "vm.loadavg"])
+        .and_then(|s| {
+            // "{ 1.50 1.20 0.95 }"
+            s.split_whitespace()
+                .nth(1)
+                .and_then(|n| n.parse::<f32>().ok())
+        })
+        .unwrap_or(0.0)
+}
+
+fn read_uptime() -> u64 {
+    run_capture("sysctl", &["-n", "kern.boottime"])
+        .and_then(|s| {
+            let sec = s.split("sec = ").nth(1)?.split(',').next()?.trim().parse::<u64>().ok()?;
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()?
+                .as_secs();
+            Some(now.saturating_sub(sec))
+        })
+        .unwrap_or(0)
+}
+
+/// Usa `df -k <path>` para obtener total/free en bytes.
+fn read_disk_usage(path: &Path) -> (u64, u64) {
+    let target = if path.exists() { path.to_path_buf() } else { home_dir() };
+    let out = match run_capture("df", &["-k", &target.display().to_string()]) {
+        Some(s) => s,
+        None => return (0, 0),
+    };
+    // Filesystem 1024-blocks Used Available ...
+    let last_line = out.lines().last().unwrap_or("");
+    let cols: Vec<&str> = last_line.split_whitespace().collect();
+    if cols.len() < 4 {
+        return (0, 0);
+    }
+    let total_kb: u64 = cols[1].parse().unwrap_or(0);
+    let avail_kb: u64 = cols[3].parse().unwrap_or(0);
+    (total_kb * 1024, avail_kb * 1024)
+}
+
+/// Lista volúmenes externos montados en /Volumes (excluyendo el de sistema raíz).
+fn list_external_volumes() -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Ok(entries) = fs::read_dir("/Volumes") {
+        for entry in entries.filter_map(Result::ok) {
+            let p = entry.path();
+            if p.is_dir() {
+                out.push(p);
+            }
+        }
+    }
+    out
+}
+
 // ─── Comandos Tauri ───────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn get_system_summary(app: AppHandle) -> Result<SystemSummary, String> {
     let settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
+    let using_fallback = effective != settings.studio_home;
     let settings_file = settings_path(&app)?;
     Ok(SystemSummary {
         app_name: "ChofyAI Studio".to_string(),
@@ -287,33 +504,74 @@ pub fn get_system_summary(app: AppHandle) -> Result<SystemSummary, String> {
         os: env::consts::OS.to_string(),
         arch: env::consts::ARCH.to_string(),
         studio_home: settings.studio_home,
+        studio_home_effective: effective,
+        using_fallback,
         settings_file: settings_file.display().to_string(),
     })
 }
 
 #[tauri::command]
 pub fn save_studio_home(app: AppHandle, studio_home: String) -> Result<AppSettings, String> {
+    let mut settings = load_settings(&app)?;
     let normalized = if studio_home.trim().is_empty() {
         default_studio_home()
     } else {
         studio_home.trim().to_string()
     };
-    let settings = AppSettings { studio_home: normalized };
-    let path = settings_path(&app)?;
-    ensure_parent(&path)?;
-    fs::write(&path, serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
+    settings.studio_home = normalized;
+    save_settings_to_disk(&app, &settings)?;
     Ok(settings)
+}
+
+#[tauri::command]
+pub fn list_volume_candidates() -> Vec<VolumeCandidate> {
+    let mut out: Vec<VolumeCandidate> = Vec::new();
+
+    // Disco principal
+    let home = home_dir().join("ChofyAIStudio");
+    let (total, free) = read_disk_usage(&home);
+    out.push(VolumeCandidate {
+        path: home.display().to_string(),
+        label: "Disco principal (~)".to_string(),
+        kind: "home".to_string(),
+        mounted: true,
+        writable: true,
+        free_bytes: Some(free),
+        total_bytes: Some(total),
+    });
+
+    // Volúmenes externos
+    for vol in list_external_volumes() {
+        let candidate = vol.join("ChofyAIStudio");
+        let label = vol
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| vol.display().to_string());
+        let writable = is_writable_dir(&vol);
+        let (total, free) = read_disk_usage(&vol);
+        out.push(VolumeCandidate {
+            path: candidate.display().to_string(),
+            label: format!("Volumen: {}", label),
+            kind: "external".to_string(),
+            mounted: vol.exists(),
+            writable,
+            free_bytes: Some(free),
+            total_bytes: Some(total),
+        });
+    }
+
+    out
 }
 
 #[tauri::command]
 pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
     let settings = load_settings(&app)?;
-    let studio_home = PathBuf::from(&settings.studio_home);
+    let effective = resolve_effective_home(&settings);
+    let studio_home = PathBuf::from(&effective);
     let mut tools = Vec::new();
 
     for (file_name, parsed) in collect_manifests(&app)? {
-        let install_dir = manifest_install_dir(&parsed, &studio_home);
+        let install_dir = manifest_install_dir(&parsed, &studio_home, &settings.tool_overrides);
         let install_dir_str = install_dir.display().to_string();
         let installed_if = parsed.installed_if.clone().unwrap_or_default();
         let mut installed_checks = Vec::new();
@@ -327,6 +585,8 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
                 missing_checks.push(check);
             }
         }
+
+        let relocated = settings.tool_overrides.contains_key(&parsed.id);
 
         tools.push(ToolSummary {
             file_name,
@@ -343,6 +603,7 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
             installed: missing_checks.is_empty() && !installed_checks.is_empty(),
             installed_checks,
             missing_checks,
+            relocated,
         });
     }
     Ok(tools)
@@ -352,18 +613,21 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
 pub fn install_tool(app: AppHandle, tool_id: String) -> Result<ActionResult, String> {
     let (_, manifest) = find_manifest(&app, &tool_id)?;
     let settings = load_settings(&app)?;
-    run_install_script(&app, &tool_id, &manifest, &settings.studio_home)
+    let effective = resolve_effective_home(&settings);
+    run_install_script(&app, &tool_id, &manifest, &effective)
 }
 
-/// Actualiza una herramienta ya instalada re-ejecutando su script de instalación.
-/// Los scripts manejan internamente `git pull` para reposiorios existentes.
 #[tauri::command]
 pub fn update_tool(app: AppHandle, tool_id: String) -> Result<ActionResult, String> {
     let (_, manifest) = find_manifest(&app, &tool_id)?;
     let settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
 
-    // Verificar que la herramienta esté instalada antes de actualizar
-    let install_dir = manifest_install_dir(&manifest, &PathBuf::from(&settings.studio_home));
+    let install_dir = manifest_install_dir(
+        &manifest,
+        &PathBuf::from(&effective),
+        &settings.tool_overrides,
+    );
     let installed_if = manifest.installed_if.clone().unwrap_or_default();
     let is_installed = !installed_if.is_empty()
         && installed_if.iter().all(|c| install_dir.join(c).exists());
@@ -375,11 +639,10 @@ pub fn update_tool(app: AppHandle, tool_id: String) -> Result<ActionResult, Stri
         ));
     }
 
-    run_install_script(&app, &tool_id, &manifest, &settings.studio_home)
-        .map(|mut r| {
-            r.message = format!("Actualización completada para {}", manifest.name);
-            r
-        })
+    run_install_script(&app, &tool_id, &manifest, &effective).map(|mut r| {
+        r.message = format!("Actualización completada para {}", manifest.name);
+        r
+    })
 }
 
 #[tauri::command]
@@ -390,8 +653,9 @@ pub fn start_tool(
 ) -> Result<ActionResult, String> {
     let (_, manifest) = find_manifest(&app, &tool_id)?;
     let settings = load_settings(&app)?;
-    let studio_home = PathBuf::from(&settings.studio_home);
-    let install_dir = manifest_install_dir(&manifest, &studio_home);
+    let effective = resolve_effective_home(&settings);
+    let studio_home = PathBuf::from(&effective);
+    let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
     let run_command = manifest
         .run
         .clone()
@@ -405,7 +669,7 @@ pub fn start_tool(
         ));
     }
 
-    let logs = log_dir(&settings.studio_home);
+    let logs = log_dir(&effective);
     fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
     let log_path = logs.join(format!("{}-run.log", tool_id));
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
@@ -415,13 +679,12 @@ pub fn start_tool(
         .arg("-lc")
         .arg(&run_command)
         .current_dir(&install_dir)
-        .env("CHOFYAI_STUDIO_HOME", &settings.studio_home)
+        .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(log_file_err))
         .spawn()
         .map_err(|e| e.to_string())?;
 
-    // Guardar PID en el registro
     let pid = child.id();
     registry
         .0
@@ -429,9 +692,7 @@ pub fn start_tool(
         .map_err(|e| e.to_string())?
         .insert(tool_id.clone(), pid);
 
-    let opened_url = manifest
-        .default_port
-        .map(|p| format!("http://127.0.0.1:{}", p));
+    let opened_url = manifest.default_port.map(|p| format!("http://127.0.0.1:{}", p));
 
     Ok(ActionResult {
         ok: true,
@@ -441,7 +702,6 @@ pub fn start_tool(
     })
 }
 
-/// Detiene una herramienta en ejecución enviando SIGTERM a su proceso.
 #[tauri::command]
 pub fn stop_tool(
     tool_id: String,
@@ -470,37 +730,32 @@ pub fn stop_tool(
     }
 }
 
-/// Reinicia una herramienta: la detiene y la vuelve a iniciar.
 #[tauri::command]
 pub fn restart_tool(
     app: AppHandle,
     tool_id: String,
     registry: tauri::State<'_, ProcessRegistry>,
 ) -> Result<ActionResult, String> {
-    // Detener si hay un proceso activo
     {
         let mut pids = registry.0.lock().map_err(|e| e.to_string())?;
         if let Some(pid) = pids.remove(&tool_id) {
-            let _ = Command::new("kill")
-                .args(["-TERM", &pid.to_string()])
-                .output();
-            // Esperar brevemente para que el proceso libere el puerto
+            let _ = Command::new("kill").args(["-TERM", &pid.to_string()]).output();
             std::thread::sleep(Duration::from_millis(800));
         }
     }
 
-    // Iniciar de nuevo
     let (_, manifest) = find_manifest(&app, &tool_id)?;
     let settings = load_settings(&app)?;
-    let studio_home = PathBuf::from(&settings.studio_home);
-    let install_dir = manifest_install_dir(&manifest, &studio_home);
+    let effective = resolve_effective_home(&settings);
+    let studio_home = PathBuf::from(&effective);
+    let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
     let run_command = manifest
         .run
         .clone()
         .and_then(|r| r.command)
         .ok_or_else(|| format!("{} no tiene run.command", tool_id))?;
 
-    let logs = log_dir(&settings.studio_home);
+    let logs = log_dir(&effective);
     fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
     let log_path = logs.join(format!("{}-run.log", tool_id));
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
@@ -510,7 +765,7 @@ pub fn restart_tool(
         .arg("-lc")
         .arg(&run_command)
         .current_dir(&install_dir)
-        .env("CHOFYAI_STUDIO_HOME", &settings.studio_home)
+        .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(log_file_err))
         .spawn()
@@ -531,7 +786,6 @@ pub fn restart_tool(
     })
 }
 
-/// Verifica si una herramienta está viva: comprueba el PID y el puerto TCP.
 #[tauri::command]
 pub fn health_check_tool(
     app: AppHandle,
@@ -547,7 +801,6 @@ pub fn health_check_tool(
 
     let running = pid.map(pid_is_alive).unwrap_or(false);
 
-    // Si el PID ya no existe, limpiar el registro
     if pid.is_some() && !running {
         if let Ok(mut pids) = registry.0.lock() {
             pids.remove(&tool_id);
@@ -577,8 +830,9 @@ pub fn health_check_tool(
 pub fn open_tool_directory(app: AppHandle, tool_id: String) -> Result<ActionResult, String> {
     let (_, manifest) = find_manifest(&app, &tool_id)?;
     let settings = load_settings(&app)?;
-    let studio_home = PathBuf::from(&settings.studio_home);
-    let install_dir = manifest_install_dir(&manifest, &studio_home);
+    let effective = resolve_effective_home(&settings);
+    let studio_home = PathBuf::from(&effective);
+    let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
     fs::create_dir_all(&install_dir).map_err(|e| e.to_string())?;
     open_in_system(&install_dir)?;
     Ok(ActionResult {
@@ -592,7 +846,8 @@ pub fn open_tool_directory(app: AppHandle, tool_id: String) -> Result<ActionResu
 #[tauri::command]
 pub fn open_tool_log(app: AppHandle, tool_id: String) -> Result<ActionResult, String> {
     let settings = load_settings(&app)?;
-    let logs = log_dir(&settings.studio_home);
+    let effective = resolve_effective_home(&settings);
+    let logs = log_dir(&effective);
     let candidates = [
         logs.join(format!("{}-run.log", tool_id)),
         logs.join(format!("{}-install.log", tool_id)),
@@ -608,5 +863,128 @@ pub fn open_tool_log(app: AppHandle, tool_id: String) -> Result<ActionResult, St
         message: format!("Log abierto: {}", existing.display()),
         log_path: Some(existing.display().to_string()),
         opened_url: None,
+    })
+}
+
+// ─── Fase D: zona de módulos y traslado ─────────────────────────────────────
+
+/// Mueve el directorio instalado de una herramienta a `target_dir` (absoluto).
+/// Registra el override en settings para que start/install futuros sigan la nueva ruta.
+/// Si el destino existe y no está vacío, falla.
+#[tauri::command]
+pub fn relocate_module(
+    app: AppHandle,
+    tool_id: String,
+    target_dir: String,
+) -> Result<ActionResult, String> {
+    let (_, manifest) = find_manifest(&app, &tool_id)?;
+    let mut settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
+    let current_dir = manifest_install_dir(
+        &manifest,
+        &PathBuf::from(&effective),
+        &settings.tool_overrides,
+    );
+
+    let target = PathBuf::from(target_dir.trim());
+    if !target.is_absolute() {
+        return Err("La ruta de destino debe ser absoluta.".to_string());
+    }
+    if target == current_dir {
+        return Err("El destino es igual al origen.".to_string());
+    }
+    if target.exists() {
+        let empty = fs::read_dir(&target)
+            .map(|mut it| it.next().is_none())
+            .unwrap_or(false);
+        if !empty {
+            return Err(format!(
+                "El destino ya existe y no está vacío: {}",
+                target.display()
+            ));
+        }
+        // está vacío → borrar para que rename funcione limpio
+        let _ = fs::remove_dir(&target);
+    }
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        if !is_writable_dir(parent) {
+            return Err(format!("Sin permisos de escritura en {}", parent.display()));
+        }
+    }
+
+    if current_dir.exists() {
+        // Intento rename (rápido, mismo volumen). Si falla por cross-device, copio + borro.
+        if let Err(_) = fs::rename(&current_dir, &target) {
+            copy_dir_recursive(&current_dir, &target)
+                .map_err(|e| format!("Copia falló: {}", e))?;
+            fs::remove_dir_all(&current_dir).map_err(|e| e.to_string())?;
+        }
+    } else {
+        fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    }
+
+    settings
+        .tool_overrides
+        .insert(tool_id.clone(), target.display().to_string());
+    save_settings_to_disk(&app, &settings)?;
+
+    Ok(ActionResult {
+        ok: true,
+        message: format!("{} reubicado en {}", manifest.name, target.display()),
+        log_path: None,
+        opened_url: None,
+    })
+}
+
+/// Quita un override y vuelve a la ruta por defecto (sin mover archivos automáticamente).
+#[tauri::command]
+pub fn clear_module_override(app: AppHandle, tool_id: String) -> Result<AppSettings, String> {
+    let mut settings = load_settings(&app)?;
+    settings.tool_overrides.remove(&tool_id);
+    save_settings_to_disk(&app, &settings)?;
+    Ok(settings)
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_recursive(&from, &to)?;
+        } else if ty.is_symlink() {
+            let target = fs::read_link(&from)?;
+            #[cfg(unix)]
+            std::os::unix::fs::symlink(&target, &to)?;
+        } else {
+            fs::copy(&from, &to)?;
+        }
+    }
+    Ok(())
+}
+
+// ─── Stats del equipo ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_system_stats(app: AppHandle) -> Result<SystemStats, String> {
+    let settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
+    let disk_path = PathBuf::from(&effective);
+    let (total, free) = read_disk_usage(&disk_path);
+    let mem_total = read_mem_total();
+    let mem_used = read_mem_used();
+    Ok(SystemStats {
+        cpu_usage: read_cpu_usage(),
+        cpu_cores: read_cpu_cores(),
+        mem_used_bytes: mem_used,
+        mem_total_bytes: mem_total,
+        disk_free_bytes: free,
+        disk_total_bytes: total,
+        disk_path: effective,
+        uptime_secs: read_uptime(),
+        load_avg_1m: read_load_avg(),
     })
 }

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemSummary {
@@ -6,7 +7,12 @@ pub struct SystemSummary {
     pub app_version: String,
     pub os: String,
     pub arch: String,
+    /// Path solicitado por el usuario en settings.json (puede no existir).
     pub studio_home: String,
+    /// Path realmente usado: studio_home si está disponible, fallback al disco principal si no.
+    pub studio_home_effective: String,
+    /// Si studio_home_effective != studio_home (volumen externo desmontado, etc.).
+    pub using_fallback: bool,
     pub settings_file: String,
 }
 
@@ -26,20 +32,27 @@ pub struct ToolSummary {
     pub installed: bool,
     pub installed_checks: Vec<String>,
     pub missing_checks: Vec<String>,
+    /// Si esta herramienta tiene un override de ubicación (zona modules/ o ruta custom).
+    pub relocated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub studio_home: String,
+    /// Override por tool_id → ruta absoluta del directorio de instalación.
+    /// Permite trasladar módulos sin cambiar el manifest.
+    #[serde(default)]
+    pub tool_overrides: HashMap<String, String>,
+    /// Path alternativo cuando el principal no está disponible. Si vacío → ~/ChofyAIStudio.
+    #[serde(default)]
+    pub fallback_home: Option<String>,
 }
 
 /// Resultado de un health check sobre una herramienta.
 #[derive(Debug, Clone, Serialize)]
 pub struct HealthResult {
     pub tool_id: String,
-    /// El PID está registrado (el proceso fue iniciado desde la app).
     pub running: bool,
-    /// El puerto TCP responde (el servidor HTTP está activo).
     pub port_open: bool,
     pub pid: Option<u32>,
 }
@@ -49,4 +62,30 @@ pub struct HealthResult {
 pub struct InstallEvent {
     pub tool_id: String,
     pub line: String,
+}
+
+/// Información de un volumen disponible (para selector de Studio Home).
+#[derive(Debug, Clone, Serialize)]
+pub struct VolumeCandidate {
+    pub path: String,
+    pub label: String,
+    pub kind: String, // "home" | "external" | "custom"
+    pub mounted: bool,
+    pub writable: bool,
+    pub free_bytes: Option<u64>,
+    pub total_bytes: Option<u64>,
+}
+
+/// Estadísticas en vivo del equipo para la barra inferior.
+#[derive(Debug, Clone, Serialize)]
+pub struct SystemStats {
+    pub cpu_usage: f32,         // 0..100
+    pub cpu_cores: u32,
+    pub mem_used_bytes: u64,
+    pub mem_total_bytes: u64,
+    pub disk_free_bytes: u64,
+    pub disk_total_bytes: u64,
+    pub disk_path: String,
+    pub uptime_secs: u64,
+    pub load_avg_1m: f32,
 }
