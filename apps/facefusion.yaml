@@ -2,6 +2,7 @@ id: facefusion
 name: FaceFusion
 category: video
 runtime: python
+python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
 description: Face swap y utilidades de video/cara.
 platforms:
   - mac-arm64

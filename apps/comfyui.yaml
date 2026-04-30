@@ -2,6 +2,7 @@ id: comfyui
 name: ComfyUI
 category: image
 runtime: python
+python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
 description: Workflows visuales para imagen (Stable Diffusion, Flux, etc.) con MPS/Apple Silicon.
 platforms:
   - mac-arm64

@@ -9,13 +9,16 @@
 
 ## 📊 Vista rápida
 
-| # | Herramienta | Categoría | Puerto | Runtime | Script |
-|:-:|:---|:---|:---:|:---:|:---|
-| 1 | 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | `python` | `install-qwen3-tts.sh` |
-| 2 | 🎙️ **whisper.cpp** | ASR | `8178` | `binary` | `install-whispercpp.sh` |
-| 3 | 🎬 **FaceFusion** | Video / Cara | — | `python` | `install-facefusion.sh` |
-| 4 | 🎵 **AceForge** | Música | `5056` | `python` | `install-aceforge.sh` |
-| 5 | 🖼️ **ComfyUI** | Imagen | `8188` | `python` | `install-comfyui.sh` |
+| # | Herramienta | Categoría | Puerto | Runtime | Acelerable con uv ⚡ | Script |
+|:-:|:---|:---|:---:|:---:|:---:|:---|
+| 1 | 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | `python` | ✅ | `install-qwen3-tts.sh` |
+| 2 | 🎙️ **whisper.cpp** | ASR | `8178` | `binary` | — | `install-whispercpp.sh` |
+| 3 | 🎬 **FaceFusion** | Video / Cara | — | `python` | ✅ | `install-facefusion.sh` |
+| 4 | 🎵 **AceForge** | Música | `5056` | `python` | ✅ | `install-aceforge.sh` |
+| 5 | 🖼️ **ComfyUI** | Imagen | `8188` | `python` | ✅ | `install-comfyui.sh` |
+
+> [!TIP]
+> Las 4 herramientas Python crean su `venv` con `uv` cuando está disponible y caen a `python -m venv` + `pip` si no — sin cambios para el usuario. `whisper.cpp` es nativo (CMake/Metal) y no necesita Python.
 
 ---
 

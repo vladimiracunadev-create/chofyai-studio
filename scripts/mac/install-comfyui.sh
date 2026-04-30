@@ -25,8 +25,17 @@ for bin in git python3; do
   fi
 done
 
-PYTHON_BIN="$(command -v python3.11 || command -v python3.10 || command -v python3)"
+PYTHON_BIN="$(detect_python python3.11 python3.10 python3)" || {
+  echo "ERROR: no encontré una versión usable de Python"
+  exit 1
+}
 echo "Usando Python: $PYTHON_BIN ($($PYTHON_BIN --version))"
+
+if uv_bin="$(detect_uv)"; then
+  echo "[uv] Detectado: $uv_bin ($($uv_bin --version))"
+else
+  echo "[pip] uv no disponible — usando python -m venv + pip clásico"
+fi
 
 if [ ! -d "$SOURCE_DIR/.git" ]; then
   echo "Clonando ComfyUI..."
@@ -36,23 +45,16 @@ else
   git -C "$SOURCE_DIR" pull --ff-only || true
 fi
 
-if [ ! -d "$VENV_DIR" ]; then
-  echo "Creando entorno virtual..."
-  "$PYTHON_BIN" -m venv "$VENV_DIR"
-fi
-
-# shellcheck disable=SC1091
-source "$VENV_DIR/bin/activate"
-
-python -m pip install --upgrade pip wheel setuptools
+create_pyenv "$VENV_DIR" "$PYTHON_BIN"
+pip_upgrade_base "$VENV_DIR"
 
 # PyTorch con MPS (Apple Silicon)
 echo "Instalando PyTorch (MPS para Apple Silicon)..."
-pip install --upgrade torch torchvision torchaudio
+pip_install "$VENV_DIR" --upgrade torch torchvision torchaudio
 
 # Requisitos de ComfyUI
 if [ -f "$SOURCE_DIR/requirements.txt" ]; then
-  pip install -r "$SOURCE_DIR/requirements.txt"
+  py_install_requirements "$VENV_DIR" "$SOURCE_DIR/requirements.txt"
 fi
 
 # Enlaces simbólicos a las carpetas externas para que ComfyUI las vea
@@ -67,4 +69,5 @@ echo
 echo "COMFYUI_INSTALL_OK"
 echo "Studio Home: $STUDIO_HOME"
 echo "Tool Home: $INSTALL_DIR"
+echo "Python manager: $(log_python_manager "$VENV_DIR")"
 echo "Run Server: source $VENV_DIR/bin/activate && cd $SOURCE_DIR && python main.py --listen 127.0.0.1 --port 8188"

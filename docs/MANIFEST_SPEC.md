@@ -77,6 +77,7 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 |---|---|---|
 | `recommended` | `bool` | Si `true`, muestra un badge "Recomendada" en la UI. |
 | `default_port` | `int` | Puerto donde levanta el servidor. Usado para healthchecks y para mostrar en UI. |
+| `python_manager` | `enum` | Solo cuando `runtime: python`. Valores: `auto` (default — uv si existe, pip si no), `uv` (forzado), `pip` (forzado). |
 | `install` | `list[string]` | Pasos declarativos de instalación (solo documentación; el script real es `install_script`). |
 | `models` | `list[string]` | Modelos que se descargan. Referencia para documentación. |
 | `healthcheck` | `object` | Verificación activa de disponibilidad. |
@@ -84,7 +85,8 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 | `healthcheck.url` | `string` | URL de healthcheck. Debe responder 200 cuando la tool está lista. |
 | `notes` | `list[string]` | Notas técnicas para desarrolladores. No aparece en la UI. |
 
----
+> [!NOTE]
+> El campo `python_manager` es **declarativo / informativo** en esta fase. La selección real (uv vs pip) se hace en runtime dentro del script via `common.sh::create_pyenv`. Pasar `python_manager: pip` en el manifest no impide que el script use uv — para forzar pip exporta `CHOFYAI_DISABLE_UV=1` antes de instalar.
 
 ---
 

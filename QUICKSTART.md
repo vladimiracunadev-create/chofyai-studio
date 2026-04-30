@@ -10,10 +10,13 @@
 ## 0️⃣ Requisitos del sistema
 
 ```bash
-brew install node@22 cmake ffmpeg git python@3.11
+brew install node@22 cmake ffmpeg git python@3.11 uv
 xcode-select --install                                    # toolchain Apple
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust
 ```
+
+> [!TIP]
+> **`uv` es opcional pero recomendado** — acelera 10-100× la instalación de herramientas Python (Qwen3-TTS, FaceFusion, AceForge, ComfyUI). Si no lo instalas, los scripts caen a `python -m venv` + `pip` clásico sin problema. **uv y pip coexisten — uno no anula al otro.**
 
 ---
 
@@ -111,6 +114,32 @@ Volúmenes en exFAT/HFS+ generan archivos AppleDouble (`._*`) que rompen `cargo 
 
 > [!TIP]
 > Si quieres una experiencia 100% limpia, formatea un volumen externo a APFS o crea una imagen APFS dentro del externo con `bash scripts/mac/mount-apfs.sh`.
+
+---
+
+## ⚡ uv como acelerador de instalaciones Python
+
+| Sin uv | Con uv |
+|:---|:---|
+| `python -m venv` (~5 s) | `uv venv` (~0.5 s) |
+| `pip install torch` (~60 s) | `uv pip install torch` (~5-10 s) |
+| Resolución secuencial | Resolución paralela + caché global |
+
+`common.sh` provee helpers que detectan `uv` y lo usan; si no está, caen a pip clásico:
+
+```bash
+# Helpers disponibles en cualquier install-*.sh
+create_pyenv "$ENV_DIR" "$PYTHON_BIN"            # uv venv O python -m venv
+pip_install "$ENV_DIR" torch torchvision         # uv pip install O pip install
+py_install_requirements "$ENV_DIR" requirements.txt
+```
+
+Para desactivar uv puntualmente (forzar pip):
+
+```bash
+export CHOFYAI_DISABLE_UV=1
+bash scripts/mac/install-comfyui.sh
+```
 
 ---
 

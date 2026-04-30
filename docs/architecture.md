@@ -80,7 +80,7 @@ flowchart TD
 
 | Script | Función |
 |:---|:---|
-| `common.sh` | `resolve_studio_home`, PATH para Homebrew |
+| `common.sh` | `resolve_studio_home`, PATH Homebrew, helpers `create_pyenv` / `pip_install` con auto-detección uv ⚡ |
 | `install-*.sh` | Clona/compila/configura cada herramienta |
 | `doctor.sh` | Diagnóstico de entorno |
 | `clean-appledouble.sh` | Limpia `._*` (volúmenes no-APFS) |

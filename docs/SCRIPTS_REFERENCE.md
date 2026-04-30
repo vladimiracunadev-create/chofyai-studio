@@ -9,6 +9,26 @@ Todos los scripts operativos se encuentran en `scripts/mac/`. Se ejecutan desde 
 
 ---
 
+## 🧰 `common.sh` — helpers compartidos
+
+Todos los scripts hacen `source "$SCRIPT_DIR/common.sh"` para reutilizar funciones de path resolution y manejo de Python con soporte transparente de **uv**.
+
+| Función | Propósito |
+|:---|:---|
+| `resolve_studio_home <default> <settings>` | Resuelve `studio_home` (env > settings.json > default) |
+| `detect_python [candidates…]` | Devuelve el primer Python disponible |
+| `detect_uv` | Devuelve el path de `uv` si está instalado |
+| `create_pyenv <env_dir> [python]` | Crea venv usando `uv venv` si está disponible, si no `python -m venv` |
+| `pip_install <env_dir> <pkg…>` | Instala paquetes con `uv pip install` o `pip install` |
+| `py_install_requirements <env_dir> <req.txt>` | Instala desde requirements |
+| `pip_upgrade_base <env_dir>` | Actualiza pip/setuptools/wheel |
+| `log_python_manager <env_dir>` | Imprime `"uv"` o `"pip"` según el venv |
+
+> [!TIP]
+> **uv y pip son intercambiables.** El helper detecta `uv` y lo usa por velocidad; si no existe, cae a pip sin cambiar de comportamiento. Para forzar pip clásico: `export CHOFYAI_DISABLE_UV=1` antes de invocar el script.
+
+---
+
 ## 🩺 Scripts de sistema
 
 ### 🚀 `bootstrap.sh`
@@ -231,10 +251,11 @@ bash scripts/mac/clean-appledouble.sh
 Todos los scripts de instalación respetan las siguientes variables:
 
 | Variable | Default | Descripción |
-|---|---|---|
+|:---|:---|:---|
 | `CHOFYAI_STUDIO_HOME` | Leído desde `storage/state/settings.json` (o app data dir si está empaquetada) | Directorio raíz efectivo (post-fallback). Tauri la inyecta antes de spawnar cada script. |
 | `STUDIO_HOME` | Alias compatible con `CHOFYAI_STUDIO_HOME` | Honrado por `common.sh::resolve_studio_home`. |
 | `LOG_DIR` | `$STUDIO_HOME/logs` | Donde se escriben los logs de instalación. |
+| `CHOFYAI_DISABLE_UV` | `0` | Si vale `1`, fuerza `python -m venv` + `pip` aunque `uv` esté instalado. |
 
 ---
 

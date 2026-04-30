@@ -28,7 +28,7 @@
 | ffmpeg | 8.1 | ✅ |
 | python 3.10 | 3.10.20 | ✅ |
 | python 3.11 | 3.11.15 | ✅ |
-| uv | 0.11.3 | ✅ |
+| uv ⚡ | 0.9.18 | ✅ (opcional — pip clásico si falta) |
 | git | 2.50.1 | ✅ |
 
 ---
@@ -79,13 +79,13 @@ Efectivo:    /Volumes/ORICO/ChofyIA/ChofyAIStudio  (fallback: ~/ChofyAIStudio si
 
 ### 🛠️ Herramientas con integración operativa
 
-| Herramienta | Categoría | Puerto | Requisitos |
-|:---|:---|:---:|:---|
-| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | python 3.10, uv |
-| 🎙️ **whisper.cpp** | ASR | `8178` | cmake, curl |
-| 🎬 **FaceFusion** | Video / Cara | — | ffmpeg, python 3.x |
-| 🎵 **AceForge** | Música | `5056` | ffmpeg, python 3.x |
-| 🖼️ **ComfyUI** | Imagen | `8188` | python 3.11/3.10, PyTorch MPS |
+| Herramienta | Categoría | Puerto | Requisitos | uv ⚡ |
+|:---|:---|:---:|:---|:---:|
+| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | python 3.10 | ✅ |
+| 🎙️ **whisper.cpp** | ASR | `8178` | cmake, curl | — |
+| 🎬 **FaceFusion** | Video / Cara | — | ffmpeg, python 3.x | ✅ |
+| 🎵 **AceForge** | Música | `5056` | ffmpeg, python 3.x | ✅ |
+| 🖼️ **ComfyUI** | Imagen | `8188` | python 3.11/3.10, PyTorch MPS | ✅ |
 
 ---
 

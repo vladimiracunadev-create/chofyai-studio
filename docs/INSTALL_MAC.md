@@ -26,10 +26,12 @@ Levantar ChofyAI Studio en un Mac Apple Silicon y dejar lista la base para insta
 | ffmpeg | Cualquier reciente | `brew install ffmpeg` |
 | python@3.10 | 3.10.x | `brew install python@3.10` |
 | python@3.11 | 3.11.x | `brew install python@3.11` |
-| uv | 0.x+ | `brew install uv` |
+| uv ⚡ | 0.x+ (opcional) | `brew install uv` — instalaciones Python 10-100× más rápidas |
 | git | Cualquier reciente | Incluido con Xcode CLT |
 
 > **Nota importante:** Los scripts de instalación de herramientas buscan los binarios en `/opt/homebrew/bin`. Si instalas con `rustup` o `pyenv` en lugar de Homebrew, asegúrate de que las rutas estén disponibles.
+
+⚡ **uv y pip coexisten** — ninguno anula al otro. Si `uv` está disponible, los scripts lo usan (10-100× más rápido); si no, caen a `python -m venv` + `pip` clásico sin problema. Puedes desactivar `uv` puntualmente con `CHOFYAI_DISABLE_UV=1`.
 
 ---
 

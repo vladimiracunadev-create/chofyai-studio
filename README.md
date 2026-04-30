@@ -8,6 +8,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2.11-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![uv](https://img.shields.io/badge/uv-supported-DE5FE9?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
 [![Versión](https://img.shields.io/badge/versión-0.4.0--dev-7c5cff)](CHANGELOG.md)
 [![Status](https://img.shields.io/badge/Estado-Fase%204%20activa-2d7a66)](docs/STATUS.md)
 
@@ -188,6 +189,7 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 | 🦀 Backend | Rust | `1.94+` |
 | ⚛️ UI | React + TypeScript + Vite | `18` / `5` |
 | 📜 Scripts | Bash + Python | `3.10/3.11` |
+| ⚡ Python pkg mgr | uv (con fallback a pip) | `0.9+` |
 | 📐 Manifests | YAML | — |
 
 ---

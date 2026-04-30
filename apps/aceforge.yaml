@@ -2,6 +2,7 @@ id: aceforge
 name: AceForge
 category: music
 runtime: python
+python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
 description: Workstation musical local-first para Apple Silicon basada en ACE-Step.
 platforms:
   - mac-arm64

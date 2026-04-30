@@ -25,6 +25,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 - **`QUICKSTART.md`** en raíz con guía rápida de arranque, fallback, módulos y empaquetado.
 - **Build `.app` ad-hoc** verificado sin Apple Developer ID (uso personal): `npm run tauri:build:app`.
 
+### ⚡ Added (uv como acelerador opcional para herramientas Python)
+
+- **`common.sh` extendido** con helpers `detect_python`, `detect_uv`, `create_pyenv`, `pip_install`, `py_install_requirements`, `pip_upgrade_base`, `log_python_manager`. La detección es **transparente**: si `uv` está disponible se usa (10-100× más rápido); si no, cae a `python -m venv` + `pip` clásico. **uv y pip coexisten — ninguno anula al otro.**
+- **Refactorizados** `install-aceforge.sh`, `install-facefusion.sh`, `install-comfyui.sh` para usar los nuevos helpers. Cada script ahora imprime `Python manager: uv|pip` al final, y un marker `.chofyai-uv` en el venv permite recordar el manager elegido.
+- **Variable `CHOFYAI_DISABLE_UV=1`** fuerza el path clásico (pip) aunque `uv` esté instalado — útil para reproducibilidad estricta o debugging.
+- **Manifest opcional `python_manager: auto|uv|pip`** documenta la intención por herramienta. Añadido a los 4 manifests Python (`aceforge`, `facefusion`, `comfyui`, `qwen3-tts`).
+- **`bootstrap.sh` y `doctor.sh`** detectan e informan sobre `uv` con instrucciones de instalación cuando falta.
+
 ### 🔄 Changed
 
 - `@tauri-apps/api` actualizado a `^2.11.0` para alinear con el crate `tauri 2.11`.
