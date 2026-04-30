@@ -1,4 +1,9 @@
-# FaceFusion - fase 2
+# 🎬 FaceFusion — bitácora Fase 2
+
+> **Bitácora histórica de la integración Fase 2.** Para el estado actual ver [`STATUS.md`](STATUS.md) y [`TOOLS.md`](TOOLS.md).
+
+[![Fase](https://img.shields.io/badge/Fase-2%20histórica-informational)](../ROADMAP.md)
+
 
 ## Qué queda operativo
 

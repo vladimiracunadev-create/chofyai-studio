@@ -1,12 +1,17 @@
-# Referencia de Scripts macOS — ChofyAI Studio
+# 📜 Referencia de Scripts macOS
+
+> **Catálogo completo de los scripts Bash que orquestan instalación, diagnóstico y limpieza.**
+
+[![Bash](https://img.shields.io/badge/Bash-5+-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
+![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-black?logo=apple&logoColor=white)
 
 Todos los scripts operativos se encuentran en `scripts/mac/`. Se ejecutan desde la raíz del repo o desde la UI del launcher.
 
 ---
 
-## Scripts de sistema
+## 🩺 Scripts de sistema
 
-### `bootstrap.sh`
+### 🚀 `bootstrap.sh`
 
 **Propósito**: Verifica que el entorno de desarrollo tiene los prerequisitos instalados.
 
@@ -24,7 +29,7 @@ bash scripts/mac/bootstrap.sh
 
 ---
 
-### `preflight-build.sh`
+### ✈️ `preflight-build.sh`
 
 **Propósito**: Verifica prerequisitos específicos para generar el build de producción (`.app` / `.dmg`).
 
@@ -40,7 +45,7 @@ bash scripts/mac/preflight-build.sh
 
 ---
 
-### `doctor.sh`
+### 🩺 `doctor.sh`
 
 **Propósito**: Diagnóstico del `studio_home` y de las herramientas instaladas. Muestra estado real de cada herramienta según sus `installed_if`.
 
@@ -62,7 +67,7 @@ bash scripts/mac/doctor.sh "/ruta/a/tu/studio_home"
 
 ---
 
-### `cleanup-tool.sh`
+### 🧹 `cleanup-tool.sh`
 
 **Propósito**: Elimina la instalación de una herramienta específica dentro de `studio_home`, manteniendo los logs.
 
@@ -91,7 +96,7 @@ bash scripts/mac/cleanup-tool.sh "/Users/tu_usuario/ChofyAIStudio" "whispercpp"
 
 ---
 
-## Scripts de instalación por herramienta
+## 🛠️ Scripts de instalación por herramienta
 
 Todos los scripts de instalación comparten la misma estructura:
 
@@ -101,7 +106,7 @@ Todos los scripts de instalación comparten la misma estructura:
 4. Crean el entorno (`venv`, compilación, etc.).
 5. Registran el resultado en `$STUDIO_HOME/logs/<tool_id>.log`.
 
-### `install-qwen3-tts.sh`
+### 🎤 `install-qwen3-tts.sh`
 
 | Campo | Valor |
 |---|---|
@@ -122,7 +127,7 @@ bash scripts/mac/install-qwen3-tts.sh
 
 ---
 
-### `install-whispercpp.sh`
+### 🎙️ `install-whispercpp.sh`
 
 | Campo | Valor |
 |---|---|
@@ -143,7 +148,7 @@ bash scripts/mac/install-whispercpp.sh
 
 ---
 
-### `install-facefusion.sh`
+### 🎬 `install-facefusion.sh`
 
 | Campo | Valor |
 |---|---|
@@ -164,7 +169,7 @@ bash scripts/mac/install-facefusion.sh
 
 ---
 
-### `install-aceforge.sh`
+### 🎵 `install-aceforge.sh`
 
 | Campo | Valor |
 |---|---|
@@ -185,7 +190,7 @@ bash scripts/mac/install-aceforge.sh
 
 ---
 
-### `install-comfyui.sh`
+### 🖼️ `install-comfyui.sh`
 
 | Campo | Valor |
 |---|---|
@@ -206,7 +211,7 @@ bash scripts/mac/install-comfyui.sh
 
 ---
 
-### `clean-appledouble.sh`
+### 🧼 `clean-appledouble.sh`
 
 | Campo | Valor |
 |---|---|
@@ -221,7 +226,7 @@ bash scripts/mac/clean-appledouble.sh
 
 ---
 
-## Variables de entorno comunes
+## ⚙️ Variables de entorno comunes
 
 Todos los scripts de instalación respetan las siguientes variables:
 
@@ -233,7 +238,7 @@ Todos los scripts de instalación respetan las siguientes variables:
 
 ---
 
-## Estructura de logs
+## 📋 Estructura de logs
 
 Cada herramienta genera un log en:
 

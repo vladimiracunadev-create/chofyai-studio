@@ -1,91 +1,139 @@
-# Empaquetado de ChofyAI Studio
+# 📦 Empaquetado de ChofyAI Studio
 
-## Objetivo
+> **Generar `.app` y `.dmg` para macOS — del build local al canal de releases.**
+
+[![Tauri Bundle](https://img.shields.io/badge/Tauri-Bundle-FFC131?logo=tauri&logoColor=black)](https://tauri.app/v2/develop/distribute/macos)
+![Apple Silicon](https://img.shields.io/badge/Target-aarch64--apple--darwin-black?logo=apple&logoColor=white)
+
+---
+
+## 🎯 Objetivo
 
 Generar un `.app` y un `.dmg` desde tu Mac para uso local o distribución controlada.
 
-## Qué quedó preparado
+---
 
-- configuración Tauri para bundle macOS
-- íconos base en `src-tauri/icons/`
-- `Info.plist`
-- `Entitlements.plist`
-- script de preflight
-- script de build release
-- lectura de manifests y scripts desde recursos empaquetados
-- escritura de settings en un directorio de datos de usuario en vez del bundle
+## ✅ Qué quedó preparado
 
-## Requisitos en tu Mac
+- ⚙️ Configuración Tauri para bundle macOS (`tauri.conf.json`, `tauri.macos.conf.json`)
+- 🎨 Íconos base en `src-tauri/icons/`
+- 📋 `Info.plist` y `Entitlements.plist`
+- ✈️ Script de preflight (`scripts/mac/preflight-build.sh`)
+- 🚀 Script de build release (`scripts/mac/build-release.sh`)
+- 📐 Lectura de manifests y scripts desde recursos empaquetados
+- 💾 Escritura de settings en directorio de datos de usuario (no en el bundle)
+
+---
+
+## 📋 Requisitos en tu Mac
 
 Instala y verifica:
 
 ```bash
 xcode-select --install
-node -v
-npm -v
-cargo --version
+node -v        # 22.x o superior
+npm -v         # 10.x+
+cargo --version  # 1.76+
 ```
 
-## Preflight
+---
+
+## ✈️ Preflight
 
 ```bash
 npm run preflight:mac
 ```
 
-## Build completo
+---
+
+## 🚀 Build completo
 
 ```bash
 npm ci
 npm run package:mac
 ```
 
-## Comandos disponibles
+---
 
-```bash
-npm run tauri:build:app
-npm run tauri:build:dmg
-npm run tauri:build:mac
-npm run package:mac
-```
+## 🛠️ Comandos disponibles
 
-## Salidas esperadas
+| Comando | Salida |
+|:---|:---|
+| `npm run tauri:build:app` | Solo `.app` |
+| `npm run tauri:build:dmg` | Solo `.dmg` |
+| `npm run tauri:build:mac` | `.app` + `.dmg` con config `tauri.macos.conf.json` |
+| `npm run package:mac` | Pipeline completo `build-release.sh` |
+
+---
+
+## 📂 Salidas esperadas
+
+> [!IMPORTANT]
+> El `target-dir` está redirigido a `/tmp/chofyai-target` por [`.cargo/config.toml`](../.cargo/config.toml) para evitar archivos AppleDouble (`._*`) en volúmenes externos no-APFS.
 
 ```text
-src-tauri/target/release/bundle/macos/
-src-tauri/target/release/bundle/dmg/
+/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app
+/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg
 ```
 
-## Qué no hace esta fase
+---
 
-- no firma la app
-- no notariza la app
-- no publica releases automáticamente
+## 🚫 Qué no hace esta fase
 
-## Tarea Pendiente: Automatización CI/CD con tu Mac Mini
+- ❌ No **firma** la app (requiere Apple Developer ID)
+- ❌ No **notariza** la app (requiere `notarytool`)
+- ❌ No publica releases automáticamente (falta self-hosted runner)
 
-Actualmente, el workflow `.github/workflows/release.yml` solo crea las notas de release, pero **no genera el binario `.app/.dmg`**, ya que eso requiere un entorno macOS Apple Silicon.
+---
 
-Para automatizar esto sin costo, **es necesario registrar tu Mac Mini física como un "Self-Hosted Runner" de GitHub**.
+## 🤖 Pendiente: Automatización CI/CD con tu Mac Mini
 
-### Pasos a futuro
+> Actualmente `.github/workflows/release.yml` solo crea las notas de release; **no genera el binario `.app/.dmg`** porque eso requiere un entorno macOS Apple Silicon.
 
-1. En GitHub, ve a **Settings > Actions > Runners > New self-hosted runner**.
+Para automatizar esto sin costo: **registrar tu Mac Mini física como Self-Hosted Runner de GitHub**.
+
+### 🪜 Pasos
+
+1. En GitHub: **Settings → Actions → Runners → New self-hosted runner**.
 2. Selecciona **macOS** y **ARM64**.
-3. Sigue las instrucciones para descargar e instalar el agente en tu Mac Mini.
-4. Modifica `.github/workflows/release.yml` para usar `runs-on: self-hosted` y añadir los pasos de `npm run package:mac`.
+3. Descarga e instala el agente en tu Mac Mini siguiendo las instrucciones.
+4. Modifica `.github/workflows/release.yml`:
 
-Con esto, cada vez que dispares un Release desde GitHub, **tu Mac Mini** recibirá la orden, compilará la app en 1-2 minutos (usando su caché local) y subirá el `.dmg` al release automáticamente.
+   ```yaml
+   runs-on: self-hosted
+   steps:
+     - uses: actions/checkout@v4
+     - run: npm ci
+     - run: npm run package:mac
+     - uses: actions/upload-artifact@v4
+       with:
+         name: chofyai-studio-mac
+         path: /tmp/chofyai-target/release/bundle/dmg/*.dmg
+   ```
 
-## Distribución interna vs distribución profesional
+Con esto, cada Release dispara el build en tu Mac Mini, compila en 1–2 min (con caché local) y sube el `.dmg` al release automáticamente.
 
-### Interna / pruebas personales
+---
 
-Puedes generar `.app` / `.dmg` y probarlo localmente.
+## 🎨 Distribución interna vs profesional
 
-### Profesional / terceros
+### 🏠 Interna / pruebas personales
 
-Necesitarás:
+| Acción | Comando |
+|:---|:---|
+| 🆓 Build ad-hoc (sin firma) | `npm run tauri:build:app` |
+| 📂 Copiar a Aplicaciones | `cp -R "/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app" /Applications/` |
+| 🔓 Permitir Gatekeeper | Click derecho → **Abrir** la primera vez |
 
-- cuenta Apple Developer
-- firma (Developer ID Application)
-- notarización alcatraz/notarytool
+### 🏢 Profesional / distribución a terceros
+
+> [!WARNING]
+> Para distribución pública necesitarás credenciales de Apple Developer ($99 USD/año).
+
+| Paso | Herramienta |
+|:---|:---|
+| 1. Cuenta de desarrollador | [Apple Developer](https://developer.apple.com/) |
+| 2. Firma | Developer ID Application certificate |
+| 3. Notarización | `xcrun notarytool` |
+| 4. Stapling | `xcrun stapler staple` |
+| 5. Canal de releases | GitHub Releases via self-hosted runner |

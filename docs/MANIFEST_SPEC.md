@@ -1,10 +1,15 @@
-# Especificación de Manifests YAML — ChofyAI Studio
+# 📐 Especificación de Manifests YAML
 
-Cada herramienta integrada en ChofyAI Studio se declara mediante un archivo YAML en el directorio `apps/`.
+> **Cómo declarar una herramienta para que ChofyAI Studio la reconozca.**
+
+[![Format](https://img.shields.io/badge/Format-YAML-CB171E?logo=yaml&logoColor=white)](https://yaml.org)
+[![Location](https://img.shields.io/badge/Location-apps%2F-7c5cff)](../apps/)
+
+Cada herramienta integrada en ChofyAI Studio se declara mediante un archivo YAML en el directorio [`apps/`](../apps/).
 
 ---
 
-## Estructura de un manifest
+## 📋 Estructura de un manifest
 
 ```yaml
 # apps/mi-herramienta.yaml
@@ -47,9 +52,11 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 
 ---
 
-## Campos en detalle
+---
 
-### Campos obligatorios
+## 🔍 Campos en detalle
+
+### ✅ Campos obligatorios
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -64,7 +71,7 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 | `run.command` | `string` | Comando para iniciar la herramienta. Ejecutado desde `studio_home_subdir`. |
 | `installed_if` | `list[string]` | Condiciones de instalación: rutas relativas a `studio_home_subdir` que deben existir. |
 
-### Campos opcionales
+### 🟡 Campos opcionales
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -79,7 +86,9 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 
 ---
 
-## Categorías disponibles
+---
+
+## 🏷️ Categorías disponibles
 
 | Valor | Uso |
 |---|---|
@@ -91,7 +100,9 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 
 ---
 
-## Runtimes disponibles
+---
+
+## ⚙️ Runtimes disponibles
 
 | Valor | Descripción |
 |---|---|
@@ -102,7 +113,9 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 
 ---
 
-## Ejemplo completo anotado: whispercpp.yaml
+---
+
+## 📝 Ejemplo completo anotado: `whispercpp.yaml`
 
 ```yaml
 id: whispercpp
@@ -135,7 +148,9 @@ notes:
 
 ---
 
-## Cómo añadir una herramienta nueva
+---
+
+## ➕ Cómo añadir una herramienta nueva
 
 1. Crea `apps/<id>.yaml` siguiendo esta especificación.
 2. Define al menos un `installed_if` que verifique un archivo real post-instalación.

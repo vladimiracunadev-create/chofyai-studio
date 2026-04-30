@@ -1,72 +1,87 @@
-# Política de seguridad — ChofyAI Studio
+# 🛡️ Política de seguridad
 
-## Versiones soportadas
+> **Cómo reportar vulnerabilidades en ChofyAI Studio.**
 
-| Versión | Soporte de seguridad |
-|---|---|
-| 0.2.x (actual) | ✅ Activa |
-| 0.1.x | ⚠️ Solo bugs críticos |
-| < 0.1.0 | ❌ Sin soporte |
+[![Security](https://img.shields.io/badge/Security-Responsible%20Disclosure-2d7a66?logo=shieldsdotio&logoColor=white)](https://github.com/vladimiracunadev-create/chofyai-studio/security)
 
 ---
 
-## Alcance
+## 📦 Versiones soportadas
+
+| Versión | Soporte de seguridad |
+|:---:|:---:|
+| `0.4.x` (Fase 4 actual) | ✅ Activa |
+| `0.3.x` | ⚠️ Solo bugs críticos |
+| `< 0.3.0` | ❌ Sin soporte |
+
+---
+
+## 🎯 Alcance
 
 Esta política cubre **exclusivamente el código de ChofyAI Studio**: el launcher Tauri/Rust, el frontend React/TypeScript y los scripts Bash incluidos en este repositorio.
 
-**Fuera de alcance:**
+### ❌ Fuera de alcance
 
-- Las herramientas de IA de terceros (Qwen3-TTS, whisper.cpp, FaceFusion, AceForge, ComfyUI). Reporta vulnerabilidades en sus repositorios originales.
-- Modelos de ML descargados durante la instalación.
-- Configuraciones del sistema operativo o del entorno Python del usuario.
+- 🤖 Las herramientas de IA de terceros (Qwen3-TTS, whisper.cpp, FaceFusion, AceForge, ComfyUI). Reporta vulnerabilidades en sus repositorios originales.
+- 📦 Modelos de ML descargados durante la instalación.
+- ⚙️ Configuraciones del sistema operativo o del entorno Python del usuario.
 
 ---
 
-## Cómo reportar una vulnerabilidad
+## 🚨 Cómo reportar una vulnerabilidad
 
-**No abras un issue público** para vulnerabilidades de seguridad.
+> [!WARNING]
+> **No abras un issue público** para vulnerabilidades de seguridad.
 
 Envía un reporte privado a través de una de estas vías:
 
-1. **GitHub Security Advisories**: usa el botón "Report a vulnerability" en la pestaña *Security* del repositorio.
-2. **Email directo**: con el asunto `[SECURITY] chofyai-studio — <resumen breve>`.
+| Vía | Cómo |
+|:---|:---|
+| 🔒 **GitHub Security Advisories** | Botón *"Report a vulnerability"* en la pestaña [Security](https://github.com/vladimiracunadev-create/chofyai-studio/security/advisories) |
+| 📧 **Email directo** | Asunto: `[SECURITY] chofyai-studio — <resumen breve>` |
 
-### Qué incluir en el reporte
+### 📝 Qué incluir en el reporte
 
-- Descripción clara de la vulnerabilidad y su impacto potencial.
-- Pasos para reproducir o un proof-of-concept mínimo.
-- Versión afectada y entorno (macOS, chip Apple Silicon).
-- Cualquier mitigación o workaround que hayas identificado.
+- 📋 Descripción clara de la vulnerabilidad y su impacto potencial.
+- 🔄 Pasos para reproducir o un proof-of-concept mínimo.
+- 🍎 Versión afectada y entorno (macOS, chip Apple Silicon).
+- 🛠️ Cualquier mitigación o workaround que hayas identificado.
 
 ---
 
-## Tiempo de respuesta esperado
+## ⏱️ Tiempo de respuesta esperado
 
 | Fase | Tiempo objetivo |
-|---|---|
-| Confirmación de recepción | 48 horas |
-| Evaluación inicial | 5 días hábiles |
-| Parche liberado (si aplica) | 30 días |
+|:---|:---:|
+| 📨 Confirmación de recepción | `48 horas` |
+| 🔍 Evaluación inicial | `5 días hábiles` |
+| 🩹 Parche liberado (si aplica) | `30 días` |
 
 ---
 
-## Consideraciones de seguridad del proyecto
+## 🔒 Consideraciones de seguridad del proyecto
 
-### Ejecución de scripts externos
+### 📜 Ejecución de scripts externos
 
 Los scripts de instalación en `scripts/mac/` ejecutan comandos con privilegios del usuario. Se recomienda:
 
-- Revisar el contenido de los scripts antes de ejecutarlos.
-- Usar un `studio_home` en un volumen **APFS interno**, no en discos externos o compartidos.
+- 👀 Revisar el contenido de los scripts antes de ejecutarlos.
+- 💾 Usar un `studio_home` en un volumen **APFS interno**, no en discos compartidos.
 
-### Secretos y credenciales
+### 🔐 Secretos y credenciales
 
-ChofyAI Studio **no solicita, almacena ni transmite credenciales**. No hay comunicación de red desde el launcher (toda actividad de red ocurre dentro de las herramientas de IA de terceros).
+> [!NOTE]
+> ChofyAI Studio **no solicita, almacena ni transmite credenciales**. No hay comunicación de red desde el launcher — toda actividad de red ocurre dentro de las herramientas de IA de terceros.
 
-### Integridad de dependencias
+### 📦 Integridad de dependencias
 
-Las dependencias npm están fijadas en `package-lock.json`. En proyectos derivados, se recomienda auditar con:
+Las dependencias npm están fijadas en `package-lock.json`. Auditar con:
 
 ```bash
 npm audit
+cargo audit       # si está instalado
 ```
+
+### 🦀 Memory safety
+
+El backend está escrito en **Rust**, lo que mitiga clases enteras de vulnerabilidades de memoria (use-after-free, buffer overflow). Las llamadas a `unsafe` están limitadas a las generadas por Tauri.

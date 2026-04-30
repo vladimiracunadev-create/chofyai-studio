@@ -1,6 +1,25 @@
-# Herramientas integradas
+# 🛠️ Herramientas integradas
 
-## 1. Qwen3-TTS
+> **Las 5 herramientas creativas de IA orquestadas por ChofyAI Studio.**
+
+![Tools](https://img.shields.io/badge/Tools-5-2d7a66)
+[![Status](https://img.shields.io/badge/Estado-Operativas-success)](STATUS.md)
+
+---
+
+## 📊 Vista rápida
+
+| # | Herramienta | Categoría | Puerto | Runtime | Script |
+|:-:|:---|:---|:---:|:---:|:---|
+| 1 | 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | `python` | `install-qwen3-tts.sh` |
+| 2 | 🎙️ **whisper.cpp** | ASR | `8178` | `binary` | `install-whispercpp.sh` |
+| 3 | 🎬 **FaceFusion** | Video / Cara | — | `python` | `install-facefusion.sh` |
+| 4 | 🎵 **AceForge** | Música | `5056` | `python` | `install-aceforge.sh` |
+| 5 | 🖼️ **ComfyUI** | Imagen | `8188` | `python` | `install-comfyui.sh` |
+
+---
+
+## 🎤 1. Qwen3-TTS
 
 ### Rol
 
@@ -28,7 +47,9 @@ scripts/mac/install-qwen3-tts.sh
 - descarga modelos durante la instalación
 - genera estructura propia dentro de `tools/qwen3-tts`
 
-## 2. whisper.cpp
+---
+
+## 🎙️ 2. whisper.cpp
 
 ### Rol
 
@@ -56,7 +77,9 @@ scripts/mac/install-whispercpp.sh
 - usa Metal en build
 - levanta `whisper-server`
 
-## 3. FaceFusion
+---
+
+## 🎬 3. FaceFusion
 
 ### Rol
 
@@ -80,7 +103,9 @@ scripts/mac/install-facefusion.sh
 - crea un `venv` local
 - usa `python install.py --onnxruntime default`
 
-## 4. AceForge
+---
+
+## 🎵 4. AceForge
 
 ### Rol
 
@@ -108,7 +133,9 @@ scripts/mac/install-aceforge.sh
 - depende de `ffmpeg`
 - queda desacoplado de ComfyUI
 
-## 5. ComfyUI
+---
+
+## 🖼️ 5. ComfyUI
 
 ### Estado
 

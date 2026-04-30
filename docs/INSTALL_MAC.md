@@ -1,12 +1,19 @@
-# Instalación y uso en macOS
+# 🍎 Instalación y uso en macOS
 
-> Última actualización: **2026-04-07**
+> **Levantar ChofyAI Studio en un Mac Apple Silicon paso a paso.**
 
-## Objetivo
+![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-black?logo=apple&logoColor=white)
+[![Última actualización](https://img.shields.io/badge/Actualizado-2026--04--30-informational)](../CHANGELOG.md)
+
+---
+
+## 🎯 Objetivo
 
 Levantar ChofyAI Studio en un Mac Apple Silicon y dejar lista la base para instalar herramientas desde la UI.
 
-## Requisitos del sistema
+---
+
+## 📋 Requisitos del sistema
 
 | Herramienta | Versión mínima | Cómo instalar |
 |---|---|---|
@@ -24,13 +31,17 @@ Levantar ChofyAI Studio en un Mac Apple Silicon y dejar lista la base para insta
 
 > **Nota importante:** Los scripts de instalación de herramientas buscan los binarios en `/opt/homebrew/bin`. Si instalas con `rustup` o `pyenv` en lugar de Homebrew, asegúrate de que las rutas estén disponibles.
 
-## Instalación de todas las dependencias de una vez
+---
+
+## ⚡ Instalación de todas las dependencias de una vez
 
 ```bash
 brew install node rust cmake ffmpeg python@3.10 python@3.11 uv git
 ```
 
-## Verificación rápida
+---
+
+## ✅ Verificación rápida
 
 ```bash
 # Verifica que todo esté en orden antes de usar la app
@@ -38,23 +49,25 @@ bash scripts/mac/bootstrap.sh
 bash scripts/mac/preflight-build.sh
 ```
 
-## Instalación paso a paso
+---
 
-### 1. Clonar el proyecto
+## 🚀 Instalación paso a paso
+
+### 1️⃣ Clonar el proyecto
 
 ```bash
 git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
 cd chofyai-studio
 ```
 
-### 2. Instalar dependencias del frontend
+### 2️⃣ Instalar dependencias del frontend
 
 ```bash
 # El .npmrc del proyecto fija el registry a npmjs.org automáticamente
 npm install
 ```
 
-### 3. Definir Studio Home
+### 3️⃣ Definir Studio Home
 
 Edita `storage/state/settings.json` con la ruta donde quieres que las herramientas se instalen:
 
@@ -70,15 +83,17 @@ Edita `storage/state/settings.json` con la ruta donde quieres que las herramient
 - Evitar exFAT (genera archivos `._*` que interfieren con git)
 - Evitar rutas con espacios
 
-### 4. Crear la estructura del Studio Home
+### 4️⃣ Crear la estructura del Studio Home
 
 ```bash
 mkdir -p /Volumes/ORICO/ChofyIA/ChofyAIStudio/{tools,logs,models,cache}
 ```
 
-## Ejecutar en modo desarrollo
+---
 
-### Modo web (solo frontend, sin backend Rust)
+## ▶️ Ejecutar en modo desarrollo
+
+### 🌐 Modo web (solo frontend, sin backend Rust)
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"
@@ -88,7 +103,7 @@ npm run dev:web
 
 > ⚠️ En modo web los botones de instalar/iniciar herramientas **no funcionan** — requieren el backend Tauri compilado.
 
-### Modo escritorio completo (requiere Rust instalado)
+### 🖥️ Modo escritorio completo (requiere Rust instalado)
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"
@@ -97,13 +112,17 @@ npm run tauri:dev
 
 Este modo activa el backend Rust y permite usar los botones de instalación e inicio de herramientas.
 
-## Ejecutar diagnóstico
+---
+
+## 🩺 Ejecutar diagnóstico
 
 ```bash
 bash scripts/mac/doctor.sh "/Volumes/ORICO/ChofyIA/ChofyAIStudio"
 ```
 
-## Instalar herramientas desde terminal (alternativa a la UI)
+---
+
+## 🛠️ Instalar herramientas desde terminal (alternativa a la UI)
 
 Los scripts leen automáticamente el `studio_home` desde `storage/state/settings.json`.
 
@@ -124,7 +143,9 @@ bash scripts/mac/install-aceforge.sh
 bash scripts/mac/install-comfyui.sh
 ```
 
-## Empaquetado macOS (.app / .dmg)
+---
+
+## 📦 Empaquetado macOS (.app / .dmg)
 
 ```bash
 npm ci
@@ -140,7 +161,7 @@ Salidas esperadas (target redirigido a `/tmp` por `.cargo/config.toml`):
 
 > Requiere Rust, Xcode CLT y todas las dependencias instaladas.
 
-### Volúmenes externos no-APFS (exFAT / HFS+)
+### ⚠️ Volúmenes externos no-APFS (exFAT / HFS+)
 
 Si el repo vive en un volumen externo no-APFS, macOS crea archivos AppleDouble (`._*`) que rompen `cargo build` al ser interpretados como TOML/JSON:
 
@@ -155,7 +176,7 @@ Mitigación incluida:
 
 Si la build sigue fallando, ejecuta el script de limpieza y reintenta. Lo ideal a largo plazo es reformatear el volumen externo a APFS o `mount-apfs.sh` para crear una imagen APFS dentro del externo.
 
-### Build sin Apple Developer ID (uso personal)
+### 🆓 Build sin Apple Developer ID (uso personal)
 
 `npm run tauri:build:app` genera un `.app` ad-hoc que funciona en este equipo:
 

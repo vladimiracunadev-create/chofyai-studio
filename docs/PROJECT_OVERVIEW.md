@@ -1,54 +1,88 @@
-# Visión general del proyecto
+# 🎯 Visión general del proyecto
 
-## Qué es ChofyAI Studio
+> **Por qué existe ChofyAI Studio y qué pretende ser (y no ser).**
 
-ChofyAI Studio es un **launcher local para macOS Apple Silicon** construido para centralizar herramientas creativas de IA sin depender de un orquestador genérico externo.
+[![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-black?logo=apple&logoColor=white)](INSTALL_MAC.md)
+[![Filosofía](https://img.shields.io/badge/Filosofía-Local%20First-2d7a66)](decisions.md)
+
+---
+
+## 🎨 Qué es ChofyAI Studio
+
+ChofyAI Studio es un **launcher local para macOS Apple Silicon** construido para centralizar herramientas creativas de IA **sin depender de un orquestador genérico externo**.
 
 Está pensado para un entorno como un **Mac mini M4 con 64 GB de RAM**, donde tiene más sentido:
 
-- una app principal **ligera**
-- herramientas pesadas **aisladas**
-- rutas de trabajo controladas
-- logs claros
-- configuración explícita
+- 🪶 una app principal **ligera**
+- 🏝️ herramientas pesadas **aisladas**
+- 🗺️ rutas de trabajo **controladas**
+- 📋 logs **claros**
+- ⚙️ configuración **explícita**
 
-## Qué problema intenta resolver
+---
 
-Muchos launchers externos:
+## 🩹 Qué problema intenta resolver
 
-- ocultan demasiado el estado real de instalación
-- mezclan UI con runtime
-- no dejan claro qué está instalado y qué no
-- pueden romperse por rutas, permisos, discos externos o installers ambiguos
+Muchos launchers externos…
+
+- 👀 ocultan demasiado el estado real de instalación
+- 🌀 mezclan UI con runtime
+- ❓ no dejan claro qué está instalado y qué no
+- 💥 se rompen por rutas, permisos, discos externos o installers ambiguos
 
 ChofyAI Studio intenta resolver eso con:
 
-- manifests YAML legibles
-- scripts explícitos por herramienta
-- checks de instalación definidos por archivos reales
-- una shell de escritorio propia
+- 📐 **Manifests YAML** legibles
+- 📜 **Scripts explícitos** por herramienta
+- ✅ **Checks de instalación** definidos por archivos reales (`installed_if`)
+- 🖥️ **Shell de escritorio propia** (Tauri + Rust)
+- 💾 **Resolución dual de disco** (externo + principal con fallback)
 
-## Filosofía
+---
 
-1. **La GUI no corre modelos dentro del proceso principal**.
-2. **Cada herramienta vive en su propia carpeta y runtime**.
-3. **El estado instalado se decide por checks explícitos**.
-4. **El proyecto está orientado primero a macOS Apple Silicon**.
-5. **Los discos críticos deben ser internos o APFS**.
+## 💡 Filosofía
 
-## Qué contiene hoy
+| # | Principio | Cómo se materializa |
+|:-:|:---|:---|
+| 1 | 🎨 La GUI **no corre modelos** dentro del proceso principal | Cada tool tiene proceso separado registrado en `ProcessRegistry` |
+| 2 | 🏝️ Cada herramienta vive en su **propia carpeta y runtime** | `studio_home/tools/<id>/` o `studio_home/modules/<id>/` |
+| 3 | ✅ El estado **instalado** se decide por checks explícitos | `installed_if` en cada manifest YAML |
+| 4 | 🍎 Orientado **primero a macOS Apple Silicon** | Scripts `mac/`, MPS para PyTorch, Metal para llama.cpp |
+| 5 | 💾 **Discos críticos** deben ser internos o APFS | Workaround AppleDouble + fallback automático |
+| 6 | 🔍 **Visibilidad operativa** ante todo | Logs por tool, health checks, stats en vivo |
 
-- shell Tauri/Rust
-- frontend React/TypeScript
-- gestión básica de settings
-- lectura de manifests
-- integración de 4 herramientas reales
-- empaquetado base para macOS
+---
 
-## Qué no pretende ser
+## 📦 Qué contiene hoy
 
-- un clon completo de Pinokio
-- un marketplace universal de repositorios IA
-- una suite terminada y distribuible profesionalmente hoy mismo
+- 🦀 Shell **Tauri 2 / Rust**
+- ⚛️ Frontend **React + TypeScript + Vite**
+- ⚙️ Gestión de `settings.json` con `tool_overrides` y `fallback_home`
+- 📐 Lectura de manifests + checks de instalación
+- 🛠️ **5 herramientas integradas**: Qwen3-TTS, whisper.cpp, FaceFusion, AceForge, ComfyUI
+- 💾 **Resolución dual de disco** con selector de volúmenes
+- 📍 **Zona de módulos** con reubicación cross-volumen
+- 📊 **Stats en vivo** del equipo (CPU/RAM/disco)
+- 📦 **Empaquetado** base `.app` / `.dmg` ad-hoc
 
-Es, en esta fase, un **producto base serio** desde el cual seguir creciendo.
+---
+
+## 🚫 Qué no pretende ser
+
+- ❌ Un clon completo de **Pinokio**
+- ❌ Un **marketplace universal** de repositorios IA
+- ❌ Una suite terminada y **distribuible profesionalmente** hoy mismo (falta firma Apple)
+
+> [!NOTE]
+> Es, en esta fase, un **producto base serio** desde el cual seguir creciendo. Cada decisión de diseño está documentada en [`decisions.md`](decisions.md) como ADR.
+
+---
+
+## 🧭 Para profundizar
+
+| 📚 Tema | 📖 Doc |
+|:---|:---|
+| Arquitectura por capas | [`architecture.md`](architecture.md) |
+| Decisiones de diseño (ADRs) | [`decisions.md`](decisions.md) |
+| Estado actual y limitaciones | [`STATUS.md`](STATUS.md) |
+| Roadmap y fases futuras | [`../ROADMAP.md`](../ROADMAP.md) |

@@ -1,74 +1,146 @@
-# ChofyAI Studio · Quickstart
+# 🚀 ChofyAI Studio · Quickstart
 
-## Requisitos (macOS Apple Silicon)
+> **Arrancar el orquestador en 3 pasos.**
+
+[![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-black?logo=apple&logoColor=white)](docs/INSTALL_MAC.md)
+[![Tauri](https://img.shields.io/badge/Tauri-2.11-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
+
+---
+
+## 0️⃣ Requisitos del sistema
 
 ```bash
 brew install node@22 cmake ffmpeg git python@3.11
-xcode-select --install   # toolchain de Apple
-# Rust (necesario para Tauri):
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+xcode-select --install                                    # toolchain Apple
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust
 ```
 
-## Arrancar localhost (modo desarrollo)
+---
+
+## 1️⃣ Arrancar localhost (modo desarrollo)
 
 ```bash
 cd chofyai-studio
 npm install
-npm run tauri:dev   # arranca Vite (http://localhost:1420) + ventana Tauri
+npm run tauri:dev
 ```
 
-`npm run dev:web` abre solo la UI en `localhost:1420` sin backend Tauri — no permite instalar/iniciar herramientas.
+Esto arranca **Vite** en `http://localhost:1420` + ventana **Tauri** con backend Rust.
 
-## Disco externo + fallback al disco principal
+> [!WARNING]
+> `npm run dev:web` abre solo la UI sin backend Tauri. Los botones de instalar/iniciar/detener **no funcionan** en ese modo.
+
+---
+
+## 2️⃣ Configurar Studio Home
+
+| Forma | Ventaja |
+|:---|:---|
+| 🖱️ **Selector de la UI** | Lista volúmenes con espacio libre y permisos. Un clic basta. |
+| 📝 **Editar `storage/state/settings.json`** | Control total para entornos automatizados |
+| 🤷 **No hacer nada** | Si tu path no es escribible, fallback automático a `~/ChofyAIStudio` |
+
+---
+
+## 💾 Disco externo + fallback al disco principal
+
+```mermaid
+flowchart LR
+    A["📝 settings.json<br/>studio_home"] --> B{"💾 ¿Volumen<br/>usable?"}
+    B -->|Sí| C["✅ Usa esa ruta"]
+    B -->|No| D["⚠️ Fallback<br/>~/ChofyAIStudio"]
+    C --> E["🛠️ Tools"]
+    D --> E
+
+    style A fill:#fff3e0,stroke:#e65100
+    style B fill:#fff8e1,stroke:#f57f17
+    style C fill:#e8f5e9,stroke:#1b5e20
+    style D fill:#ffebee,stroke:#b71c1c
+    style E fill:#f3e5f5,stroke:#4a148c
+```
 
 ChofyAI elige `studio_home` en este orden:
 
-1. `studio_home` configurado en `storage/state/settings.json` (o, si está empaquetado, en `~/Library/Application Support/.../state/settings.json`).
-2. Si esa ruta apunta a un volumen **desmontado o sin permisos**, cae automáticamente a `~/ChofyAIStudio` (disco principal).
-3. La barra inferior muestra `⚠ Usando fallback` cuando se aplica el plan B.
+1. **`studio_home`** declarado en `settings.json` (dev) o en `~/Library/Application Support/.../state/settings.json` (empaquetada).
+2. Si la ruta apunta a un **volumen desmontado o sin permisos**, cae a `~/ChofyAIStudio`.
+3. La barra inferior muestra `⚠ Usando fallback` cuando aplica.
 
-El **selector de volúmenes** en la UI lista `~`, todos los `/Volumes/*` montados y permite cambiar con un clic.
+---
 
-## Zona de módulos / reubicación
+## 📍 Zona de módulos / reubicación
 
-Cada herramienta vive por defecto en `studio_home/tools/<id>`. Botón **📍 Mover** sugiere `studio_home/modules/<id>`.
-La reubicación:
+Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite mover cada módulo:
 
-- Acepta cualquier ruta absoluta de destino.
-- Si destino y origen están en distinto volumen, copia recursivamente y borra origen.
-- Guarda override en `settings.json → tool_overrides`.
-- **Reset ruta** quita el override (no mueve archivos).
+| Operación | Comportamiento |
+|:---|:---|
+| 📍 **Mover** | Sugiere `studio_home/modules/<id>` o acepta cualquier ruta absoluta |
+| 🔄 Mismo volumen | `rename` instantáneo |
+| 🌉 Cross-device | Copia recursiva (incluye symlinks) + borrado |
+| 💾 Persistencia | Guarda override en `settings.json → tool_overrides` |
+| ↺ **Reset ruta** | Quita el override (no mueve archivos) |
 
-## Generar el `.app` (ad-hoc, sin firma Apple)
+---
+
+## 📦 Generar el `.app` (ad-hoc, sin firma Apple)
 
 ```bash
 npm run tauri:build:app
-# Resultado: /tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app
 ```
 
-Para lanzarlo en este equipo basta con copiarlo a `/Applications`. macOS pedirá permisos en el primer arranque (Click derecho → Abrir).
+Resultado:
 
-## Notas sobre disco externo no-APFS
+```text
+/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app
+```
 
-Volúmenes en exFAT/HFS+ generan archivos AppleDouble (`._*`) que rompen `cargo build`. Por eso:
+Para usarlo en este equipo:
 
-- `.cargo/config.toml` apunta el `target-dir` a `/tmp/chofyai-target` (en disco APFS).
-- Antes de cualquier build, ejecuta `bash scripts/mac/clean-appledouble.sh` si dudas.
+```bash
+cp -R "/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app" /Applications/
+# Primer arranque: click derecho → Abrir
+```
 
-## Comandos backend disponibles (Tauri IPC)
+---
 
-| Comando                  | Descripción                                       |
-|--------------------------|---------------------------------------------------|
-| `get_system_summary`     | Studio home solicitado vs. efectivo + fallback.   |
-| `get_system_stats`       | CPU/RAM/disco/uptime (barra inferior).            |
-| `list_volume_candidates` | Volúmenes para el selector.                       |
-| `save_studio_home`       | Cambia studio_home (sin mover archivos).          |
-| `list_tools`             | Manifests + estado de instalación.                |
-| `install_tool`           | Ejecuta el script con streaming de progreso.      |
-| `update_tool`            | Re-ejecuta el script (git pull interno).          |
-| `start/stop/restart`     | Control de procesos.                              |
-| `health_check_tool`      | PID + puerto TCP.                                 |
-| `relocate_module`        | Mueve directorio + registra override.             |
-| `clear_module_override`  | Quita override (no mueve archivos).               |
-| `open_tool_directory`    | Abre Finder en la carpeta del tool.               |
-| `open_tool_log`          | Abre log con app por defecto.                     |
+## ⚠️ Notas sobre disco externo no-APFS
+
+Volúmenes en exFAT/HFS+ generan archivos AppleDouble (`._*`) que rompen `cargo build`. El repo ya mitiga esto:
+
+- **`.cargo/config.toml`** apunta `target-dir` a `/tmp/chofyai-target` (siempre APFS).
+- **`bash scripts/mac/clean-appledouble.sh`** borra los `._*` del árbol de fuentes si reaparecen.
+
+> [!TIP]
+> Si quieres una experiencia 100% limpia, formatea un volumen externo a APFS o crea una imagen APFS dentro del externo con `bash scripts/mac/mount-apfs.sh`.
+
+---
+
+## 🦀 Comandos backend disponibles (Tauri IPC)
+
+| Comando | Descripción |
+|:---|:---|
+| `get_system_summary` | Studio home solicitado vs. efectivo + flag fallback |
+| `get_system_stats` | 📊 CPU/RAM/disco/uptime (barra inferior) |
+| `list_volume_candidates` | 🔍 Volúmenes para el selector |
+| `save_studio_home` | Cambia studio_home (sin mover archivos) |
+| `list_tools` | Manifests + estado de instalación |
+| `install_tool` | Ejecuta script con streaming de progreso |
+| `update_tool` | Re-ejecuta el script (git pull interno) |
+| `start_tool` / `stop_tool` / `restart_tool` | 🎛️ Control de procesos |
+| `health_check_tool` | 💚 PID + puerto TCP |
+| `relocate_module` | 📍 Mueve directorio + registra override |
+| `clear_module_override` | ↺ Quita override (no mueve archivos) |
+| `open_tool_directory` | 📁 Abre Finder en la carpeta del tool |
+| `open_tool_log` | 📋 Abre log con app por defecto |
+
+---
+
+## 🧭 Siguientes pasos
+
+| 📌 Quiero… | 📖 Leer |
+|:---|:---|
+| Ver qué herramientas hay y cómo funcionan | [`docs/TOOLS.md`](docs/TOOLS.md) |
+| Instalar dependencias del sistema | [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md) |
+| Entender la arquitectura | [`docs/architecture.md`](docs/architecture.md) |
+| Añadir una herramienta nueva | [`docs/MANIFEST_SPEC.md`](docs/MANIFEST_SPEC.md) |
+| Resolver un error | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
+| Ver qué viene en Fase 5+ | [`ROADMAP.md`](ROADMAP.md) |
