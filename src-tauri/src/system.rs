@@ -416,6 +416,41 @@ pub fn import_marketplace_tool(app: AppHandle, id: String) -> Result<ActionResul
 }
 
 #[tauri::command]
+pub fn list_workflows(app: AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let dir = match repo_root() {
+        Some(root) => root.join("workflows"),
+        None => app.path().resolve("workflows", BaseDirectory::Resource).map_err(|e| e.to_string())?,
+    };
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out = Vec::new();
+    for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
+        let entry = match entry { Ok(e) => e, Err(_) => continue };
+        let path = entry.path();
+        if !path.is_file() { continue; }
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !name.ends_with(".yaml") && !name.ends_with(".yml") { continue; }
+        if name.starts_with("._") { continue; }
+        let raw = match fs::read_to_string(&path) { Ok(s) => s, Err(_) => continue };
+        let parsed: Result<serde_yaml::Value, _> = serde_yaml::from_str(&raw);
+        if let Ok(v) = parsed {
+            // Conversión a JSON para que el frontend reciba algo nativo
+            if let Ok(json) = serde_json::to_value(&v) {
+                out.push(json);
+            }
+        }
+    }
+    // Ordena por id para estabilidad
+    out.sort_by(|a, b| {
+        let ai = a.get("id").and_then(|x| x.as_str()).unwrap_or("");
+        let bi = b.get("id").and_then(|x| x.as_str()).unwrap_or("");
+        ai.cmp(bi)
+    });
+    Ok(out)
+}
+
+#[tauri::command]
 pub fn notify_macos(title: String, body: String) -> Result<(), String> {
     // Sanitize quotes para AppleScript
     let safe = |s: &str| s.replace('"', "\\\"").replace('\n', " ");

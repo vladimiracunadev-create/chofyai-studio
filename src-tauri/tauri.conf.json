@@ -48,6 +48,7 @@
       "../docs",
       "../scripts/mac",
       "../marketplace",
+      "../workflows",
       "../storage/state/settings.json"
     ]
   }

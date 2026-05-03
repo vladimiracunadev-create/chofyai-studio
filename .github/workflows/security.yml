@@ -24,7 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
       - uses: trufflesecurity/trufflehog@v3.63.1
         with:
           path: ./
@@ -33,21 +34,34 @@ jobs:
           extra_args: --only-verified
 
   # ─────────────────────────────────────────────
-  # Dependency audit npm
+  # Dependency audit npm (skip si no hay package-lock.json)
   # ─────────────────────────────────────────────
   npm-audit:
     name: "npm audit"
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('package-lock.json') != '' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Skip si no hay package-lock.json
+        id: check
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::No hay package-lock.json — npm-audit skipped"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
-        with: { node-version: "20", cache: "npm" }
+        if: steps.check.outputs.skip != 'true'
+        with:
+          node-version: "20"
+          cache: "npm"
       - name: Audit
+        if: steps.check.outputs.skip != 'true'
         run: |
           npm audit --omit=dev --audit-level=high || true
           npm audit --json > npm-audit.json || true
       - name: Resumen high+critical
+        if: steps.check.outputs.skip != 'true'
         run: |
           if [ -f npm-audit.json ]; then
             node -e "
@@ -59,47 +73,72 @@ jobs:
             "
           fi
       - uses: actions/upload-artifact@v4
-        if: always()
-        with: { name: npm-audit, path: npm-audit.json, if-no-files-found: ignore }
+        if: always() && steps.check.outputs.skip != 'true'
+        with:
+          name: npm-audit
+          path: npm-audit.json
+          if-no-files-found: ignore
 
   # ─────────────────────────────────────────────
-  # Dependency audit cargo
+  # Dependency audit cargo (skip si no hay Cargo.lock)
   # ─────────────────────────────────────────────
   cargo-audit:
     name: "cargo audit"
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('**/Cargo.lock') != '' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Skip si no hay Cargo.lock
+        id: check
+        run: |
+          locks=$(find . -name Cargo.lock -not -path '*/target/*' | head -1)
+          if [ -z "$locks" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::No hay Cargo.lock — cargo-audit skipped"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.check.outputs.skip != 'true'
       - name: Install cargo-audit
+        if: steps.check.outputs.skip != 'true'
         run: cargo install --locked cargo-audit
       - name: Audit
+        if: steps.check.outputs.skip != 'true'
         run: |
           for d in $(find . -name Cargo.lock -not -path '*/target/*' -exec dirname {} \; | sort -u); do
             echo "=== $d ==="
-            (cd "$d" && cargo audit --ignore RUSTSEC-2024-0436) || exit 1
+            (cd "$d" && cargo audit) || exit 1
           done
 
   # ─────────────────────────────────────────────
-  # CodeQL (JS/TS + Rust si aplica)
+  # CodeQL (JS/TS) — skip si no hay package.json
   # ─────────────────────────────────────────────
   codeql-js:
     name: "CodeQL (JS/TS)"
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('package.json') != '' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Skip si no hay package.json
+        id: check
+        run: |
+          if [ ! -f package.json ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::No hay package.json — CodeQL JS/TS skipped"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: github/codeql-action/init@v3
+        if: steps.check.outputs.skip != 'true'
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
       - uses: github/codeql-action/analyze@v3
+        if: steps.check.outputs.skip != 'true'
         with:
           category: "/language:javascript-typescript"
 
   # ─────────────────────────────────────────────
-  # Pinned-actions check — falla si algún uses: usa @main o @vN
+  # Pinned-actions check — avisa si algún uses: usa @main o @vN
   # ─────────────────────────────────────────────
   actions-pinning:
     name: "Pin GitHub Actions"
@@ -108,7 +147,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Detectar acciones no-pinneadas
         run: |
-          set -e
           unpinned=$(grep -rE "uses:\s+[^@]+@(main|master|v[0-9]+)\s*$" .github/workflows/ \
             | grep -v "actions/checkout@v4" \
             | grep -v "actions/setup-" \

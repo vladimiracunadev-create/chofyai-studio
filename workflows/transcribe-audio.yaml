@@ -1,0 +1,33 @@
+id: transcribe-audio
+name: Transcribir audio a texto
+category: asr
+emoji: 🎙
+description: |
+  Sube un archivo de audio y obtén la transcripción usando whisper.cpp local.
+  Soporta formatos comunes (wav, mp3, m4a, ogg, flac).
+
+requires_tools:
+  - whispercpp
+
+inputs:
+  - id: audio
+    type: file
+    label: Archivo de audio
+    accept: "audio/*"
+    required: true
+
+steps:
+  - id: transcribe
+    label: Transcribir con whisper.cpp
+    type: http
+    method: POST
+    url: http://127.0.0.1:8178/inference
+    body_kind: multipart
+    fields:
+      file: "{{inputs.audio}}"
+      response_format: "json"
+      temperature: "0.0"
+    output:
+      kind: text
+      from: text
+      label: Texto transcrito

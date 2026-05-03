@@ -1,0 +1,61 @@
+id: audio-pipeline
+name: Audio → Texto → Resumen (futuro)
+category: chain
+emoji: 🔗
+description: |
+  Pipeline conceptual que toma un audio largo, lo transcribe con whisper,
+  resume el texto con un LLM local, y opcionalmente sintetiza el resumen
+  como audio con Qwen3-TTS.
+
+  ⚠️ Esta workflow es un STUB que documenta el patrón de chain.
+  Para activarla necesitas:
+    1. Un LLM local servido por HTTP (Ollama / llama.cpp / etc.).
+    2. Adaptar el step 'summarize' al endpoint correcto.
+
+requires_tools:
+  - whispercpp
+  - qwen3-tts
+
+inputs:
+  - id: audio
+    type: file
+    label: Audio largo
+    accept: "audio/*"
+    required: true
+  - id: max_words
+    type: text
+    label: Palabras máximas del resumen
+    default: "150"
+
+steps:
+  - id: transcribe
+    label: 1. Transcribir audio
+    type: http
+    method: POST
+    url: http://127.0.0.1:8178/inference
+    body_kind: multipart
+    fields:
+      file: "{{inputs.audio}}"
+      response_format: "json"
+    output:
+      kind: text
+      from: text
+      label: Texto crudo
+
+  - id: summarize
+    label: 2. Resumir con LLM local (placeholder)
+    type: stub
+    note: "Apunta a tu endpoint LLM (Ollama: POST /api/generate)"
+    input_from: transcribe
+    output:
+      kind: text
+      label: Resumen
+
+  - id: tts
+    label: 3. Sintetizar resumen como audio
+    type: stub
+    note: "Apunta a Qwen3-TTS — endpoint exacto depende de la versión"
+    input_from: summarize
+    output:
+      kind: audio_url
+      label: Audio del resumen

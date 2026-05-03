@@ -79,6 +79,41 @@ export type VolumeCandidate = {
   total_bytes?: number | null;
 };
 
+export type WorkflowInput = {
+  id: string;
+  type: 'file' | 'text';
+  label: string;
+  required?: boolean;
+  default?: string;
+  accept?: string;
+  placeholder?: string;
+};
+
+export type WorkflowStep = {
+  id: string;
+  label: string;
+  type: 'http' | 'stub';
+  method?: 'GET' | 'POST';
+  url?: string;
+  body_kind?: 'multipart' | 'json';
+  fields?: Record<string, string>;
+  body?: string;
+  note?: string;
+  input_from?: string;
+  output?: { kind: string; from?: string; label?: string };
+};
+
+export type WorkflowDef = {
+  id: string;
+  name: string;
+  category: string;
+  emoji?: string;
+  description: string;
+  requires_tools?: string[];
+  inputs?: WorkflowInput[];
+  steps: WorkflowStep[];
+};
+
 export type MarketplaceEntry = {
   id: string;
   name: string;

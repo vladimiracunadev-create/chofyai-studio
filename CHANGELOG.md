@@ -11,6 +11,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🐛 Fixed (CI — security workflow)
+
+- **`.github/workflows/security.yml`**: el uso de `if: ${{ hashFiles(...) != '' }}` a nivel job-level fallaba porque GitHub Actions evalúa esa expresión **antes** del checkout (no hay archivos para hashear). Reemplazado por gating step-level: cada job hace `actions/checkout@v4` primero, luego un step `Skip si...` setea `outputs.skip` con `[ -f file ]`, y los siguientes steps usan `if: steps.check.outputs.skip != 'true'`. Compatible con `workflow_call:` desde otros repos.
+
+### 🔗 Added (Sprint 7 — Workflows MVP)
+
+- **Schema YAML para workflows** en `workflows/`: descriptor declarativo con `id`, `name`, `category`, `emoji`, `description`, `requires_tools[]`, `inputs[]` y `steps[]`. Cada step soporta `type: http` (con `body_kind: multipart|json`, sustitución `{{inputs.X}}` en URL/fields/body) o `type: stub` (placeholder no ejecutable).
+- **3 workflows de ejemplo**:
+  - `transcribe-audio.yaml` — POST de archivo a `whisper-server :8178/inference`, extrae `text` del JSON. **Funcional con whisper.cpp instalado.**
+  - `comfyui-prompt.yaml` — POST de workflow JSON a `:8188/prompt` (requiere SDXL Base instalado). Demuestra `body_kind: json` con sustitución de prompt.
+  - `audio-pipeline.yaml` — chain conceptual con stubs (audio → STT → LLM resumir → TTS) que documenta el patrón sin ejecutar (placeholders para LLM externo).
+- **Comando Rust `list_workflows()`**: lee `workflows/*.yaml`, deserializa con `serde_yaml`, convierte a `serde_json::Value` y devuelve lista ordenada por `id`. Funciona desde repo root o resource bundle.
+- **`workflows/`** registrado en `tauri.conf.json` resources para que el `.app` distribuible incluya las recetas.
+- **Frontend `WorkflowsPanel`**: modal grid con cards (emoji + nombre + categoría + steps + requisitos), botón ▶ por workflow.
+- **`WorkflowRunner` modal**: form dinámico de inputs (`type: file|text` con `required`/`accept`/`placeholder`/`default`), botón ▶ Ejecutar que corre los steps secuencialmente vía `fetch()` con UI de progreso por paso (`⏳ ⌛ 🔄 ✅ ❌`), tiempo en segundos, output truncado a 4 KB con `<pre>`. Aborta en el primer fail.
+- **Atajo `⌘W`** y botón `🔗 Workflows` en sidebar. Acción "Abrir Workflows" en paleta `⌘K`.
+
 ### 🛒 Added (Sprint 6 — Marketplace MVP)
 
 - **Catálogo `marketplace/registry.yaml`** con 10 herramientas comunitarias curadas: Bark, RVC, Stable Audio Open, AnimateDiff, Coqui TTS, Open WebUI, Vosk, MusicGen, InvokeAI, SDXL workflow para ComfyUI. Cada entrada documenta categoría, runtime, descripción corta, repo, tamaño estimado, requisitos y notas de instalación.

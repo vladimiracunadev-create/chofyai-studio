@@ -803,6 +803,87 @@ button.danger-soft {
 }
 button.danger-soft:hover { background: rgba(255,80,80,0.18); }
 
+/* === Workflows === */
+.wf-modal { width: 760px; max-width: 96vw; }
+.wf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.wf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #0f1115;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
+}
+.wf-card:hover { border-color: rgba(124,92,255,0.4); }
+.wf-card-head { display: flex; align-items: center; gap: 10px; }
+.wf-card-head strong { font-size: 0.94rem; flex: 1; }
+.wf-card-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #7c8ea8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  flex-wrap: wrap;
+}
+.wf-card button { margin-top: auto; }
+
+.wf-inputs { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.wf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.84rem;
+  color: #c9d3e3;
+}
+.wf-field input {
+  padding: 8px 12px;
+  background: #0f1115;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #d3dcec;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.84rem;
+}
+.wf-field input[type="file"] {
+  font-family: inherit;
+  padding: 4px;
+}
+
+.wf-steps { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.wf-step {
+  background: #0f1115;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.wf-step.running { border-color: rgba(124,92,255,0.4); }
+.wf-step.ok { border-color: rgba(54,215,183,0.35); }
+.wf-step.fail { border-color: rgba(255,80,80,0.4); }
+.wf-step-head { display: flex; align-items: center; gap: 8px; }
+.wf-step-icon { font-size: 1rem; }
+.wf-step-out, .wf-step-err {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: #07080b;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.wf-step-err { color: #ff8080; }
+.wf-step-out { color: #c9d3e3; }
+
 /* === Marketplace === */
 .market-modal { width: 880px; max-width: 96vw; }
 .market-grid {

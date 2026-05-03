@@ -16,6 +16,8 @@ import type {
   ToastKind,
   ToolManifest,
   VolumeCandidate,
+  WorkflowDef,
+  WorkflowStep,
 } from './types';
 
 // ─── Toasts globales ─────────────────────────────────────────────────────────
@@ -58,6 +60,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: '⌘L', label: 'Ver logs (último tool tocado)', group: 'Acciones' },
   { keys: '⌘B', label: 'Toggle modo claro/oscuro', group: 'Apariencia' },
   { keys: '⌘M', label: 'Abrir Marketplace', group: 'Navegación' },
+  { keys: '⌘W', label: 'Abrir Workflows', group: 'Navegación' },
   { keys: 'Esc', label: 'Cerrar modal/panel actual', group: 'Navegación' },
   { keys: '↑↓', label: 'Navegar lista en paleta ⌘K', group: 'Navegación' },
   { keys: '↵', label: 'Ejecutar comando seleccionado', group: 'Navegación' },
@@ -93,6 +96,254 @@ async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?
     }
     return null;
   }
+}
+
+// ─── Workflows ───────────────────────────────────────────────────────────────
+function substituteVars(template: string, inputs: Record<string, string>): string {
+  return template.replace(/\{\{\s*inputs\.(\w+)\s*\}\}/g, (_, k) => inputs[k] ?? '');
+}
+
+type StepResult = { stepId: string; status: 'pending' | 'running' | 'ok' | 'fail' | 'skipped'; output?: string; error?: string; durationMs?: number };
+
+async function runWorkflowStep(
+  step: WorkflowStep,
+  inputs: Record<string, string>,
+  files: Record<string, File>,
+): Promise<{ ok: boolean; output?: string; error?: string }> {
+  if (step.type === 'stub') {
+    return { ok: true, output: `(stub) ${step.note ?? 'Step no ejecutable — placeholder'}` };
+  }
+  if (step.type !== 'http' || !step.url) return { ok: false, error: 'step inválido' };
+
+  const url = substituteVars(step.url, inputs);
+  let resp: Response;
+  try {
+    if (step.body_kind === 'multipart') {
+      const form = new FormData();
+      for (const [k, vRaw] of Object.entries(step.fields ?? {})) {
+        const v = substituteVars(vRaw, inputs);
+        if (v.startsWith('__FILE__:')) {
+          const fileKey = v.replace('__FILE__:', '');
+          const f = files[fileKey];
+          if (!f) return { ok: false, error: `archivo '${fileKey}' faltante` };
+          form.append(k, f);
+        } else {
+          form.append(k, v);
+        }
+      }
+      resp = await fetch(url, { method: step.method ?? 'POST', body: form });
+    } else if (step.body_kind === 'json') {
+      const bodyStr = substituteVars(step.body ?? '{}', inputs);
+      resp = await fetch(url, {
+        method: step.method ?? 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: bodyStr,
+      });
+    } else {
+      resp = await fetch(url, { method: step.method ?? 'GET' });
+    }
+  } catch (e) {
+    return { ok: false, error: `Network: ${(e as Error).message}` };
+  }
+
+  if (!resp.ok) return { ok: false, error: `HTTP ${resp.status} ${resp.statusText}` };
+
+  const contentType = resp.headers.get('content-type') ?? '';
+  let raw: unknown;
+  if (contentType.includes('application/json')) raw = await resp.json();
+  else raw = await resp.text();
+
+  const fromKey = step.output?.from;
+  let extracted: string;
+  if (fromKey && typeof raw === 'object' && raw !== null) {
+    const val = (raw as Record<string, unknown>)[fromKey];
+    extracted = typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+  } else {
+    extracted = typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2);
+  }
+  return { ok: true, output: extracted };
+}
+
+function WorkflowRunner({
+  wf, onClose,
+}: { wf: WorkflowDef; onClose: () => void }) {
+  const [inputs, setInputs] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const i of wf.inputs ?? []) if (i.default) init[i.id] = i.default;
+    return init;
+  });
+  const [files, setFiles] = useState<Record<string, File>>({});
+  const [running, setRunning] = useState(false);
+  const [results, setResults] = useState<StepResult[]>([]);
+
+  const canRun = (wf.inputs ?? []).every((i) => {
+    if (!i.required) return true;
+    return i.type === 'file' ? Boolean(files[i.id]) : Boolean(inputs[i.id]?.trim());
+  });
+
+  const runAll = async () => {
+    setRunning(true);
+    const initialResults: StepResult[] = wf.steps.map((s) => ({ stepId: s.id, status: 'pending' }));
+    setResults(initialResults);
+
+    // Inputs efectivos: para 'file' pasamos un placeholder __FILE__:<id>
+    const effInputs: Record<string, string> = { ...inputs };
+    for (const i of wf.inputs ?? []) {
+      if (i.type === 'file' && files[i.id]) effInputs[i.id] = `__FILE__:${i.id}`;
+    }
+
+    let prevOutput: string | undefined;
+    for (let idx = 0; idx < wf.steps.length; idx++) {
+      const step = wf.steps[idx];
+      setResults((prev) => prev.map((r, i) => i === idx ? { ...r, status: 'running' } : r));
+      const t0 = Date.now();
+      const stepInputs = step.input_from
+        ? { ...effInputs, [step.input_from]: prevOutput ?? '' }
+        : effInputs;
+      const r = await runWorkflowStep(step, stepInputs, files);
+      const dur = Date.now() - t0;
+      if (r.ok) {
+        prevOutput = r.output;
+        setResults((prev) => prev.map((x, i) => i === idx ? { ...x, status: 'ok', output: r.output, durationMs: dur } : x));
+      } else {
+        setResults((prev) => prev.map((x, i) => i === idx ? { ...x, status: 'fail', error: r.error, durationMs: dur } : x));
+        notify('error', `Step "${step.label}" falló`, r.error);
+        break;
+      }
+    }
+    setRunning(false);
+    notify('success', 'Workflow terminado', wf.name);
+    void notifyNative('Workflow', `${wf.name} terminado`);
+  };
+
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal wf-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>{wf.emoji ?? '🔗'} {wf.name}</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+        <p className="muted" style={{ fontSize: '0.86rem', whiteSpace: 'pre-wrap' }}>{wf.description}</p>
+
+        <section style={{ marginTop: 14 }}>
+          <h4>📥 Entradas</h4>
+          <div className="wf-inputs">
+            {(wf.inputs ?? []).map((i) => (
+              <label key={i.id} className="wf-field">
+                <span>{i.label}{i.required && <span style={{ color: '#ff8080' }}> *</span>}</span>
+                {i.type === 'file' ? (
+                  <input
+                    type="file"
+                    accept={i.accept}
+                    onChange={(e) => setFiles((prev) => ({ ...prev, [i.id]: e.target.files?.[0] ?? prev[i.id] }))}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder={i.placeholder}
+                    value={inputs[i.id] ?? ''}
+                    onChange={(e) => setInputs((prev) => ({ ...prev, [i.id]: e.target.value }))}
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ marginTop: 14 }}>
+          <h4>⚙️ Pasos</h4>
+          <div className="wf-steps">
+            {wf.steps.map((s, i) => {
+              const r = results[i];
+              const icon = r?.status === 'ok' ? '✅' : r?.status === 'fail' ? '❌' : r?.status === 'running' ? '🔄' : r?.status === 'skipped' ? '⏭' : '⏳';
+              return (
+                <div key={s.id} className={`wf-step ${r?.status ?? 'pending'}`}>
+                  <div className="wf-step-head">
+                    <span className="wf-step-icon">{icon}</span>
+                    <strong>{s.label}</strong>
+                    {s.type === 'stub' && <span className="pill">stub</span>}
+                    {r?.durationMs !== undefined && <span className="muted" style={{fontSize:'0.74rem'}}>· {(r.durationMs / 1000).toFixed(2)}s</span>}
+                  </div>
+                  {r?.error && <pre className="wf-step-err">{r.error}</pre>}
+                  {r?.output && (
+                    <pre className="wf-step-out">{r.output.slice(0, 4000)}{r.output.length > 4000 && '\n…(truncado)'}</pre>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="onb-actions">
+          <button className="secondary" onClick={onClose}>Cerrar</button>
+          <button onClick={runAll} disabled={!canRun || running}>
+            {running ? '⏳ Ejecutando…' : '▶ Ejecutar workflow'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkflowsPanel({
+  open, onClose, onRun,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onRun: (wf: WorkflowDef) => void;
+}) {
+  const [list, setList] = useState<WorkflowDef[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    void (async () => {
+      const r = await tauriInvoke<WorkflowDef[]>('list_workflows');
+      setList(r ?? []);
+      setLoading(false);
+    })();
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal wf-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>🔗 Workflows</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+        <p className="muted" style={{ fontSize: '0.84rem' }}>
+          Recetas declarativas que orquestan llamadas HTTP a tus tools locales. Definidas en <code>workflows/*.yaml</code>.
+        </p>
+        {loading && <p className="muted">Cargando…</p>}
+        {!loading && list.length === 0 && (
+          <p className="muted">Sin workflows. Crea uno en <code>workflows/&lt;id&gt;.yaml</code>.</p>
+        )}
+        <div className="wf-grid">
+          {list.map((w) => (
+            <div key={w.id} className="wf-card">
+              <div className="wf-card-head">
+                <span style={{ fontSize: '1.6rem' }}>{w.emoji ?? '🔗'}</span>
+                <strong>{w.name}</strong>
+              </div>
+              <p className="muted" style={{ fontSize: '0.82rem', whiteSpace: 'pre-wrap' }}>{w.description.split('\n')[0]}</p>
+              <div className="wf-card-meta">
+                <span>{w.category}</span>
+                <span>·</span>
+                <span>{w.steps?.length ?? 0} step(s)</span>
+                {w.requires_tools && w.requires_tools.length > 0 && <>
+                  <span>·</span>
+                  <span>requiere: {w.requires_tools.join(', ')}</span>
+                </>}
+              </div>
+              <button onClick={() => { onClose(); onRun(w); }}>▶ Ejecutar</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Marketplace ─────────────────────────────────────────────────────────────
@@ -1012,6 +1263,8 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
+  const [showWorkflows, setShowWorkflows] = useState(false);
+  const [runningWorkflow, setRunningWorkflow] = useState<WorkflowDef | null>(null);
   const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
   const [lastTouchedToolId, setLastTouchedToolId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -1071,6 +1324,7 @@ export default function App() {
         if (lastTouchedToolId) setViewingLogsFor((v) => v === lastTouchedToolId ? null : lastTouchedToolId);
       }
       else if (k === 'm') { e.preventDefault(); setShowMarket((v) => !v); }
+      else if (k === 'w') { e.preventDefault(); setShowWorkflows((v) => !v); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -1082,6 +1336,7 @@ export default function App() {
       { id: 'open-settings', label: '⚙️ Abrir configuración', group: 'App', run: () => setShowSettings(true) },
       { id: 'open-tour', label: '👋 Re-abrir tour', group: 'App', run: () => setShowOnboarding(true) },
       { id: 'open-market', label: '🛒 Abrir Marketplace', group: 'App', run: () => setShowMarket(true) },
+      { id: 'open-workflows', label: '🔗 Abrir Workflows', group: 'App', run: () => setShowWorkflows(true) },
       { id: 'open-help', label: '⌨️ Mostrar atajos', group: 'App', run: () => setShowHelp(true) },
       { id: 'refresh-all', label: '🔄 Refrescar tools y stats', group: 'App', run: () => { void reloadTools(); void reloadStats(); } },
       { id: 'clear-queue', label: '🧹 Limpiar cola', group: 'App', run: () => { if (!isQueueRunning) { setQueue([]); setQueueVisible(false); } } },
@@ -1422,6 +1677,14 @@ export default function App() {
         alreadyInstalledIds={new Set(tools.map((t) => t.id))}
         onImported={() => { void reloadTools(); }}
       />
+      <WorkflowsPanel
+        open={showWorkflows}
+        onClose={() => setShowWorkflows(false)}
+        onRun={(wf) => setRunningWorkflow(wf)}
+      />
+      {runningWorkflow && (
+        <WorkflowRunner wf={runningWorkflow} onClose={() => setRunningWorkflow(null)} />
+      )}
       <PreInstallCheck
         tool={preInstallTool}
         freeBytes={stats?.disk_free_bytes ?? null}
@@ -1471,6 +1734,9 @@ export default function App() {
             </button>
             <button className="nav-item" onClick={() => setShowMarket(true)} title="Catálogo curado de tools comunitarias">
               🛒 Marketplace <kbd className="nav-kbd">⌘M</kbd>
+            </button>
+            <button className="nav-item" onClick={() => setShowWorkflows(true)} title="Pipelines y chains entre tools">
+              🔗 Workflows <kbd className="nav-kbd">⌘W</kbd>
             </button>
             <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
               {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} Tema · {theme}

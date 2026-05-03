@@ -1,0 +1,50 @@
+id: comfyui-prompt
+name: Generar imagen desde prompt (ComfyUI)
+category: image
+emoji: 🖼
+description: |
+  Encola un prompt simple en ComfyUI usando el workflow JSON por defecto.
+  Requiere que tengas un checkpoint (ej. SDXL base) en
+  tools/comfyui/source/models/checkpoints/.
+
+requires_tools:
+  - comfyui
+
+inputs:
+  - id: prompt
+    type: text
+    label: Prompt
+    required: true
+    placeholder: "a futuristic city at dawn, photorealistic"
+  - id: negative
+    type: text
+    label: Negative prompt
+    required: false
+    default: "blurry, low quality, watermark"
+
+steps:
+  - id: queue-prompt
+    label: Enviar prompt a la cola de ComfyUI
+    type: http
+    method: POST
+    url: http://127.0.0.1:8188/prompt
+    body_kind: json
+    body: |
+      {
+        "prompt": {
+          "3": { "class_type": "KSampler", "inputs": { "seed": 42, "steps": 20, "cfg": 7, "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0, "model": ["4",0], "positive": ["6",0], "negative": ["7",0], "latent_image": ["5",0] } },
+          "4": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "sd_xl_base_1.0.safetensors" } },
+          "5": { "class_type": "EmptyLatentImage", "inputs": { "width": 512, "height": 512, "batch_size": 1 } },
+          "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "{{inputs.prompt}}", "clip": ["4",1] } },
+          "7": { "class_type": "CLIPTextEncode", "inputs": { "text": "{{inputs.negative}}", "clip": ["4",1] } },
+          "8": { "class_type": "VAEDecode", "inputs": { "samples": ["3",0], "vae": ["4",2] } },
+          "9": { "class_type": "SaveImage", "inputs": { "images": ["8",0], "filename_prefix": "chofyai" } }
+        }
+      }
+    output:
+      kind: json
+      from: prompt_id
+      label: ID del prompt encolado
+
+# Nota: este workflow requiere SDXL Base instalado. Si no lo tienes,
+# importa "sdxl-comfy" desde el Marketplace y descarga el checkpoint.
