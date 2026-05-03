@@ -178,6 +178,7 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 | 🩺 **Problemas comunes** | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Errores y soluciones |
 | 📦 **Empaquetado** | [`docs/packaging.md`](docs/packaging.md) | `.app` y `.dmg` |
 | 🗺️ **Roadmap** | [`ROADMAP.md`](ROADMAP.md) | Qué viene en Fase 5+ |
+| ☁️ **Migración a AWS** | [`docs/cloud/README.md`](docs/cloud/README.md) | Plan completo: arquitectura, servicios, costos y despliegue |
 
 ---
 
@@ -254,6 +255,21 @@ npm run package:mac       # Pipeline completo
 |:---|:---|:---|
 | [`ci.yml`](.github/workflows/ci.yml) | push / PR a `main` | 🧹 Lint Markdown · 🔍 TypeScript typecheck · ✅ Validación YAML · 🔒 Secret scanning |
 | [`release.yml`](.github/workflows/release.yml) | `workflow_dispatch` | 🏷️ Tag + GitHub Release con notas desde `CHANGELOG.md` |
+
+---
+
+## ☁️ Migración a la nube (AWS)
+
+¿Quieres llevar ChofyAI Studio más allá de tu Mac? La carpeta [`docs/cloud/`](docs/cloud/README.md) contiene un plan completo para migrarlo a AWS:
+
+| Documento | Contenido |
+|:---|:---|
+| 📘 [`AWS_MIGRATION.md`](docs/cloud/AWS_MIGRATION.md) | Visión global, fases y decisiones |
+| 🏗️ [`AWS_ARCHITECTURE.md`](docs/cloud/AWS_ARCHITECTURE.md) | Arquitectura objetivo con diagramas |
+| 🧰 [`AWS_SERVICES.md`](docs/cloud/AWS_SERVICES.md) | Mapa de servicios AWS y por qué |
+| 💰 [`AWS_COSTS.md`](docs/cloud/AWS_COSTS.md) | Costos por escenario y palancas |
+| 🔒 [`AWS_SECURITY.md`](docs/cloud/AWS_SECURITY.md) | IAM, redes, secretos, hardening |
+| 🚀 [`AWS_STEP_BY_STEP.md`](docs/cloud/AWS_STEP_BY_STEP.md) | Despliegue hands-on con Terraform |
 
 ---
 
