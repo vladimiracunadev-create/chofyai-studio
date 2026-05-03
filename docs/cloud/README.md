@@ -56,12 +56,17 @@ flowchart LR
 
 ## ⚡ TL;DR
 
-| Aspecto | Local actual | Cloud objetivo |
+| Aspecto | Local v0.5.0 | Cloud objetivo |
 |:---|:---|:---|
-| 🖥️ Frontend | Tauri WebView | S3 + CloudFront |
-| 🦀 Backend | Rust local IPC | ECS Fargate (API REST/WS) |
+| 🖥️ Frontend | Tauri WebView · React + TS · i18n ES/EN · ⌘K palette | S3 + CloudFront (la misma SPA) |
+| 🦀 Backend | Rust local IPC · 30+ comandos | ECS Fargate (API REST/WS) |
 | 🧠 Inferencia | Procesos locales | EC2 GPU (`g6.xlarge`) on-demand |
-| 💾 Estado | `studio_home` en disco | S3 + EFS + RDS |
+| 💾 Estado | `studio_home` + `processes.json` + `crash.log` | S3 + EFS + RDS + DynamoDB + CloudWatch |
+| 🛒 Marketplace | `marketplace/registry.yaml` empaquetado | S3 público + CloudFront + repo `community-tools` |
+| 🔗 Workflows | YAML local + frontend `fetch()` runner | Step Functions o mismo `fetch()` para MVP |
+| 👻 Huérfanos | `lsof -iTCP` + adopt/kill | ECS task health + CloudWatch alarms |
+| 🛡 Seguridad CI | `security.yml` portable con `workflow_call` | El mismo workflow invocado desde repo cloud |
+| 💾 Discos externos | Sparsebundle APFS sobre exFAT | EFS (POSIX nativo) |
 | 👤 Usuarios | 1 (el dueño del Mac) | N (Cognito multi-tenant) |
 | 💵 Costo arranque | Hardware ya pagado | ~95 USD/mes mínimo |
 | 🔁 Reversible | — | Sí, fases independientes |

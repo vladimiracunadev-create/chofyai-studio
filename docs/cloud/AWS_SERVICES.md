@@ -107,6 +107,8 @@ mindmap
 | ☠️ **SQS DLQ** | Capturar mensajes no procesados tras N reintentos | Permite debug y reproceso manual |
 | 🚌 **EventBridge** | Bus para eventos de negocio (`job.completed`, `user.signup`) | Routing por reglas, integra Lambdas y SaaS externos |
 | 📣 **SNS** | Notificaciones a humanos (email/Slack) y fan-out | Tópicos por severidad |
+| 🎬 **Step Functions** | Orquestador de **workflows** entre tools | Traduce el YAML local a state machine; Lambdas por step; visibilidad nativa |
+| 🔍 **OpenSearch Serverless** *(futuro)* | Indexar **marketplace** + búsqueda | Cuando el catálogo curado supere ~100 tools |
 
 ---
 
@@ -152,11 +154,19 @@ mindmap
 | Servir UI a usuarios remotos | S3 + CloudFront |
 | Reemplazar `tauri::invoke()` | API Gateway + ECS Fargate |
 | Reemplazar `ProcessRegistry` | RDS + Redis |
+| Reemplazar `processes.json` (PIDs persistidos) | DynamoDB con TTL |
+| Reemplazar `crash.log` | CloudWatch Logs + Sentry opcional |
 | Reemplazar scripts bash de `run` | SQS + EC2 GPU + cloud-init |
 | Reemplazar `studio_home/models/` | EFS |
 | Reemplazar `outputs/` | S3 + presigned URLs |
 | Reemplazar logs locales | CloudWatch Logs |
 | Reemplazar el botón "abrir herramienta" | WebSocket via API Gateway |
+| Reemplazar **`marketplace/registry.yaml`** | S3 público con CloudFront + repo `community-tools` |
+| Reemplazar **`workflows/*.yaml`** runner | Step Functions (orquestador) o frontend `fetch()` para MVP |
+| Reemplazar **sparsebundle APFS** local | EFS (POSIX nativo, sin trampas de filesystem) |
+| Reemplazar **detección de huérfanos** | ECS task health + CloudWatch alarms |
+| Reemplazar **i18n local** | Mismo (es frontend puro, no necesita backend) |
+| Reemplazar **security workflow CI** | Mismo workflow vía `workflow_call` desde el repo cloud |
 | Multiusuario / roles | Cognito + IAM |
 | Costo controlado | Spot + lifecycle + Cost Anomaly Detection |
 

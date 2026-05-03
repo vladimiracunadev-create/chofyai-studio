@@ -148,7 +148,67 @@ flowchart TB
 | `studio_home/tools/<id>/models` | **EFS** (modo Elastic Throughput) | Compartido entre workers, montaje POSIX |
 | `studio_home/tools/<id>/outputs` | **S3** (clase Standard → IA) | Lifecycle a Glacier a los 30 días |
 | `storage/state/settings.json` | **DynamoDB** + **Secrets Manager** | Settings por usuario |
-| Logs locales | **CloudWatch Logs** | Retención configurable |
+| `storage/state/processes.json` | **DynamoDB** (`sessions`) | PIDs por sesión, TTL |
+| `storage/state/crash.log` | **CloudWatch Logs** + **Sentry** opcional | Error tracking |
+| Logs de tools | **CloudWatch Logs** | Retención configurable |
+| Sparsebundle APFS local | n/a — cloud nativo APFS-equivalente con EFS | — |
+
+### 3.5 Marketplace de tools (nuevo en v0.5.0)
+
+Hoy el catálogo curado vive en `marketplace/registry.yaml` empaquetado dentro del `.app`. En cloud:
+
+| Aspecto | Cloud |
+|:---|:---|
+| 🪣 Hosting del catálogo | **S3** público con CloudFront (cache 1h, invalidate al actualizar) |
+| 🔄 Versionado | Tags git en repo `community-tools` separado, S3 sirve `latest.yaml` y `v<N>.yaml` |
+| 🔍 Indexación | **OpenSearch Serverless** para búsqueda full-text (cuando el catálogo crezca a >100 tools) |
+| 📥 Import | Frontend hace `fetch()` directo a S3, valida schema, llama API Gateway → ECS para crear el manifest del usuario |
+| 🛡 Validación | Lambda valida cada PR al repo `community-tools` con el schema antes de aceptar |
+
+```mermaid
+flowchart LR
+    Repo["📦 community-tools<br/>(repo git)"] -->|merge a main| GHA["🤖 GitHub Action"]
+    GHA -->|sync| S3["🪣 S3 marketplace.chofyai.app"]
+    S3 -->|cache 1h| CF["🌐 CloudFront"]
+    UI["⚛️ Frontend"] -->|GET registry.yaml| CF
+    UI -->|POST import| API["🚪 API Gateway"]
+    API --> ECS["🦀 Backend"]
+    ECS -->|crea apps/<id>.yaml por user| RDS["🗄️ RDS"]
+
+    style S3 fill:#fff3e0,stroke:#e65100
+    style CF fill:#fff8e1,stroke:#f57f17
+```
+
+### 3.6 Workflows (chains entre tools, nuevo en v0.5.0)
+
+Los workflows YAML locales necesitan un orquestador en cloud. **AWS Step Functions** es la opción natural:
+
+| Aspecto | Cloud |
+|:---|:---|
+| 📜 Definición | `workflows/*.yaml` por usuario en S3 (privado, KMS-encrypted) |
+| 🎬 Runner | **Step Functions Standard** workflow generado a partir del YAML |
+| 🔁 Steps tipo `http` | Lambda que hace POST al endpoint del tool worker |
+| 🛑 Steps tipo `stub` | `Pass` state |
+| 📊 Visibilidad | UI suscrita vía WebSocket a EventBridge events de la state machine |
+| 💾 Resultados | S3 (artefactos) + DynamoDB (metadatos por step) |
+
+```mermaid
+flowchart LR
+    UI["⚛️ Run workflow"] --> SFN["🎬 Step Functions"]
+    SFN --> L1["⚡ Lambda step1<br/>POST whisper"]
+    L1 --> L2["⚡ Lambda step2<br/>POST LLM"]
+    L2 --> L3["⚡ Lambda step3<br/>POST TTS"]
+    L1 -.event.-> EB["🚌 EventBridge"]
+    L2 -.event.-> EB
+    L3 -.event.-> EB
+    EB -->|push| WS["🔔 WebSocket"]
+    WS --> UI
+
+    style SFN fill:#fce4ec,stroke:#880e4f
+    style EB fill:#f3e5f5,stroke:#4a148c
+```
+
+> **Alternativa más simple** para MVP: el frontend cloud sigue ejecutando los steps con `fetch()` directo (igual que el desktop), Step Functions queda para v2.
 
 ---
 

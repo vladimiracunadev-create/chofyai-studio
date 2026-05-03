@@ -75,8 +75,9 @@ notes:                          # (lista, opcional) Notas para el desarrollador 
 
 | Campo | Tipo | Descripción |
 |---|---|---|
+| `icon` | `string` | Emoji o glyph del tool — sustituye al emoji de categoría en la tarjeta. Ej: `🎙` whisper.cpp, `🎤` Qwen3-TTS, `🎨` ComfyUI, `🎭` FaceFusion, `🎹` AceForge. **Recomendado** para identificación visual rápida. Si está ausente, la UI cae al `CATEGORY_EMOJI` (`🎤`/`🎙`/`🎬`/`🖼`/`🎵`). |
 | `recommended` | `bool` | Si `true`, muestra un badge "Recomendada" en la UI. |
-| `default_port` | `int` | Puerto donde levanta el servidor. Usado para healthchecks y para mostrar en UI. |
+| `default_port` | `int` | Puerto donde levanta el servidor. Usado para healthchecks y para mostrar en UI. **Importante**: si dos tools comparten puerto (ej. Gradio default 7860), una de ellas debe declararlo distinto y exportar `GRADIO_SERVER_PORT=N` en el `run.command`. |
 | `python_manager` | `enum` | Solo cuando `runtime: python`. Valores: `auto` (default — uv si existe, pip si no), `uv` (forzado), `pip` (forzado). |
 | `install` | `list[string]` | Pasos declarativos de instalación (solo documentación; el script real es `install_script`). |
 | `models` | `list[string]` | Modelos que se descargan. Referencia para documentación. |

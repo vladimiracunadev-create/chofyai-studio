@@ -172,7 +172,44 @@ flowchart LR
 
 ---
 
-## ✅ 10. Checklist de hardening día 1
+## 🤖 10. Reuso del security workflow del repo desktop
+
+ChofyAI Studio (versión desktop) ya tiene un **workflow de seguridad portable** en
+`.github/workflows/security.yml` con `workflow_call` habilitado. Para los repos cloud
+(infra Terraform, Lambdas, etc.) **referencia ese workflow en lugar de duplicarlo**:
+
+```yaml
+# en infra-cloud-aws/.github/workflows/security.yml
+name: Security
+on:
+  push:    { branches: [main] }
+  pull_request: { branches: [main] }
+  schedule: [{ cron: "0 6 * * 1" }]
+
+jobs:
+  security:
+    uses: vladimiracunadev-create/chofyai-studio/.github/workflows/security.yml@main
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+```
+
+Cobertura automática:
+
+| Job | Aplicable a infra cloud |
+|:---|:---|
+| 🔐 **TruffleHog** | ✅ Detecta secrets (AWS keys, JWT) |
+| 📦 **npm audit** | ✅ Si hay `package-lock.json` (CDK TS, Lambdas Node) |
+| 🦀 **cargo audit** | ⚠️ Solo si la infra usa Rust (skip silencioso si no) |
+| 🔬 **CodeQL** | ✅ Para Lambdas TS/JS |
+| 📌 **Pin actions** | ✅ Universal |
+
+Ver [`docs/SECURITY_WORKFLOW.md`](../SECURITY_WORKFLOW.md) en el repo desktop para guía completa de portabilidad.
+
+---
+
+## ✅ 11. Checklist de hardening día 1
 
 - [ ] Root account con MFA hardware y guardada en caja fuerte
 - [ ] Organización AWS + cuentas separadas `dev`/`prod`

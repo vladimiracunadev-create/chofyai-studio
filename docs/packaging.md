@@ -23,6 +23,21 @@ Generar un `.app` y un `.dmg` desde tu Mac para uso local o distribución contro
 - 📐 Lectura de manifests y scripts desde recursos empaquetados
 - 💾 Escritura de settings en directorio de datos de usuario (no en el bundle)
 
+### 📦 Recursos del bundle (v0.5.0)
+
+`tauri.conf.json` declara estos directorios como recursos embebidos en el `.app`:
+
+| Recurso | Función |
+|:---|:---|
+| `apps/` | Manifests YAML de las 5 tools base (con campo `icon`) |
+| `docs/` | Documentación lectiva incluida en el bundle |
+| `marketplace/registry.yaml` | Catálogo curado de 10 tools comunitarias importables |
+| `workflows/*.yaml` | 3 workflows base (transcribe, comfyui-prompt, audio-pipeline) |
+| `scripts/mac/` | Scripts de instalación + doctor + clean + sparsebundle |
+| `storage/state/settings.json` | Settings iniciales (sobrescritos por usuario en runtime) |
+
+Todos accesibles vía `app.path().resolve("...", BaseDirectory::Resource)` en Rust con fallback a `repo_root()` en modo dev.
+
 ---
 
 ## 📋 Requisitos en tu Mac
