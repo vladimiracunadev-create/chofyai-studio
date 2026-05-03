@@ -35,6 +35,8 @@ pub fn run() {
             system::list_running_pids,
             system::read_tool_log,
             system::notify_macos,
+            system::list_tool_models,
+            system::delete_tool_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -79,6 +79,14 @@ export type VolumeCandidate = {
   total_bytes?: number | null;
 };
 
+export type ModelEntry = {
+  name: string;
+  relative_path: string;
+  absolute_path: string;
+  size_bytes: number;
+  modified_secs: number;
+};
+
 export type ToastKind = 'info' | 'success' | 'warn' | 'error';
 
 export type Toast = {

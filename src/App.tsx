@@ -7,6 +7,7 @@ import type {
   AppSettings,
   HealthResult,
   InstallEvent,
+  ModelEntry,
   QueueItem,
   SystemStats,
   SystemSummary,
@@ -50,14 +51,8 @@ const CATEGORY_LABEL: Record<ToolManifest['category'], string> = {
   image: 'Imágenes', music: 'Música', system: 'Sistema',
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function fmtBytes(b?: number | null): string {
-  if (!b || b <= 0) return '—';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let v = b, i = 0;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-  return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
-}
+// ─── Helpers (en src/utils.ts para tests) ─────────────────────────────────────
+import { fmtBytes, fmtElapsed, parseInstallLine } from './utils';
 
 async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?: { silent?: boolean }): Promise<T | null> {
   if (!inTauri) return null;
@@ -71,42 +66,228 @@ async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?
   }
 }
 
-function fmtElapsed(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const mm = Math.floor(s / 60), ss = s % 60;
-  return `${mm}:${ss.toString().padStart(2, '0')}`;
+// ─── Command Palette (⌘K) ────────────────────────────────────────────────────
+type CmdAction = { id: string; label: string; hint?: string; group: string; run: () => void };
+
+function CommandPalette({
+  open, onClose, actions,
+}: { open: boolean; onClose: () => void; actions: CmdAction[] }) {
+  const [query, setQuery] = useState('');
+  const [cursor, setCursor] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) { setQuery(''); setCursor(0); setTimeout(() => inputRef.current?.focus(), 30); }
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return actions.slice(0, 30);
+    return actions.filter((a) => (a.label + ' ' + (a.hint ?? '') + ' ' + a.group).toLowerCase().includes(q)).slice(0, 30);
+  }, [actions, query]);
+
+  useEffect(() => { setCursor(0); }, [query]);
+
+  if (!open) return null;
+  const exec = (a?: CmdAction) => { if (a) { a.run(); onClose(); } };
+
+  return (
+    <div className="cmdk-overlay" onClick={onClose}>
+      <div className="cmdk-modal" onClick={(e) => e.stopPropagation()}>
+        <input
+          ref={inputRef}
+          className="cmdk-input"
+          placeholder="🔎 Buscar comando o tool…   (esc)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onClose();
+            else if (e.key === 'ArrowDown') { e.preventDefault(); setCursor((c) => Math.min(c + 1, filtered.length - 1)); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
+            else if (e.key === 'Enter') { e.preventDefault(); exec(filtered[cursor]); }
+          }}
+        />
+        <div className="cmdk-list">
+          {filtered.length === 0 && <div className="cmdk-empty">Sin resultados</div>}
+          {filtered.map((a, i) => (
+            <button
+              key={a.id}
+              className={`cmdk-item ${i === cursor ? 'active' : ''}`}
+              onMouseEnter={() => setCursor(i)}
+              onClick={() => exec(a)}
+            >
+              <span className="cmdk-group">{a.group}</span>
+              <span className="cmdk-label">{a.label}</span>
+              {a.hint && <span className="cmdk-hint">{a.hint}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="cmdk-footer">↑↓ navegar · ↵ ejecutar · esc cerrar</div>
+      </div>
+    </div>
+  );
 }
 
-type LineParse = { phase?: string; progressPct?: number; speed?: string; eta?: string };
-function parseInstallLine(prev: LineParse, line: string): LineParse {
-  const out: LineParse = { ...prev };
-  const stripped = line.replace(/\x1b\[[0-9;]*m/g, '');
+// ─── Models panel ────────────────────────────────────────────────────────────
+function ModelsPanel({ tool, onClose }: { tool: ToolManifest; onClose: () => void }) {
+  const [models, setModels] = useState<ModelEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const reload = async () => {
+    setLoading(true);
+    const r = await tauriInvoke<ModelEntry[]>('list_tool_models', { toolId: tool.id });
+    setModels(r ?? []);
+    setLoading(false);
+  };
+  useEffect(() => { void reload(); }, [tool.id]);
 
-  if (/^Clonando|^Cloning into/i.test(stripped)) out.phase = 'Clonando repositorio';
-  else if (/Receiving objects:\s+(\d+)%/i.test(stripped)) {
-    const m = stripped.match(/Receiving objects:\s+(\d+)%/i)!;
-    out.phase = 'Descargando objetos git'; out.progressPct = +m[1];
-  }
-  else if (/Resolving deltas:\s+(\d+)%/i.test(stripped)) {
-    const m = stripped.match(/Resolving deltas:\s+(\d+)%/i)!;
-    out.phase = 'Resolviendo deltas'; out.progressPct = +m[1];
-  }
-  else if (/Creating virtual environment|Creando venv/i.test(stripped)) out.phase = 'Creando entorno Python';
-  else if (/Resolved \d+ packages|Installing collected|Downloading|Installed \d+ packages/i.test(stripped)) out.phase = 'Instalando dependencias Python';
-  else if (/^\[\s*(\d+)%\]/.test(stripped)) {
-    const m = stripped.match(/^\[\s*(\d+)%\]/)!;
-    out.phase = 'Compilando (cmake/make)'; out.progressPct = Math.min(+m[1], 100);
-  }
-  else if (/Linking CXX|Linking C /i.test(stripped)) out.phase = 'Enlazando binarios';
-  else if (/Downloading .*model|saved in.*\.bin|Downloading ggml/i.test(stripped)) out.phase = 'Descargando modelo';
-  else if (/^\s*(\d{1,3})\s+\d+[KMG]?\s+(\d{1,3})\s+\d+[KMG]?\s+\d+\s+\d+\s+(\d+[KMG]?)\s/.test(stripped)) {
-    const m = stripped.match(/^\s*(\d{1,3})\s+(\d+[KMG]?)\s+(\d{1,3})\s+(\d+[KMG]?)\s+\d+\s+\d+\s+(\d+[KMG]?)/)!;
-    out.progressPct = +m[1];
-    out.speed = `${m[5]}B/s`;
-  }
-  else if (/INSTALL_OK\b/.test(stripped)) { out.phase = 'Listo'; out.progressPct = 100; }
+  const totalBytes = models.reduce((acc, m) => acc + m.size_bytes, 0);
 
-  return out;
+  const onDelete = async (m: ModelEntry) => {
+    if (!confirm(`¿Borrar "${m.relative_path}" (${fmtBytes(m.size_bytes)})?`)) return;
+    const r = await tauriInvoke<ActionResult>('delete_tool_model', { toolId: tool.id, relativePath: m.relative_path });
+    if (r?.ok) { notify('success', 'Modelo borrado', m.name); void reload(); }
+  };
+
+  return (
+    <section className="card models-card">
+      <div className="section-header">
+        <h3>📦 Modelos · {tool.name} <span className="muted" style={{fontSize:'0.78rem'}}>{models.length} archivo(s) · {fmtBytes(totalBytes)}</span></h3>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="secondary" onClick={() => void reload()}>🔄</button>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+      </div>
+      {loading && <p className="muted">Escaneando…</p>}
+      {!loading && models.length === 0 && (
+        <p className="muted">No hay modelos en <code>{tool.install_dir}/models</code> aún.</p>
+      )}
+      {!loading && models.length > 0 && (
+        <div className="models-list">
+          {models.map((m) => (
+            <div key={m.absolute_path} className="model-row">
+              <div className="model-info">
+                <strong>{m.name}</strong>
+                <span className="muted" style={{fontSize:'0.74rem',fontFamily:'ui-monospace'}}>{m.relative_path}</span>
+              </div>
+              <span className="model-size">{fmtBytes(m.size_bytes)}</span>
+              <button className="secondary danger-soft" onClick={() => void onDelete(m)} title="Borrar archivo">🗑</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── Settings modal ──────────────────────────────────────────────────────────
+function SettingsModal({
+  open, onClose, summary, volumes, onSaved, tools,
+}: {
+  open: boolean; onClose: () => void; summary: SystemSummary | null;
+  volumes: VolumeCandidate[]; onSaved: () => void; tools: ToolManifest[];
+}) {
+  const [draft, setDraft] = useState<string>('');
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft(summary?.studio_home ?? '');
+    void (async () => {
+      // Cargar overrides actuales
+      try {
+        const settingsResp = await tauriInvoke<Record<string, unknown>>('get_system_summary');
+        if (settingsResp) {
+          const t = tools.filter((x) => x.relocated);
+          const m: Record<string, string> = {};
+          for (const x of t) m[x.id] = x.install_dir;
+          setOverrides(m);
+        }
+      } catch { /* noop */ }
+    })();
+  }, [open, summary, tools]);
+
+  if (!open) return null;
+
+  const onSaveHome = async () => {
+    if (!draft.trim()) return;
+    const r = await tauriInvoke<unknown>('save_studio_home', { studioHome: draft });
+    if (r) {
+      notify('success', 'Studio home guardado', draft);
+      onSaved();
+    }
+  };
+
+  const onClearOverride = async (toolId: string) => {
+    const r = await tauriInvoke<ActionResult>('clear_module_override', { toolId });
+    if (r) {
+      notify('success', 'Override eliminado', toolId);
+      const next = { ...overrides }; delete next[toolId]; setOverrides(next);
+      onSaved();
+    }
+  };
+
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>⚙️ Configuración</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+
+        <section style={{ marginTop: 14 }}>
+          <h4>💾 Studio home</h4>
+          <p className="muted" style={{ fontSize: '0.82rem' }}>Ruta base donde se instalan las herramientas.</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              className="onb-input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="/ruta/absoluta"
+            />
+            <button onClick={onSaveHome} disabled={!draft.trim() || draft === summary?.studio_home}>Guardar</button>
+          </div>
+          <div className="vol-grid">
+            {volumes.map((v) => (
+              <button
+                key={v.path}
+                className={`vol-chip ${v.path === draft ? 'active' : ''}`}
+                onClick={() => setDraft(v.path)}
+                disabled={!v.writable || !v.mounted}
+                title={v.writable ? 'Escribible' : 'Solo lectura'}
+              >
+                <strong>{v.label}</strong>
+                <span>{v.free_bytes ? fmtBytes(v.free_bytes) + ' libres' : '—'}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ marginTop: 18 }}>
+          <h4>📍 Overrides de tools</h4>
+          {Object.keys(overrides).length === 0 ? (
+            <p className="muted" style={{ fontSize: '0.82rem' }}>Sin overrides — todas las tools usan <code>studio_home/tools/&lt;id&gt;</code>.</p>
+          ) : (
+            <div className="override-list">
+              {Object.entries(overrides).map(([id, p]) => (
+                <div key={id} className="override-row">
+                  <strong>{id}</strong>
+                  <code style={{ fontSize: '0.74rem', flex: 1 }}>{p}</code>
+                  <button className="secondary" onClick={() => void onClearOverride(id)}>↺ Reset</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section style={{ marginTop: 18, fontSize: '0.78rem' }} className="muted">
+          <h4 style={{ marginBottom: 4 }}>🩺 Diagnóstico</h4>
+          <div>OS: {summary?.os} · Arch: {summary?.arch} · App: v{APP_VERSION}</div>
+          <div>settings.json: <code>{summary?.settings_file}</code></div>
+          {summary?.using_fallback && <div style={{ color: '#ffcd80' }}>⚠ Usando fallback ({summary.studio_home_effective})</div>}
+        </section>
+      </div>
+    </div>
+  );
 }
 
 // ─── Onboarding (first-run wizard) ────────────────────────────────────────────
@@ -542,6 +723,50 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
     try { return !localStorage.getItem(ONBOARDING_KEY); } catch { return false; }
   });
+  const [showCmdK, setShowCmdK] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
+
+  // Atajo global ⌘K / Ctrl+K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowCmdK((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Acciones para la paleta
+  const cmdActions = useMemo<CmdAction[]>(() => {
+    const list: CmdAction[] = [
+      { id: 'open-settings', label: '⚙️ Abrir configuración', group: 'App', run: () => setShowSettings(true) },
+      { id: 'open-tour', label: '👋 Re-abrir tour', group: 'App', run: () => setShowOnboarding(true) },
+      { id: 'refresh-all', label: '🔄 Refrescar tools y stats', group: 'App', run: () => { void reloadTools(); void reloadStats(); } },
+      { id: 'clear-queue', label: '🧹 Limpiar cola', group: 'App', run: () => { if (!isQueueRunning) { setQueue([]); setQueueVisible(false); } } },
+    ];
+    for (const t of tools) {
+      const port = t.default_port ? `:${t.default_port}` : '';
+      const installed = t.installed;
+      if (!installed) {
+        list.push({ id: `install-${t.id}`, label: `📦 Instalar ${t.name}`, hint: t.id, group: t.category, run: () => { void handleInstall(t); } });
+      } else {
+        list.push({ id: `start-${t.id}`, label: `▶ Iniciar ${t.name}`, hint: port, group: t.category, run: () => { void handleStart(t); } });
+        list.push({ id: `stop-${t.id}`, label: `⏹ Detener ${t.name}`, group: t.category, run: () => { void handleStop(t); } });
+        list.push({ id: `restart-${t.id}`, label: `🔄 Reiniciar ${t.name}`, group: t.category, run: () => { void handleRestart(t); } });
+        if (t.default_port) {
+          list.push({ id: `view-${t.id}`, label: `👁 Ver UI de ${t.name}`, hint: port, group: t.category, run: () => setViewingTool(t.id) });
+        }
+        list.push({ id: `logs-${t.id}`, label: `📋 Ver logs de ${t.name}`, group: t.category, run: () => setViewingLogsFor(t.id) });
+        list.push({ id: `models-${t.id}`, label: `📦 Modelos de ${t.name}`, group: t.category, run: () => setViewingModelsFor(t.id) });
+        list.push({ id: `folder-${t.id}`, label: `📁 Abrir carpeta de ${t.name}`, group: t.category, run: () => { void handleOpenFolder(t); } });
+      }
+    }
+    return list;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tools, isQueueRunning]);
   const progressRef = useRef<Record<string, string[]>>({});
 
   // ─── Carga inicial ─────────────────────────────────────────────────────────
@@ -842,6 +1067,15 @@ export default function App() {
       <Toaster />
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       <UpdateChecker />
+      <CommandPalette open={showCmdK} onClose={() => setShowCmdK(false)} actions={cmdActions} />
+      <SettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        summary={summary}
+        volumes={volumes}
+        tools={tools}
+        onSaved={() => { void reloadSummary(); void reloadTools(); void reloadVolumes(); }}
+      />
       <main className="layout">
         <aside className="sidebar">
           <div className="brand">
@@ -858,10 +1092,15 @@ export default function App() {
             <button className="nav-item">Voices</button>
             <button className="nav-item">Outputs</button>
             <button className="nav-item">Logs</button>
-            <button className="nav-item">Settings</button>
+            <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides">
+              ⚙️ Settings
+            </button>
             <button className="nav-item">Doctor</button>
             <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
               👋 Tour
+            </button>
+            <button className="nav-item" onClick={() => setShowCmdK(true)} title="⌘K paleta de comandos">
+              ⌘K Comandos
             </button>
           </nav>
           {queue.length > 0 && (
@@ -995,6 +1234,13 @@ export default function App() {
             const t = tools.find((x) => x.id === viewingLogsFor);
             if (!t) return null;
             return <LogsViewer toolId={t.id} name={t.name} onClose={() => setViewingLogsFor(null)} />;
+          })()}
+
+          {/* Models panel */}
+          {viewingModelsFor && (() => {
+            const t = tools.find((x) => x.id === viewingModelsFor);
+            if (!t) return null;
+            return <ModelsPanel tool={t} onClose={() => setViewingModelsFor(null)} />;
           })()}
 
           {/* Empty state si no hay tools instaladas */}
@@ -1149,6 +1395,9 @@ export default function App() {
                       )}
                       <button className="secondary" disabled={isBusy} onClick={() => handleOpenFolder(tool)} title="Abrir carpeta">📁</button>
                       <button className="secondary" disabled={isBusy} onClick={() => handleOpenLog(tool)} title="Ver log">📋</button>
+                      {tool.installed && (
+                        <button className="secondary" onClick={() => setViewingModelsFor(viewingModelsFor === tool.id ? null : tool.id)} title="Ver/borrar modelos">📦</button>
+                      )}
                       <button className="secondary" disabled={isBusy || isRunning} onClick={() => startRelocate(tool)} title="Reubicar a zona modules">
                         📍 Mover
                       </button>

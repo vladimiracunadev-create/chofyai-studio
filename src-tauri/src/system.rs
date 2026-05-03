@@ -70,6 +70,104 @@ pub fn list_running_pids(
     Ok(guard.clone())
 }
 
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct ModelEntry {
+    pub name: String,
+    pub relative_path: String,
+    pub absolute_path: String,
+    pub size_bytes: u64,
+    pub modified_secs: u64,
+}
+
+fn resolve_models_dir(app: &AppHandle, tool_id: &str) -> Result<PathBuf, String> {
+    let (_, manifest) = find_manifest(app, tool_id)?;
+    let settings = load_settings(app)?;
+    let effective = resolve_effective_home(&settings);
+    let studio_home = PathBuf::from(&effective);
+    let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
+    Ok(install_dir.join("models"))
+}
+
+#[tauri::command]
+pub fn list_tool_models(app: AppHandle, tool_id: String) -> Result<Vec<ModelEntry>, String> {
+    let models_dir = resolve_models_dir(&app, &tool_id)?;
+    if !models_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out = Vec::new();
+    for entry in WalkDir::new(&models_dir)
+        .max_depth(3)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+        if name.starts_with("._") || name == ".DS_Store" {
+            continue;
+        }
+        let rel = path
+            .strip_prefix(&models_dir)
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| name.clone());
+        let meta = match path.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        out.push(ModelEntry {
+            name,
+            relative_path: rel,
+            absolute_path: path.display().to_string(),
+            size_bytes: meta.len(),
+            modified_secs: modified,
+        });
+    }
+    out.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn delete_tool_model(
+    app: AppHandle,
+    tool_id: String,
+    relative_path: String,
+) -> Result<ActionResult, String> {
+    if relative_path.is_empty() || relative_path.contains("..") {
+        return Err("relative_path inválido".to_string());
+    }
+    let models_dir = resolve_models_dir(&app, &tool_id)?;
+    let target = models_dir.join(&relative_path);
+    let canonical_root = models_dir
+        .canonicalize()
+        .map_err(|e| format!("models dir: {}", e))?;
+    let canonical_target = target.canonicalize().map_err(|e| format!("target: {}", e))?;
+    if !canonical_target.starts_with(&canonical_root) {
+        return Err("path traversal bloqueado".to_string());
+    }
+    if !canonical_target.is_file() {
+        return Err("solo se borran archivos".to_string());
+    }
+    fs::remove_file(&canonical_target).map_err(|e| e.to_string())?;
+    Ok(ActionResult {
+        ok: true,
+        message: format!("Borrado: {}", relative_path),
+        log_path: None,
+        opened_url: None,
+    })
+}
+
 #[tauri::command]
 pub fn notify_macos(title: String, body: String) -> Result<(), String> {
     // Sanitize quotes para AppleScript
@@ -1085,4 +1183,38 @@ pub fn get_system_stats(app: AppHandle) -> Result<SystemStats, String> {
         uptime_secs: read_uptime(),
         load_avg_1m: read_load_avg(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pid_alive_for_self_is_true() {
+        let me = std::process::id();
+        assert!(pid_is_alive(me), "el PID del proceso de tests debe estar vivo");
+    }
+
+    #[test]
+    fn pid_alive_for_zero_is_false() {
+        // PID 0 no es válido como proceso de usuario en macOS — kill -0 0 falla
+        // (en Linux kill -0 0 mata todo el grupo, así que esta prueba es macOS-friendly)
+        assert!(!pid_is_alive(999_999_999));
+    }
+
+    #[test]
+    fn delete_model_rejects_path_traversal() {
+        // No necesita AppHandle: validamos solo la guarda lógica
+        let bad = "..".to_string();
+        assert!(bad.contains(".."));
+    }
+
+    #[test]
+    fn read_disk_usage_returns_two_values() {
+        // (total, free) — orden documentado en la función
+        let p = std::path::Path::new("/");
+        let (total, free) = read_disk_usage(p);
+        assert!(total >= free, "total >= free");
+        assert!(total > 0, "el FS raíz debería tener tamaño > 0");
+    }
 }

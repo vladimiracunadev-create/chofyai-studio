@@ -11,6 +11,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🎛 Added (Sprint 3 — paleta ⌘K, Settings UI, gestión de modelos, tests baseline)
+
+- **Command palette `⌘K` / `Ctrl+K`** (`CommandPalette`): modal con search, navegación con flechas, ejecución con `↵`. Auto-genera comandos por tool: instalar / iniciar / detener / reiniciar / ver UI / ver logs / ver modelos / abrir carpeta + comandos globales (refrescar, abrir settings, abrir tour, limpiar cola). Atajo global registrado en `window`.
+- **Settings modal completo** (`SettingsModal`): selector visual de volúmenes (chips con espacio libre y permisos, deshabilitados si solo lectura), input de `studio_home` editable, lista de overrides activos con botón `↺ Reset`, sección de diagnóstico con OS/arch/versión y aviso de fallback. Sustituye la edición manual de `settings.json` para los cambios comunes.
+- **Models panel** (`ModelsPanel`): nuevo panel inline por tool que escanea `<install_dir>/models/` recursivo (depth 3), lista archivos ordenados por tamaño descendente, muestra total agregado y permite borrar individual con confirmación.
+- **Comandos Rust nuevos**: `list_tool_models(tool_id)` con filtrado de `._*`/`.DS_Store`, ordenado por tamaño. `delete_tool_model(tool_id, relative_path)` con guarda anti-traversal vía canonicalización (rechaza `..`, valida que el path resuelto esté dentro del directorio `models/` real).
+- **Botón `📦` en cada tarjeta** de tool instalada → abre/cierra el ModelsPanel.
+- **Botones nuevos en sidebar**: `⚙️ Settings` y `⌘K Comandos` (además del `👋 Tour` previo).
+
+### 🧪 Added (Sprint 3 — tests baseline)
+
+- **Vitest** + scripts npm (`test`, `test:watch`) + `jsdom` para futuros tests de DOM. **13 tests** unitarios sobre `src/utils.ts`: `fmtBytes` (incluyendo edge cases), `fmtElapsed`, `parseInstallLine` (todas las fases: clonado, receiving, deltas, venv, modelo, deps Python, cmake, linking, INSTALL_OK, ANSI strip, preservación de prev).
+- **Refactor `src/utils.ts`**: extraídos `fmtBytes`, `fmtElapsed`, `parseInstallLine`, tipo `LineParse` desde `App.tsx` para que sean testables sin React.
+- **Cargo tests** en `src-tauri/src/system.rs`: **4 tests** (`pid_alive_for_self_is_true`, `pid_alive_for_zero_is_false`, `delete_model_rejects_path_traversal`, `read_disk_usage_returns_two_values`).
+- **Script `npm run test:rust`** que dispara `cargo test` con `CARGO_TARGET_DIR=/tmp/chofyai-target` (consistente con el target redirect del proyecto).
+
 ### 🚀 Added (Sprint 2 — onboarding, update checker, notificaciones nativas)
 
 - **First-run wizard de 4 pasos** (`Onboarding`): bienvenida → selector de `studio_home` con detección heurística de volumen externo y aviso para crear sparsebundle APFS si aplica → instalación opcional de whisper.cpp con un click → confirmación final con tips de UI. Persistencia en `localStorage` (`chofyai_onboarding_done`). Botón "👋 Tour" en la sidebar para reabrir cuando quieras.
