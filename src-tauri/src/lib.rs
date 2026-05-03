@@ -4,12 +4,16 @@ mod system;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use system::ProcessRegistry;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(ProcessRegistry(Mutex::new(HashMap::new())))
-        .setup(|_app| {
+        .setup(|app| {
+            let handle = app.handle();
+            let registry: tauri::State<'_, ProcessRegistry> = handle.state();
+            system::restore_registry(handle, &registry);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -28,6 +32,8 @@ pub fn run() {
             system::relocate_module,
             system::clear_module_override,
             system::get_system_stats,
+            system::list_running_pids,
+            system::read_tool_log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

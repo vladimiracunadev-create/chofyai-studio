@@ -79,6 +79,16 @@ export type VolumeCandidate = {
   total_bytes?: number | null;
 };
 
+export type ToastKind = 'info' | 'success' | 'warn' | 'error';
+
+export type Toast = {
+  id: string;
+  kind: ToastKind;
+  title: string;
+  body?: string;
+  ts: number;
+};
+
 export type SystemStats = {
   cpu_usage: number;
   cpu_cores: number;

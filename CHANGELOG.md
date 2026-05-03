@@ -11,6 +11,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🛡 Added (Sprint 1 — toasts, persistencia, logs in-app, empty state, health retry)
+
+- **Sistema de toasts global** (`Toaster` + helper `notify()` + wrapper de `tauriInvoke`): toda llamada a comando Tauri que falla emite un toast con título y mensaje. Toasts por kind (`info`/`success`/`warn`/`error`) con auto-dismiss (4–8 s) y botón cierre. Animación slide-in.
+- **`AppErrorBoundary`** envuelve toda la UI: si un componente React crasheaba antes era pantalla en blanco; ahora muestra fallback con stack y botón `🔄 Recargar`. También dispara un toast.
+- **Persistencia de procesos entre reinicios** (Rust): nuevo `processes.json` en `storage/state/` se escribe en cada `start_tool` / `stop_tool` / `restart_tool` / health-fail. En el `setup` de Tauri, `restore_registry` carga el archivo y filtra PIDs con `kill -0` antes de adoptarlos al `ProcessRegistry`. Cuando se cierra y reabre la app, los servidores que siguen vivos vuelven a aparecer como activos.
+- **Comando Rust `list_running_pids`** + adopción al primer load de la UI: si hay procesos restaurados se notifica con un toast info.
+- **Comando Rust `read_tool_log(tool_id, kind, last_lines)`** que lee `<studio_home>/logs/<tool>-{install,run}.log` y devuelve las últimas N líneas.
+- **`LogsViewer` panel inline**: el botón `📋` ahora abre un panel embebido en la ventana principal (no más TextEdit) con: selector `install|run`, input de filtro por substring, checkbox `auto` (refresh cada 2 s) y botón refresh manual. Mini-terminal de 50vh con scroll automático al final.
+- **Health retry tolerante**: nuevo estado `starting` por tool. Cuando inicias un servidor (Start/Restart) entra en `starting` y durante **60 s** el probe NO lo declara muerto aunque el puerto aún no responda. `HealthDot` pinta amarillo pulsante en starting, verde glow en activo, gris en detenido.
+- **Empty state con CTA**: si las 5 tools están sin instalar, se muestra una tarjeta destacada con `🚀` y dos botones: "⚡ Instalar whisper.cpp ahora" (la más rápida y ligera) y "📦 Encolar las 5 herramientas".
+- **Notificaciones de éxito**: Start/Stop/Restart emiten toast con el mensaje del backend.
+
 ### ☁️ Added (docs — migración a AWS)
 
 - **Suite `docs/cloud/`** con 6 documentos (~1 800 líneas) que cubren el plan completo de migración a AWS: visión global ([`AWS_MIGRATION.md`](docs/cloud/AWS_MIGRATION.md)), arquitectura objetivo con diagramas Mermaid ([`AWS_ARCHITECTURE.md`](docs/cloud/AWS_ARCHITECTURE.md)), mapa de 22 servicios ([`AWS_SERVICES.md`](docs/cloud/AWS_SERVICES.md)), análisis de costos por escenario ([`AWS_COSTS.md`](docs/cloud/AWS_COSTS.md)), modelo de seguridad y hardening ([`AWS_SECURITY.md`](docs/cloud/AWS_SECURITY.md)), guía hands-on con Terraform ([`AWS_STEP_BY_STEP.md`](docs/cloud/AWS_STEP_BY_STEP.md)).

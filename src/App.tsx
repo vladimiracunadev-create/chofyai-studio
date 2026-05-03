@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type {
@@ -9,9 +10,17 @@ import type {
   QueueItem,
   SystemStats,
   SystemSummary,
+  Toast,
+  ToastKind,
   ToolManifest,
   VolumeCandidate,
 } from './types';
+
+// ─── Toasts globales ─────────────────────────────────────────────────────────
+type Toaster = (kind: ToastKind, title: string, body?: string) => void;
+let pushToast: Toaster = () => {};
+function setToasterRef(fn: Toaster) { pushToast = fn; }
+export function notify(kind: ToastKind, title: string, body?: string) { pushToast(kind, title, body); }
 
 // ─── Detección Tauri ─────────────────────────────────────────────────────────
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -39,9 +48,16 @@ function fmtBytes(b?: number | null): string {
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
 
-async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T | null> {
+async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?: { silent?: boolean }): Promise<T | null> {
   if (!inTauri) return null;
-  try { return await invoke<T>(cmd, args); } catch { return null; }
+  try { return await invoke<T>(cmd, args); }
+  catch (err) {
+    if (!opts?.silent) {
+      const msg = typeof err === 'string' ? err : (err as Error)?.message || String(err);
+      notify('error', `${cmd} falló`, msg);
+    }
+    return null;
+  }
 }
 
 function fmtElapsed(ms: number): string {
@@ -82,15 +98,129 @@ function parseInstallLine(prev: LineParse, line: string): LineParse {
   return out;
 }
 
+// ─── Toaster ─────────────────────────────────────────────────────────────────
+function Toaster() {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  useEffect(() => {
+    setToasterRef((kind, title, body) => {
+      const t: Toast = { id: `${Date.now()}_${Math.random()}`, kind, title, body, ts: Date.now() };
+      setToasts((prev) => [...prev.slice(-4), t]);
+      const ttl = kind === 'error' ? 8000 : kind === 'warn' ? 6000 : 4000;
+      setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), ttl);
+    });
+  }, []);
+  return (
+    <div className="toaster">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast toast-${t.kind}`}>
+          <div className="toast-row">
+            <span className="toast-icon">
+              {t.kind === 'error' && '❌'}
+              {t.kind === 'warn' && '⚠️'}
+              {t.kind === 'success' && '✅'}
+              {t.kind === 'info' && 'ℹ️'}
+            </span>
+            <div className="toast-body">
+              <strong>{t.title}</strong>
+              {t.body && <p>{t.body}</p>}
+            </div>
+            <button className="toast-close" onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}>×</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── ErrorBoundary ───────────────────────────────────────────────────────────
+class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    console.error('UI ErrorBoundary:', error, info);
+    notify('error', 'Error de interfaz', error.message);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="error-boundary">
+          <h2>💥 La interfaz se rompió</h2>
+          <p>{this.state.error.message}</p>
+          <button onClick={() => { this.setState({ error: null }); location.reload(); }}>🔄 Recargar</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── LogsViewer (panel inline) ───────────────────────────────────────────────
+function LogsViewer({ toolId, name, onClose }: { toolId: string; name: string; onClose: () => void }) {
+  const [content, setContent] = useState<string>('Cargando…');
+  const [kind, setKind] = useState<'install' | 'run'>('run');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [filter, setFilter] = useState('');
+  const preRef = useRef<HTMLPreElement>(null);
+
+  const reload = async () => {
+    const res = await tauriInvoke<string>('read_tool_log', { toolId, kind, lastLines: 500 });
+    if (res !== null) setContent(res);
+  };
+  useEffect(() => { void reload(); }, [toolId, kind]);
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const id = setInterval(() => { void reload(); }, 2000);
+    return () => clearInterval(id);
+  }, [autoRefresh, toolId, kind]);
+  useEffect(() => {
+    if (preRef.current && autoRefresh) preRef.current.scrollTop = preRef.current.scrollHeight;
+  }, [content, autoRefresh]);
+
+  const filtered = filter
+    ? content.split('\n').filter((l) => l.toLowerCase().includes(filter.toLowerCase())).join('\n')
+    : content;
+
+  return (
+    <section className="card logs-card">
+      <div className="section-header">
+        <h3>📋 Logs · {name}</h3>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <select value={kind} onChange={(e) => setKind(e.target.value as 'install' | 'run')}>
+            <option value="run">▶ run</option>
+            <option value="install">📦 install</option>
+          </select>
+          <input
+            placeholder="🔍 filtrar…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={{ padding: '4px 8px', borderRadius: 6, background: '#0f1115', border: '1px solid rgba(255,255,255,0.08)', color: '#d3dcec' }}
+          />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem' }}>
+            <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+            auto
+          </label>
+          <button className="secondary" onClick={() => void reload()}>🔄</button>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+      </div>
+      <pre ref={preRef} className="logs-pre">{filtered || '(vacío)'}</pre>
+    </section>
+  );
+}
+
 // ─── Componentes ─────────────────────────────────────────────────────────────
-function HealthDot({ health }: { health?: HealthResult }) {
-  if (!health) return null;
-  const ok = health.running || health.port_open;
+function HealthDot({ health, starting }: { health?: HealthResult; starting?: boolean }) {
+  if (!health && !starting) return null;
+  const ok = health?.running || health?.port_open;
+  const color = ok ? '#36d7b7' : starting ? '#f5a623' : '#666';
+  const title = ok ? `Activo · PID ${health?.pid ?? '—'}` : starting ? 'Iniciando…' : 'Detenido';
   return (
     <span
-      title={ok ? `Activo · PID ${health.pid ?? '—'}` : 'Detenido'}
+      title={title}
       style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', marginLeft: 6, flexShrink: 0,
-        background: ok ? '#36d7b7' : '#666', boxShadow: ok ? '0 0 6px #36d7b7' : 'none' }}
+        background: color,
+        boxShadow: ok ? `0 0 6px ${color}` : starting ? `0 0 6px ${color}` : 'none',
+        animation: starting && !ok ? 'pulse 1.2s ease-in-out infinite' : undefined }}
     />
   );
 }
@@ -212,6 +342,8 @@ export default function App() {
   const [isQueueRunning, setIsQueueRunning] = useState(false);
   const [queueVisible, setQueueVisible] = useState(false);
   const [viewingTool, setViewingTool] = useState<string | null>(null);
+  const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
+  const [startingTools, setStartingTools] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const progressRef = useRef<Record<string, string[]>>({});
 
@@ -310,20 +442,33 @@ export default function App() {
   }, []);
 
   // Health periódico — CADA tool con puerto (no solo runningIds)
+  // Tolera 60s en estado "starting" antes de marcar como caído
   useEffect(() => {
     if (!inTauri || tools.length === 0) return;
     const probe = async () => {
       for (const t of tools) {
         if (!t.default_port) continue;
-        const result = await tauriInvoke<HealthResult>('health_check_tool', { toolId: t.id });
+        const result = await tauriInvoke<HealthResult>('health_check_tool', { toolId: t.id }, { silent: true });
         if (!result) continue;
         setHealth((prev) => ({ ...prev, [t.id]: result }));
         if (result.running || result.port_open) {
           setRunningIds((prev) => prev.has(t.id) ? prev : new Set(prev).add(t.id));
+          // Limpia starting si ya respondió
+          setStartingTools((prev) => {
+            if (!(t.id in prev)) return prev;
+            const n = { ...prev }; delete n[t.id]; return n;
+          });
         } else {
+          // Durante 60s post-start: NO declarar caído
+          const startedAt = startingTools[t.id];
+          if (startedAt && Date.now() - startedAt < 60_000) continue;
           setRunningIds((prev) => {
             if (!prev.has(t.id)) return prev;
             const s = new Set(prev); s.delete(t.id); return s;
+          });
+          setStartingTools((prev) => {
+            if (!(t.id in prev)) return prev;
+            const n = { ...prev }; delete n[t.id]; return n;
           });
         }
       }
@@ -331,7 +476,19 @@ export default function App() {
     void probe();
     const interval = setInterval(probe, 5000);
     return () => clearInterval(interval);
-  }, [tools]);
+  }, [tools, startingTools]);
+
+  // Adopta PIDs persistidos al primer load (mantiene UI sincronizada con Rust)
+  useEffect(() => {
+    if (!inTauri) return;
+    void (async () => {
+      const pids = await tauriInvoke<Record<string, number>>('list_running_pids', undefined, { silent: true });
+      if (pids && Object.keys(pids).length > 0) {
+        setRunningIds(new Set(Object.keys(pids)));
+        notify('info', 'Procesos restaurados', `${Object.keys(pids).length} servidor(es) sigue(n) vivo(s)`);
+      }
+    })();
+  }, []);
 
   const installedCount = useMemo(() => tools.filter((t) => t.installed).length, [tools]);
 
@@ -372,10 +529,16 @@ export default function App() {
   const handleStart = async (tool: ToolManifest) => {
     setBusyToolId(tool.id);
     setMessage(`Iniciando ${tool.name}...`);
+    setStartingTools((prev) => ({ ...prev, [tool.id]: Date.now() }));
     const r = await tauriInvoke<ActionResult>('start_tool', { toolId: tool.id });
-    if (r?.opened_url) window.open(r.opened_url, '_blank');
     setRunningIds((prev) => new Set([...prev, tool.id]));
-    if (r) setMessage(r.message); setBusyToolId(null);
+    if (r) {
+      setMessage(r.message);
+      notify('success', `${tool.name} iniciado`, r.message);
+    } else {
+      setStartingTools((prev) => { const n = { ...prev }; delete n[tool.id]; return n; });
+    }
+    setBusyToolId(null);
   };
 
   const handleStop = async (tool: ToolManifest) => {
@@ -383,15 +546,18 @@ export default function App() {
     const r = await tauriInvoke<ActionResult>('stop_tool', { toolId: tool.id });
     setRunningIds((prev) => { const s = new Set(prev); s.delete(tool.id); return s; });
     setHealth((prev) => { const next = { ...prev }; delete next[tool.id]; return next; });
-    if (r) setMessage(r.message); setBusyToolId(null);
+    setStartingTools((prev) => { const n = { ...prev }; delete n[tool.id]; return n; });
+    if (r) { setMessage(r.message); notify('info', `${tool.name} detenido`); }
+    setBusyToolId(null);
   };
 
   const handleRestart = async (tool: ToolManifest) => {
     setBusyToolId(tool.id);
+    setStartingTools((prev) => ({ ...prev, [tool.id]: Date.now() }));
     const r = await tauriInvoke<ActionResult>('restart_tool', { toolId: tool.id });
-    if (r?.opened_url) window.open(r.opened_url, '_blank');
     setRunningIds((prev) => new Set([...prev, tool.id]));
-    if (r) setMessage(r.message); setBusyToolId(null);
+    if (r) { setMessage(r.message); notify('success', `${tool.name} reiniciado`); }
+    setBusyToolId(null);
   };
 
   const handleOpenFolder = async (tool: ToolManifest) => {
@@ -399,9 +565,8 @@ export default function App() {
     if (r) setMessage(r.message);
   };
 
-  const handleOpenLog = async (tool: ToolManifest) => {
-    const r = await tauriInvoke<ActionResult>('open_tool_log', { toolId: tool.id });
-    if (r) setMessage(r.message);
+  const handleOpenLog = (tool: ToolManifest) => {
+    setViewingLogsFor(viewingLogsFor === tool.id ? null : tool.id);
   };
 
   const handleRelocate = async (tool: ToolManifest) => {
@@ -468,7 +633,8 @@ export default function App() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <>
+    <AppErrorBoundary>
+      <Toaster />
       <main className="layout">
         <aside className="sidebar">
           <div className="brand">
@@ -614,6 +780,40 @@ export default function App() {
             </section>
           )}
 
+          {/* Logs viewer panel */}
+          {viewingLogsFor && (() => {
+            const t = tools.find((x) => x.id === viewingLogsFor);
+            if (!t) return null;
+            return <LogsViewer toolId={t.id} name={t.name} onClose={() => setViewingLogsFor(null)} />;
+          })()}
+
+          {/* Empty state si no hay tools instaladas */}
+          {tools.length > 0 && tools.every((t) => !t.installed) && (
+            <section className="card empty-state-card">
+              <div className="empty-content">
+                <span className="empty-emoji">🚀</span>
+                <h3>Aún no tienes herramientas instaladas</h3>
+                <p className="muted">
+                  Instala tu primera herramienta para empezar. Recomendamos <strong>whisper.cpp</strong>:
+                  rápido (compila en ~2 min), funciona sin GPU, y descarga solo 141 MB.
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {(() => {
+                    const wsp = tools.find((x) => x.id === 'whispercpp');
+                    return wsp ? (
+                      <button onClick={() => handleInstall(wsp)} disabled={busyToolId === 'whispercpp'}>
+                        ⚡ Instalar whisper.cpp ahora
+                      </button>
+                    ) : null;
+                  })()}
+                  <button className="secondary" onClick={addAllPendingToQueue} disabled={isQueueRunning}>
+                    📦 Encolar las 5 herramientas
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Vista embebida del tool en uso */}
           {viewingTool && (() => {
             const t = tools.find((x) => x.id === viewingTool);
@@ -683,7 +883,7 @@ export default function App() {
                     <div className="tool-head">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <h4>{tool.name}</h4>
-                        <HealthDot health={toolHealth} />
+                        <HealthDot health={toolHealth} starting={Boolean(startingTools[tool.id])} />
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         {tool.recommended && <span className="pill">Recomendado</span>}
@@ -769,6 +969,6 @@ export default function App() {
       </main>
 
       <StatusBar stats={stats} summary={summary} />
-    </>
+    </AppErrorBoundary>
   );
 }

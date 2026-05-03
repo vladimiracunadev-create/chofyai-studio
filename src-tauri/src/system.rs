@@ -20,6 +20,82 @@ use walkdir::WalkDir;
 
 pub struct ProcessRegistry(pub Mutex<HashMap<String, u32>>);
 
+fn processes_state_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let p = app_paths(app)?.settings_path;
+    Ok(p.parent()
+        .ok_or_else(|| "settings_path sin parent".to_string())?
+        .join("processes.json"))
+}
+
+
+fn persist_registry(app: &AppHandle, map: &HashMap<String, u32>) {
+    if let Ok(path) = processes_state_path(app) {
+        let _ = fs::create_dir_all(path.parent().unwrap_or(Path::new(".")));
+        if let Ok(json) = serde_json::to_string_pretty(map) {
+            let _ = fs::write(&path, json);
+        }
+    }
+}
+
+pub fn restore_registry(app: &AppHandle, registry: &ProcessRegistry) {
+    let path = match processes_state_path(app) {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+    if !path.exists() {
+        return;
+    }
+    let contents = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let prev: HashMap<String, u32> = match serde_json::from_str(&contents) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    let alive: HashMap<String, u32> = prev.into_iter().filter(|(_, pid)| pid_is_alive(*pid)).collect();
+    if let Ok(mut guard) = registry.0.lock() {
+        for (k, v) in alive.iter() {
+            guard.insert(k.clone(), *v);
+        }
+    }
+    persist_registry(app, &alive);
+}
+
+#[tauri::command]
+pub fn list_running_pids(
+    registry: tauri::State<'_, ProcessRegistry>,
+) -> Result<HashMap<String, u32>, String> {
+    let guard = registry.0.lock().map_err(|e| e.to_string())?;
+    Ok(guard.clone())
+}
+
+#[tauri::command]
+pub fn read_tool_log(
+    app: AppHandle,
+    tool_id: String,
+    kind: String,
+    last_lines: Option<usize>,
+) -> Result<String, String> {
+    let settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
+    let logs = log_dir(&effective);
+    let suffix = match kind.as_str() {
+        "install" => "install",
+        "run" => "run",
+        other => return Err(format!("kind inválido: {}", other)),
+    };
+    let path = logs.join(format!("{}-{}.log", tool_id, suffix));
+    if !path.exists() {
+        return Ok(format!("(sin log {} aún en {})", suffix, path.display()));
+    }
+    let contents = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let n = last_lines.unwrap_or(500);
+    let lines: Vec<&str> = contents.lines().collect();
+    let tail = if lines.len() > n { &lines[lines.len() - n..] } else { &lines[..] };
+    Ok(tail.join("\n"))
+}
+
 // ─── Estructuras internas ─────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, Clone)]
@@ -686,11 +762,11 @@ pub fn start_tool(
         .map_err(|e| e.to_string())?;
 
     let pid = child.id();
-    registry
-        .0
-        .lock()
-        .map_err(|e| e.to_string())?
-        .insert(tool_id.clone(), pid);
+    {
+        let mut guard = registry.0.lock().map_err(|e| e.to_string())?;
+        guard.insert(tool_id.clone(), pid);
+        persist_registry(&app, &guard);
+    }
 
     let opened_url = manifest.default_port.map(|p| format!("http://127.0.0.1:{}", p));
 
@@ -704,6 +780,7 @@ pub fn start_tool(
 
 #[tauri::command]
 pub fn stop_tool(
+    app: AppHandle,
     tool_id: String,
     registry: tauri::State<'_, ProcessRegistry>,
 ) -> Result<ActionResult, String> {
@@ -714,6 +791,7 @@ pub fn stop_tool(
             .args(["-TERM", &pid.to_string()])
             .output()
             .map_err(|e| e.to_string())?;
+        persist_registry(&app, &pids);
         Ok(ActionResult {
             ok: true,
             message: format!("{} detenido (PID {})", tool_id, pid),
@@ -740,6 +818,7 @@ pub fn restart_tool(
         let mut pids = registry.0.lock().map_err(|e| e.to_string())?;
         if let Some(pid) = pids.remove(&tool_id) {
             let _ = Command::new("kill").args(["-TERM", &pid.to_string()]).output();
+            persist_registry(&app, &pids);
             std::thread::sleep(Duration::from_millis(800));
         }
     }
@@ -772,11 +851,11 @@ pub fn restart_tool(
         .map_err(|e| e.to_string())?;
 
     let pid = child.id();
-    registry
-        .0
-        .lock()
-        .map_err(|e| e.to_string())?
-        .insert(tool_id.clone(), pid);
+    {
+        let mut guard = registry.0.lock().map_err(|e| e.to_string())?;
+        guard.insert(tool_id.clone(), pid);
+        persist_registry(&app, &guard);
+    }
 
     Ok(ActionResult {
         ok: true,
@@ -804,6 +883,7 @@ pub fn health_check_tool(
     if pid.is_some() && !running {
         if let Ok(mut pids) = registry.0.lock() {
             pids.remove(&tool_id);
+            persist_registry(&app, &pids);
         }
     }
 
