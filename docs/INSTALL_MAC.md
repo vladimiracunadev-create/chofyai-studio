@@ -217,7 +217,7 @@ Salidas esperadas (target redirigido a `/tmp` por `.cargo/config.toml`):
 
 ```text
 /tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app
-/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_0.4.0_aarch64.dmg
+/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_0.5.0_aarch64.dmg
 ```
 
 > Requiere Rust, Xcode CLT y todas las dependencias instaladas.

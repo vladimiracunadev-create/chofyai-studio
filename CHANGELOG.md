@@ -9,6 +9,28 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ---
 
+## 🎉 [0.5.0] — 2026-05-03
+
+> **Release Fase 5**: 9 sprints aplicados (UX profesional, sparsebundle APFS, vista embebida,
+> seguridad portable, paleta `⌘K`, Settings UI, gestión de modelos, tests baseline, CI extendido,
+> Marketplace MVP, Workflows + Builder visual, i18n ES/EN, iconos custom, UI overhaul completo).
+>
+> 5/5 herramientas verificadas en runtime · 24 tests automáticos · 0 errores de lint en 31 docs · CI con security workflow portable.
+
+### 📊 Resumen ejecutivo
+
+| Capa | Highlights |
+|:---|:---|
+| 🖥️ UI | Sidebar agrupada con grupos Workspace/Tools/Sistema, topbar con stats live, modales para Resumen/Huérfanos/Doctor/Settings/Marketplace/Workflows/Help, tema dark/light/system, atajos `⌘K`/`⌘,`/`⌘/`/`⌘R`/`⌘L`/`⌘B`/`⌘M`/`⌘W`, vista embebida del tool reemplazando la sección Herramientas |
+| 🦀 Backend | 18 nuevos comandos Tauri: persistencia de PIDs, logs in-app, native notifications, modelos, huérfanos (list/adopt/kill), crash log, marketplace, workflows (list/save/delete), doctor, etc. |
+| 💾 Datos | Sparsebundle APFS sobre exFAT como solución oficial · `processes.json` persistido entre sesiones · `crash.log` post-mortem |
+| 🛡 Seguridad | Workflow portable con TruffleHog + npm/cargo audit + CodeQL + Pin actions + Dependabot, invocable vía `workflow_call` desde otros repos |
+| 🧪 Calidad | Vitest 13 tests + cargo 4 tests + i18n 7 tests = 20 tests CI · markdownlint 0 errores en 31 archivos |
+| 🌐 i18n | ES + EN sin deps, ~85 keys, hot-swap reactivo |
+| 📚 Docs | Suite cloud AWS (6 archivos), docs/SECURITY_WORKFLOW.md portable, troubleshooting con 15 entradas, todos los docs barridos |
+
+---
+
 ## 🚧 [Unreleased]
 
 ### 🐛 Fixed (CI — security workflow)

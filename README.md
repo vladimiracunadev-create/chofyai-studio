@@ -9,8 +9,8 @@
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![uv](https://img.shields.io/badge/uv-supported-DE5FE9?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
-[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](CHANGELOG.md)
-[![Status](https://img.shields.io/badge/Estado-Fase%205%20activa-2d7a66)](docs/STATUS.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0-7c5cff)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/Estado-release-2d7a66)](docs/STATUS.md)
 [![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](docs/STATUS.md)
 
 > [!NOTE]
@@ -70,15 +70,21 @@ graph TD
 
 ## ✨ Características clave
 
-### 💎 Fase 5 (en curso)
+### 🎉 v0.5.0 (release)
 
 | # | Pilar | Descripción |
 |:-:|:---|:---|
-| 1 | 👁 **Vista embebida** | Botón `👁 Ver UI` en cada tool con server activo abre `<iframe>` inline — todas las herramientas dentro de la ventana principal, sin saltar al navegador |
-| 2 | 📊 **Cola pro** | Barra de progreso animada, fase detectada (Clonando / Compilando / Descargando), MB/s, `⏱ MM:SS` y mini-terminal con últimas 8 líneas |
-| 3 | 🔄 **Refresh inteligente** | Auto-refresh cada 8 s + botón manual. Detecta tools instaladas o arrancadas desde CLI sin reiniciar la app |
-| 4 | 💚 **Health probe global** | TODAS las tools con `default_port` se chequean en cada ciclo, no solo las arrancadas desde la UI |
-| 5 | 💾 **APFS sparsebundle** | Soporte oficial para discos externos exFAT/HFS+ vía imagen APFS elástica — wheels Python funcionan sin trampas |
+| 1 | 👁 **Vista embebida** | "Ver UI" reemplaza la sección Herramientas con la UI de la tool seleccionada, manteniendo sidebar/topbar/statusbar — botón `← Herramientas` para volver |
+| 2 | 📊 **Cola de instalación pro** | Parser de fases (Clonando · Compilando · Descargando · Instalando deps), barra animada %, MB/s, `⏱ MM:SS` y mini-terminal |
+| 3 | ⌨️ **Atajos** | Paleta `⌘K` + 6 shortcuts globales (`⌘,` `⌘/` `⌘R` `⌘L` `⌘B` `⌘M` `⌘W`) + help panel completo |
+| 4 | 🛒 **Marketplace MVP** | 10 tools curadas (Bark, RVC, MusicGen…) con import al manifest local |
+| 5 | 🔗 **Workflows + Visual Builder** | YAML declarativo + drag & drop para componer pipelines |
+| 6 | 🌐 **i18n ES/EN** | Hot-swap reactivo sin deps, ~85 keys |
+| 7 | 🎨 **UI profesional** | Design tokens, tema dark/light/system, tarjetas con hover, sidebar agrupada con badges |
+| 8 | 🛡 **Security workflow portable** | TruffleHog + npm/cargo audit + CodeQL + Dependabot, invocable vía `workflow_call` desde otros repos |
+| 9 | 👻 **Procesos huérfanos** | Detección automática + adoptar/matar |
+| 10 | 💥 **Crash log persistente** | ErrorBoundary escribe a `storage/state/crash.log` para post-mortem |
+| 11 | 💾 **APFS sparsebundle** | Soporte oficial para discos externos exFAT/HFS+ |
 
 ### 🏗 Fase 4 (consolidada)
 

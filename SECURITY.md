@@ -10,7 +10,7 @@
 
 | Versión | Soporte de seguridad |
 |:---:|:---:|
-| `0.5.x` (Fase 5 actual) | ✅ Activa |
+| `0.5.x` (release activa) | ✅ Activa |
 | `0.4.x` | ⚠️ Solo bugs críticos |
 | `< 0.4.0` | ❌ Sin soporte |
 

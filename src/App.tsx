@@ -33,7 +33,7 @@ async function notifyNative(title: string, body: string) {
 }
 
 // Versión actual hardcoded. Match con package.json version.
-const APP_VERSION = '0.5.0-dev';
+const APP_VERSION = '0.5.0';
 
 const ONBOARDING_KEY = 'chofyai_onboarding_done';
 const THEME_KEY = 'chofyai_theme';
@@ -1595,56 +1595,45 @@ function StatusBar({ stats, summary }: { stats: SystemStats | null; summary: Sys
     return () => clearInterval(id);
   }, []);
 
-  if (!stats) {
-    return (
-      <footer className="statusbar">
-        <span className="muted">Cargando estadísticas del equipo…</span>
-      </footer>
-    );
-  }
-  const cpuPct = Math.round(stats.cpu_usage);
-  const memPct = stats.mem_total_bytes ? Math.round((stats.mem_used_bytes / stats.mem_total_bytes) * 100) : 0;
-  const diskUsed = stats.disk_total_bytes - stats.disk_free_bytes;
-  const diskPct = stats.disk_total_bytes ? Math.round((diskUsed / stats.disk_total_bytes) * 100) : 0;
-  // Uptime = tiempo desde que esta sesión de la app abrió
+  const hasStats = !!stats;
+  const cpuPct = stats ? Math.round(stats.cpu_usage) : 0;
+  const memPct = stats?.mem_total_bytes ? Math.round((stats.mem_used_bytes / stats.mem_total_bytes) * 100) : 0;
+  const diskUsed = stats ? stats.disk_total_bytes - stats.disk_free_bytes : 0;
+  const diskPct = stats?.disk_total_bytes ? Math.round((diskUsed / stats.disk_total_bytes) * 100) : 0;
   const appUpSecs = Math.floor((Date.now() - APP_STARTED_AT) / 1000);
   const upH = Math.floor(appUpSecs / 3600);
   const upM = Math.floor((appUpSecs % 3600) / 60);
 
   return (
     <footer className="statusbar">
-      <span className="stat">
+      <span className="stat" title={hasStats ? `Uso de CPU · ${stats!.cpu_cores} núcleos · load average 1m: ${stats!.load_avg_1m.toFixed(2)}` : ''}>
         <span className="stat-label">CPU</span>
-        <span>{cpuPct}%</span>
+        <span className="stat-value">{hasStats ? `${cpuPct}%` : '—'}</span>
         <span className="stat-bar"><span className={`stat-bar-fill ${cpuPct > 85 ? 'warn' : ''}`} style={{ width: `${cpuPct}%` }} /></span>
-        <span className="muted">· {stats.cpu_cores} núcleos · load {stats.load_avg_1m.toFixed(2)}</span>
+        {hasStats && <span className="stat-extra">{stats!.cpu_cores} cores · load {stats!.load_avg_1m.toFixed(2)}</span>}
       </span>
-      <span className="sep">│</span>
-      <span className="stat">
+      <span className="stat" title={hasStats ? `RAM en uso · ${fmtBytes(stats!.mem_used_bytes)} de ${fmtBytes(stats!.mem_total_bytes)} totales` : ''}>
         <span className="stat-label">RAM</span>
-        <span>{fmtBytes(stats.mem_used_bytes)} / {fmtBytes(stats.mem_total_bytes)}</span>
+        <span className="stat-value">{hasStats ? `${memPct}%` : '—'}</span>
         <span className="stat-bar"><span className={`stat-bar-fill ${memPct > 85 ? 'warn' : ''}`} style={{ width: `${memPct}%` }} /></span>
+        {hasStats && <span className="stat-extra">{fmtBytes(stats!.mem_used_bytes)} / {fmtBytes(stats!.mem_total_bytes)}</span>}
       </span>
-      <span className="sep">│</span>
-      <span className="stat">
-        <span className="stat-label">Disco</span>
-        <span>{fmtBytes(stats.disk_free_bytes)} libres</span>
+      <span className="stat" title={hasStats ? `Disco · ${fmtBytes(stats!.disk_free_bytes)} libres de ${fmtBytes(stats!.disk_total_bytes)} en ${stats!.disk_path}` : ''}>
+        <span className="stat-label">DISCO</span>
+        <span className="stat-value">{hasStats ? `${diskPct}%` : '—'}</span>
         <span className="stat-bar"><span className={`stat-bar-fill ${diskPct > 90 ? 'warn' : ''}`} style={{ width: `${diskPct}%` }} /></span>
-        <span className="muted">· {stats.disk_path}</span>
+        {hasStats && <span className="stat-extra">{fmtBytes(stats!.disk_free_bytes)} libres / {fmtBytes(stats!.disk_total_bytes)}</span>}
       </span>
-      <span className="sep">│</span>
-      <span className="stat">
-        <span className="stat-label" title="Tiempo de esta sesión de ChofyAI Studio">App</span>
-        <span>{upH}h {upM}m</span>
+      <span className="stat" title="Tiempo que la app de ChofyAI Studio lleva abierta en esta sesión">
+        <span className="stat-label">USO APP</span>
+        <span className="stat-value">{upH}h {upM}m</span>
       </span>
       {summary?.using_fallback && (
-        <>
-          <span className="sep">│</span>
-          <span className="badge-fb" title={`Solicitado: ${summary.studio_home}`}>
-            ⚠ Usando fallback (disco principal)
-          </span>
-        </>
+        <span className="badge-fb" title={`Solicitado: ${summary.studio_home} · Efectivo: ${summary.studio_home_effective}`}>
+          ⚠ fallback
+        </span>
       )}
+      <span className="stat-version" title={`ChofyAI Studio v${APP_VERSION} · ${summary?.os ?? ''} ${summary?.arch ?? ''}`}>v{APP_VERSION}</span>
     </footer>
   );
 }

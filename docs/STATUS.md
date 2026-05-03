@@ -2,10 +2,11 @@
 
 > **Snapshot técnico — qué funciona hoy, qué está pendiente y con qué versiones se ha verificado.**
 
-[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](../CHANGELOG.md)
-[![Fase](https://img.shields.io/badge/Fase-5%20activa-2d7a66)](../ROADMAP.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0-7c5cff)](../CHANGELOG.md)
+[![Estado](https://img.shields.io/badge/Estado-release-2d7a66)](../ROADMAP.md)
 [![Última actualización](https://img.shields.io/badge/Actualizado-2026--05--03-informational)](../CHANGELOG.md)
 [![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](../CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/Tests-20%2F20-brightgreen)](../CHANGELOG.md)
 
 > Última actualización: **2026-05-03** · Ver [CHANGELOG](../CHANGELOG.md) para historial · Ver [ROADMAP](../ROADMAP.md) para fases futuras.
 
@@ -13,7 +14,7 @@
 
 ## 🏷️ Versión del repositorio
 
-**`v0.5.0-dev`** — Fase 5 en curso: 5 sprints aplicados (cola pro, vista embebida, sparsebundle APFS, onboarding wizard, paleta `⌘K`, atajos visibles, tema light/dark/system, security workflow portable, detección de huérfanos, crash log persistente). 5/5 tools verificadas en runtime.
+**`v0.5.0`** — release de **Fase 5** con **9 sprints aplicados**: cola pro, vista embebida, sparsebundle APFS, onboarding wizard, paleta `⌘K`, atajos visibles, tema light/dark/system, security workflow portable, detección de huérfanos, crash log persistente, Marketplace MVP, Workflows + Builder visual con drag&drop, i18n ES/EN, iconos custom y UI overhaul completo. 5/5 tools verificadas en runtime · 20 tests automáticos · 0 errores de lint en 31 docs.
 
 ---
 

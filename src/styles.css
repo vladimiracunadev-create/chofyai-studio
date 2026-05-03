@@ -1964,3 +1964,123 @@ textarea:focus {
 @media (max-width: 1100px) {
   .settings-overlay, .onboarding-overlay, .cmdk-overlay { left: 0; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   FIX: statusbar contenido se cortaba (Disco, RAM)
+   ════════════════════════════════════════════════════════════════ */
+.statusbar {
+  height: auto !important;
+  min-height: 36px;
+  padding: 6px 18px !important;
+  flex-wrap: wrap !important;
+  overflow-x: visible !important;
+  gap: 12px 18px !important;
+  white-space: normal !important;
+  background: rgba(10, 12, 16, 0.88) !important;
+  backdrop-filter: blur(14px);
+}
+.statusbar .stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+}
+.statusbar .stat-label {
+  font-size: 0.64rem !important;
+  font-weight: 700;
+  color: var(--text-subtle);
+}
+.statusbar .stat-bar {
+  width: 70px !important;
+  height: 6px !important;
+}
+.statusbar .sep { display: none; }   /* separadores | redundantes con gap */
+.statusbar .muted { font-size: 0.68rem; }
+
+/* Padding-bottom del main para no quedar tapado por statusbar */
+.layout { padding-bottom: 44px; }
+.sidebar { padding-bottom: 80px !important; }   /* compensar el wrap potencial */
+
+/* ════════════════════════════════════════════════════════════════
+   STATUSBAR FINAL: 1 línea siempre, contenido mínimo y legible
+   ════════════════════════════════════════════════════════════════ */
+.statusbar {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 16px !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  gap: 14px !important;
+  white-space: nowrap !important;
+  background: rgba(10, 12, 16, 0.92) !important;
+  font-size: 0.72rem !important;
+  align-items: center;
+}
+.statusbar .stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.statusbar .stat-label {
+  font-size: 0.6rem !important;
+  font-weight: 700;
+  color: var(--text-subtle);
+  letter-spacing: 0.06em;
+}
+.statusbar .stat-value {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
+  color: var(--text);
+}
+.statusbar .stat-bar {
+  width: 60px !important;
+  height: 5px !important;
+  background: rgba(255,255,255,0.06);
+}
+.statusbar .stat-version {
+  margin-left: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.66rem;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+}
+.statusbar .badge-fb {
+  font-size: 0.66rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(245,166,35,0.18);
+  color: #ffcd80;
+  border: 1px solid rgba(245,166,35,0.35);
+  flex-shrink: 0;
+}
+.statusbar .sep { display: none; }   /* ya no se usa */
+
+/* Compensación del padding del main */
+.layout { padding-bottom: 32px; }
+.sidebar { padding-bottom: 48px !important; }
+
+/* Hide scrollbar estilizado */
+.statusbar::-webkit-scrollbar { height: 4px; }
+
+/* ════════════════════════════════════════════════════════════════
+   FIX FINAL statusbar: empieza después de la sidebar (no se oculta)
+   ════════════════════════════════════════════════════════════════ */
+.statusbar {
+  left: 248px !important;        /* arranca después de la sidebar 248px */
+  right: 0 !important;
+}
+@media (max-width: 1100px) {
+  .statusbar { left: 0 !important; }
+}
+/* La sidebar mantiene su z-index pero ya no cubre stats — la statusbar empieza después */
+
+/* statusbar: textos secundarios contextuales (cores, load, libres, used/total) */
+.statusbar .stat-extra {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.66rem;
+  color: var(--text-subtle);
+}

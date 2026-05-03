@@ -2,8 +2,8 @@
 
 > **Hoja de ruta de ChofyAI Studio — qué está hecho, qué viene y por qué.**
 
-[![Estado](https://img.shields.io/badge/Estado-Fase%205%20activa-2d7a66)](docs/STATUS.md)
-[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](CHANGELOG.md)
+[![Estado](https://img.shields.io/badge/Estado-release-2d7a66)](docs/STATUS.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0-7c5cff)](CHANGELOG.md)
 [![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](docs/STATUS.md)
 
 ---
@@ -66,19 +66,22 @@
 
 ---
 
-## 🟢 Fase 5 — UX profesional, comandos y seguridad *(en curso)*
+## ✅ Fase 5 — UX profesional, comandos y seguridad *(release v0.5.0)*
 
 - [x] 💎 **Cola de instalación pro** (parser de fases, MB/s, mini-terminal)
-- [x] 👁 **Vista embebida** `<iframe>` de cada tool en la ventana principal
+- [x] 👁 **Vista embebida** del tool reemplazando la sección Herramientas con header + back button
 - [x] 🔄 **Auto-refresh** + health probe global + estado `starting` con tolerancia 60s
-- [x] 🛡 **Sprint 1**: toasts globales, ErrorBoundary, persistencia de PIDs, logs in-app, empty state
+- [x] 🛡 **Sprint 1**: toasts globales, ErrorBoundary con crash log, persistencia de PIDs, logs in-app, empty state
 - [x] 🚀 **Sprint 2**: onboarding wizard (4 pasos), update checker, notificaciones nativas macOS
-- [x] 🎛 **Sprint 3**: paleta `⌘K`, Settings UI completo, gestión de modelos, tests baseline (Vitest 13 + cargo 4)
-- [x] ✨ **Sprint 4**: catálogo de atajos, help panel `⌘/`, tema claro/oscuro/sistema, pre-install check
-- [x] 🛡 **Sprint 5**: workflow de seguridad portable (TruffleHog + npm/cargo audit + CodeQL + Dependabot), detección y adopción de **procesos huérfanos**, **crash log** persistente
-- [ ] 🧱 Marketplace de tools comunitarias
-- [ ] 🔗 Workflows / chains entre tools
-- [ ] 🌐 i18n (ES/EN)
+- [x] 🎛 **Sprint 3**: paleta `⌘K`, Settings UI completo, gestión de modelos, tests baseline
+- [x] ✨ **Sprint 4**: catálogo de atajos `⌘K/⌘,/⌘/⌘R/⌘L/⌘B`, help panel, tema dark/light/system, pre-install check
+- [x] 🛡 **Sprint 5**: security workflow portable (TruffleHog + npm/cargo audit + CodeQL + Dependabot), huérfanos, crash log
+- [x] 🧱 **Sprint 6**: **Marketplace MVP** con 10 tools curadas (Bark, RVC, MusicGen, etc.) y `import_marketplace_tool`
+- [x] 🔗 **Sprint 7**: **Workflows** declarativos en YAML con runner HTTP secuencial
+- [x] 🌐 **Sprint 8**: **i18n ES/EN** sin deps con ~85 keys y hot-swap reactivo
+- [x] 🎨 **Sprint 9**: **Visual Workflow Builder** drag&drop, iconos custom por tool, UI overhaul profesional con design tokens
+- [x] 🪟 **Sidebar agrupada** (Workspace/Tools/Sistema) con badges y atajos visibles
+- [x] 📊 **Modales para Resumen/Huérfanos/Doctor/Settings/Marketplace/Workflows/Help** sustituyendo cards permanentes
 
 ---
 
@@ -100,8 +103,8 @@
 | 1 — MVP local | `✅ COMPLETA` | 100% |
 | 2 — Robustez launcher | `✅ COMPLETA` | 7/7 (huérfanos resueltos en Sprint 5) |
 | 3 — Disco dual + módulos | `✅ COMPLETA` | 100% |
-| 4 — Producto instalable | `🚧 EN CURSO` | 4/9 (falta firma + notarización) |
-| 5 — UX profesional | `🟢 EN CURSO` | 8/11 (faltan marketplace + workflows + i18n) |
+| 4 — Producto instalable | `🚧 EN CURSO` | 4/9 (falta firma + notarización + canal releases) |
+| 5 — UX profesional | `✅ COMPLETA` | 14/14 (release v0.5.0) |
 | 6 — Expansión catálogo | `🌱 FUTURO` | 0/5 |
 
 > Ver detalle del estado actual en [`docs/STATUS.md`](docs/STATUS.md) y bitácora en [`CHANGELOG.md`](CHANGELOG.md).
