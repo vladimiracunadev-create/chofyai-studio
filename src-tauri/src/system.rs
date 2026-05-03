@@ -415,12 +415,68 @@ pub fn import_marketplace_tool(app: AppHandle, id: String) -> Result<ActionResul
     })
 }
 
+fn workflows_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    match repo_root() {
+        Some(root) => Ok(root.join("workflows")),
+        None => app.path().resolve("workflows", BaseDirectory::Resource).map_err(|e| e.to_string()),
+    }
+}
+
+fn validate_workflow_id(id: &str) -> Result<(), String> {
+    if id.is_empty() { return Err("id vacío".into()); }
+    if id.contains('/') || id.contains('\\') || id.contains("..") {
+        return Err("id no puede contener / \\ ni ..".into());
+    }
+    if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+        return Err("id solo permite [a-zA-Z0-9_-]".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn save_workflow(app: AppHandle, id: String, yaml_content: String) -> Result<ActionResult, String> {
+    validate_workflow_id(&id)?;
+    // Validación: el YAML debe parsear y tener al menos los campos esperados
+    let parsed: serde_yaml::Value = serde_yaml::from_str(&yaml_content)
+        .map_err(|e| format!("YAML inválido: {}", e))?;
+    let mapping = parsed.as_mapping().ok_or("YAML root debe ser un mapping")?;
+    for k in &["id", "name", "description", "steps"] {
+        if !mapping.contains_key(serde_yaml::Value::String(k.to_string())) {
+            return Err(format!("falta campo obligatorio: {}", k));
+        }
+    }
+    let dir = workflows_dir(&app)?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let target = dir.join(format!("{}.yaml", id));
+    fs::write(&target, yaml_content).map_err(|e| e.to_string())?;
+    Ok(ActionResult {
+        ok: true,
+        message: format!("Workflow guardado: workflows/{}.yaml", id),
+        log_path: Some(target.display().to_string()),
+        opened_url: None,
+    })
+}
+
+#[tauri::command]
+pub fn delete_workflow(app: AppHandle, id: String) -> Result<ActionResult, String> {
+    validate_workflow_id(&id)?;
+    let dir = workflows_dir(&app)?;
+    let target = dir.join(format!("{}.yaml", id));
+    if !target.exists() {
+        return Err(format!("workflows/{}.yaml no existe", id));
+    }
+    fs::remove_file(&target).map_err(|e| e.to_string())?;
+    Ok(ActionResult {
+        ok: true,
+        message: format!("Workflow borrado: {}.yaml", id),
+        log_path: None,
+        opened_url: None,
+    })
+}
+
 #[tauri::command]
 pub fn list_workflows(app: AppHandle) -> Result<Vec<serde_json::Value>, String> {
-    let dir = match repo_root() {
-        Some(root) => root.join("workflows"),
-        None => app.path().resolve("workflows", BaseDirectory::Resource).map_err(|e| e.to_string())?,
-    };
+    let dir = workflows_dir(&app)?;
     if !dir.exists() {
         return Ok(vec![]);
     }
@@ -500,6 +556,8 @@ pub fn read_tool_log(
 struct RawManifest {
     id: String,
     name: String,
+    #[serde(default)]
+    icon: Option<String>,
     category: String,
     runtime: String,
     description: Option<String>,
@@ -1066,6 +1124,7 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
             file_name,
             id: parsed.id,
             name: parsed.name,
+            icon: parsed.icon,
             category: parsed.category,
             runtime: parsed.runtime,
             description: parsed.description.unwrap_or_default(),

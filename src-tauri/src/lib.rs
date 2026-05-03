@@ -45,6 +45,8 @@ pub fn run() {
             system::list_marketplace_tools,
             system::import_marketplace_tool,
             system::list_workflows,
+            system::save_workflow,
+            system::delete_workflow,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

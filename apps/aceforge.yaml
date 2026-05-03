@@ -1,5 +1,6 @@
 id: aceforge
 name: AceForge
+icon: "🎹"
 category: music
 runtime: python
 python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no

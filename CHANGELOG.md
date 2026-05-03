@@ -15,6 +15,39 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 - **`.github/workflows/security.yml`**: el uso de `if: ${{ hashFiles(...) != '' }}` a nivel job-level fallaba porque GitHub Actions evalúa esa expresión **antes** del checkout (no hay archivos para hashear). Reemplazado por gating step-level: cada job hace `actions/checkout@v4` primero, luego un step `Skip si...` setea `outputs.skip` con `[ -f file ]`, y los siguientes steps usan `if: steps.check.outputs.skip != 'true'`. Compatible con `workflow_call:` desde otros repos.
 
+### 🎨 Added (Sprint 9 — Visual Workflow Builder + iconos custom + UI profesional)
+
+**Iconos custom por tool**:
+
+- Campo `icon` en cada manifest YAML: 🎙 whisper.cpp · 🎤 Qwen3-TTS · 🎨 ComfyUI · 🎭 FaceFusion · 🎹 AceForge.
+- `RawManifest` y `ToolSummary` (Rust + TS) extendidos con `icon: Option<String>`.
+- Render: icono grande junto al nombre en cada tarjeta, con fallback automático al `CATEGORY_EMOJI` si el manifest no declara `icon`.
+
+**Visual Workflow Builder** (drag & drop):
+
+- Nuevo modal `WorkflowBuilder` con grid de 3 secciones: Metadata + Inputs + Steps.
+- **Drag & drop nativo** (HTML5 API, sin libs) para reordenar steps. Indicador visual `dragging` (opacity + borde primary). Grip `⋮⋮` con cursor `grab`.
+- Editor por step: type `http|stub`, method, URL, body_kind `multipart|json`, fields como `key: valor` línea-a-línea, body JSON multi-línea, output `kind+from`.
+- Editor de inputs: id, type, label, required.
+- **Preview YAML** togglable que se actualiza en vivo según ediciones.
+- Botón `+ Nuevo workflow` en `WorkflowsPanel`. Botón `🗑` por workflow para borrar.
+- Backend Rust: `save_workflow(id, yaml_content)` con validación (id `[a-zA-Z0-9_-]`, no `..`, parse YAML, fields obligatorios) + `delete_workflow(id)` con guarda de existencia. Helper `workflows_dir()` reutilizable.
+
+**UI overhaul profesional**:
+
+- **Design tokens** en `:root` (CSS variables): `--surface`, `--surface-2`, `--surface-3`, `--border`, `--text/muted/subtle`, `--primary/2`, `--accent`, `--warning`, `--danger`, `--radius-{xs,sm,md,lg,xl}`, `--shadow-{sm,md,lg}`, `--transition`. Tema dark + light usan los mismos tokens.
+- **Typography**: stack `-apple-system, "SF Pro Text", Inter` + `font-feature-settings: "ss01", "cv11", "cv02"` para mejores ligaduras y formas de números.
+- **Sistema de botones unificado**: primary con gradient hover + lift `translateY(-1px)` + shadow primary, secondary con surface-3 + hover sutil. Disabled opacity 0.45.
+- **Sidebar refinada**: nav-items 8 px padding, active con barra lateral 3 px primary + gradient sutil, kbd hints alineados con opacity 0.55.
+- **Tool cards**: hover `translateY(-1px)` + shadow-md + border más fuerte, icon 1.45 rem, meta con grid 2 cols.
+- **Inputs/textarea/select** unificados con focus ring `0 0 0 3px primary/15`.
+- **Status bar** con `backdrop-filter: blur(12px)` y transparencia.
+- **Modales** con backdrop blur 10 px, surface + border-strong, shadow-lg, radius-xl.
+- **Scrollbars** custom 10 px estilo macOS-like.
+- **Light theme** ajustado: surface blanca, borders `rgba(20,30,60,...)`, contraste WCAG AA.
+- **Focus rings accesibles** con `:focus-visible` outline primary 2 px.
+- **Selection** color custom (purple 0.4).
+
 ### 🌐 Added (Sprint 8 — i18n ES/EN)
 
 - **`src/i18n.ts`** sin dependencias externas: type `Lang = 'es' | 'en'`, dictionaries por idioma con ~70 keys agrupadas (sidebar, sections, buttons, states, empty, tool, toasts, onboarding), función `t(key, params?)` con sustitución `{name}` estilo MessageFormat lite, persistencia en `localStorage` (`chofyai_lang`), listener pattern para re-render reactivo.

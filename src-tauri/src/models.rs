@@ -21,6 +21,7 @@ pub struct ToolSummary {
     pub file_name: String,
     pub id: String,
     pub name: String,
+    pub icon: Option<String>,
     pub category: String,
     pub runtime: String,
     pub description: String,

@@ -1,5 +1,6 @@
 id: qwen3-tts
 name: Qwen3-TTS
+icon: "🎤"
 category: voice
 runtime: python
 python_manager: auto   # qwen3-tts ya provisiona uv dentro del venv

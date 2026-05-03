@@ -2,6 +2,7 @@ export type ToolManifest = {
   file_name: string;
   id: string;
   name: string;
+  icon?: string | null;
   category: 'voice' | 'asr' | 'video' | 'image' | 'music' | 'system';
   runtime: 'python' | 'binary' | 'node' | 'mlx' | 'mixed';
   default_port?: number;

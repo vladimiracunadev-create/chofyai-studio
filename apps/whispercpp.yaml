@@ -1,5 +1,6 @@
 id: whispercpp
 name: whisper.cpp
+icon: "🎙"
 category: asr
 runtime: binary
 description: ASR local y transcripción con foco en Apple Silicon.

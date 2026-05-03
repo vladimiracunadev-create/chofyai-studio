@@ -287,33 +287,301 @@ function WorkflowRunner({
   );
 }
 
+// ─── Workflow Builder (drag & drop) ──────────────────────────────────────────
+type BuilderInput = { id: string; type: 'file' | 'text'; label: string; required?: boolean; default?: string; accept?: string; placeholder?: string };
+type BuilderStep = {
+  uid: string; // local-only para reordenar
+  id: string;
+  label: string;
+  type: 'http' | 'stub';
+  method?: 'GET' | 'POST';
+  url?: string;
+  body_kind?: 'multipart' | 'json';
+  fields_text?: string;  // KEY: VAL por línea (más fácil que UI compleja)
+  body?: string;
+  note?: string;
+  output_kind?: string;
+  output_from?: string;
+};
+
+function emptyStep(): BuilderStep {
+  return {
+    uid: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: `step${Math.floor(Math.random() * 9999)}`,
+    label: 'Nuevo paso',
+    type: 'http',
+    method: 'POST',
+    url: 'http://127.0.0.1:8178/inference',
+    body_kind: 'multipart',
+    fields_text: 'file: {{inputs.audio}}\nresponse_format: json',
+    output_kind: 'text',
+    output_from: 'text',
+  };
+}
+
+function buildYaml(meta: { id: string; name: string; emoji: string; category: string; description: string; requires_tools: string[] }, inputs: BuilderInput[], steps: BuilderStep[]): string {
+  let out = '';
+  out += `id: ${meta.id}\n`;
+  out += `name: ${meta.name}\n`;
+  out += `category: ${meta.category}\n`;
+  if (meta.emoji) out += `emoji: "${meta.emoji}"\n`;
+  out += `description: |\n`;
+  for (const line of meta.description.split('\n')) out += `  ${line}\n`;
+  if (meta.requires_tools.length > 0) {
+    out += `requires_tools:\n`;
+    for (const t of meta.requires_tools) out += `  - ${t}\n`;
+  }
+  if (inputs.length > 0) {
+    out += `inputs:\n`;
+    for (const i of inputs) {
+      out += `  - id: ${i.id}\n`;
+      out += `    type: ${i.type}\n`;
+      out += `    label: ${JSON.stringify(i.label)}\n`;
+      if (i.required) out += `    required: true\n`;
+      if (i.default) out += `    default: ${JSON.stringify(i.default)}\n`;
+      if (i.accept) out += `    accept: ${JSON.stringify(i.accept)}\n`;
+      if (i.placeholder) out += `    placeholder: ${JSON.stringify(i.placeholder)}\n`;
+    }
+  }
+  out += `steps:\n`;
+  for (const s of steps) {
+    out += `  - id: ${s.id}\n`;
+    out += `    label: ${JSON.stringify(s.label)}\n`;
+    out += `    type: ${s.type}\n`;
+    if (s.type === 'http') {
+      if (s.method) out += `    method: ${s.method}\n`;
+      if (s.url) out += `    url: ${JSON.stringify(s.url)}\n`;
+      if (s.body_kind) out += `    body_kind: ${s.body_kind}\n`;
+      if (s.body_kind === 'multipart' && s.fields_text) {
+        out += `    fields:\n`;
+        for (const line of s.fields_text.split('\n')) {
+          const [k, ...rest] = line.split(':');
+          if (!k.trim()) continue;
+          const v = rest.join(':').trim();
+          out += `      ${k.trim()}: ${JSON.stringify(v)}\n`;
+        }
+      }
+      if (s.body_kind === 'json' && s.body) {
+        out += `    body: |\n`;
+        for (const line of s.body.split('\n')) out += `      ${line}\n`;
+      }
+    } else if (s.type === 'stub' && s.note) {
+      out += `    note: ${JSON.stringify(s.note)}\n`;
+    }
+    if (s.output_kind) {
+      out += `    output:\n      kind: ${s.output_kind}\n`;
+      if (s.output_from) out += `      from: ${s.output_from}\n`;
+    }
+  }
+  return out;
+}
+
+function WorkflowBuilder({
+  open, onClose, onSaved,
+}: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [meta, setMeta] = useState({
+    id: 'mi-workflow',
+    name: 'Mi workflow',
+    emoji: '🔗',
+    category: 'asr',
+    description: 'Descripción del workflow.',
+    requires_tools: '' as string,
+  });
+  const [inputs, setInputs] = useState<BuilderInput[]>([
+    { id: 'audio', type: 'file', label: 'Archivo de audio', required: true, accept: 'audio/*' },
+  ]);
+  const [steps, setSteps] = useState<BuilderStep[]>([emptyStep()]);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showYaml, setShowYaml] = useState(false);
+
+  if (!open) return null;
+
+  const yaml = useMemo(() => buildYaml({
+    ...meta,
+    requires_tools: meta.requires_tools.split(',').map((s) => s.trim()).filter(Boolean),
+  }, inputs, steps), [meta, inputs, steps]);
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    setSteps((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const r = await tauriInvoke<ActionResult>('save_workflow', { id: meta.id, yamlContent: yaml });
+    setSaving(false);
+    if (r?.ok) {
+      notify('success', 'Workflow guardado', r.message);
+      void notifyNative('Workflow', `Guardado workflows/${meta.id}.yaml`);
+      onSaved();
+    }
+  };
+
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal builder-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>🛠 Workflow Builder</h2>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="secondary" onClick={() => setShowYaml((v) => !v)}>{showYaml ? 'Ocultar YAML' : 'Ver YAML'}</button>
+            <button className="secondary" onClick={onClose}>✕</button>
+          </div>
+        </div>
+
+        <section className="builder-grid">
+          {/* Metadata */}
+          <div className="builder-section">
+            <h4>📝 Metadata</h4>
+            <div className="builder-fields">
+              <label>ID (sin espacios)<input value={meta.id} onChange={(e) => setMeta({ ...meta, id: e.target.value.replace(/[^a-zA-Z0-9_-]/g, '') })} /></label>
+              <label>Nombre<input value={meta.name} onChange={(e) => setMeta({ ...meta, name: e.target.value })} /></label>
+              <label>Emoji<input value={meta.emoji} onChange={(e) => setMeta({ ...meta, emoji: e.target.value })} maxLength={4} /></label>
+              <label>Categoría
+                <select value={meta.category} onChange={(e) => setMeta({ ...meta, category: e.target.value })}>
+                  <option>asr</option><option>voice</option><option>image</option><option>video</option><option>music</option><option>chain</option><option>system</option>
+                </select>
+              </label>
+              <label>Descripción<textarea rows={3} value={meta.description} onChange={(e) => setMeta({ ...meta, description: e.target.value })} /></label>
+              <label>Requiere tools (coma)<input value={meta.requires_tools} onChange={(e) => setMeta({ ...meta, requires_tools: e.target.value })} placeholder="whispercpp, qwen3-tts" /></label>
+            </div>
+          </div>
+
+          {/* Inputs */}
+          <div className="builder-section">
+            <h4>📥 Inputs <button className="secondary" onClick={() => setInputs([...inputs, { id: `input${inputs.length + 1}`, type: 'text', label: 'Texto' }])}>+ añadir</button></h4>
+            <div className="builder-list">
+              {inputs.map((inp, i) => (
+                <div key={i} className="builder-card">
+                  <div className="builder-row">
+                    <input value={inp.id} onChange={(e) => { const a = [...inputs]; a[i] = { ...inp, id: e.target.value.replace(/\W/g, '') }; setInputs(a); }} placeholder="id" />
+                    <select value={inp.type} onChange={(e) => { const a = [...inputs]; a[i] = { ...inp, type: e.target.value as 'file' | 'text' }; setInputs(a); }}>
+                      <option value="text">text</option><option value="file">file</option>
+                    </select>
+                    <input value={inp.label} onChange={(e) => { const a = [...inputs]; a[i] = { ...inp, label: e.target.value }; setInputs(a); }} placeholder="label" />
+                    <label className="builder-checkbox"><input type="checkbox" checked={Boolean(inp.required)} onChange={(e) => { const a = [...inputs]; a[i] = { ...inp, required: e.target.checked }; setInputs(a); }} />req</label>
+                    <button className="secondary danger-soft" onClick={() => setInputs(inputs.filter((_, j) => j !== i))}>🗑</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Steps con drag-drop */}
+          <div className="builder-section">
+            <h4>⚙️ Steps <span className="muted" style={{ fontSize: '0.74rem' }}>(arrastra ↕ para reordenar)</span> <button className="secondary" onClick={() => setSteps([...steps, emptyStep()])}>+ añadir</button></h4>
+            <div className="builder-list">
+              {steps.map((s, i) => (
+                <div
+                  key={s.uid}
+                  className={`builder-card builder-step ${dragIdx === i ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={(e) => { e.preventDefault(); if (dragIdx !== null) reorder(dragIdx, i); setDragIdx(null); }}
+                  onDragEnd={() => setDragIdx(null)}
+                >
+                  <div className="builder-row">
+                    <span className="builder-grip" title="Arrastra">⋮⋮</span>
+                    <strong>#{i + 1}</strong>
+                    <input value={s.id} onChange={(e) => { const a = [...steps]; a[i] = { ...s, id: e.target.value.replace(/\W/g, '') }; setSteps(a); }} placeholder="step id" />
+                    <input value={s.label} onChange={(e) => { const a = [...steps]; a[i] = { ...s, label: e.target.value }; setSteps(a); }} placeholder="Etiqueta visible" style={{ flex: 1 }} />
+                    <select value={s.type} onChange={(e) => { const a = [...steps]; a[i] = { ...s, type: e.target.value as 'http' | 'stub' }; setSteps(a); }}>
+                      <option value="http">http</option><option value="stub">stub</option>
+                    </select>
+                    <button className="secondary danger-soft" onClick={() => setSteps(steps.filter((_, j) => j !== i))}>🗑</button>
+                  </div>
+                  {s.type === 'http' && (
+                    <div className="builder-row builder-step-config">
+                      <select value={s.method ?? 'POST'} onChange={(e) => { const a = [...steps]; a[i] = { ...s, method: e.target.value as 'GET' | 'POST' }; setSteps(a); }}>
+                        <option>POST</option><option>GET</option>
+                      </select>
+                      <input value={s.url ?? ''} onChange={(e) => { const a = [...steps]; a[i] = { ...s, url: e.target.value }; setSteps(a); }} placeholder="http://127.0.0.1:8178/inference" style={{ flex: 1 }} />
+                      <select value={s.body_kind ?? 'multipart'} onChange={(e) => { const a = [...steps]; a[i] = { ...s, body_kind: e.target.value as 'multipart' | 'json' }; setSteps(a); }}>
+                        <option value="multipart">multipart</option><option value="json">json</option>
+                      </select>
+                    </div>
+                  )}
+                  {s.type === 'http' && s.body_kind === 'multipart' && (
+                    <textarea rows={3} value={s.fields_text ?? ''} onChange={(e) => { const a = [...steps]; a[i] = { ...s, fields_text: e.target.value }; setSteps(a); }} placeholder="key: valor (uno por línea)" />
+                  )}
+                  {s.type === 'http' && s.body_kind === 'json' && (
+                    <textarea rows={4} value={s.body ?? ''} onChange={(e) => { const a = [...steps]; a[i] = { ...s, body: e.target.value }; setSteps(a); }} placeholder='{"prompt": "{{inputs.prompt}}"}' />
+                  )}
+                  {s.type === 'stub' && (
+                    <textarea rows={2} value={s.note ?? ''} onChange={(e) => { const a = [...steps]; a[i] = { ...s, note: e.target.value }; setSteps(a); }} placeholder="Nota — placeholder" />
+                  )}
+                  <div className="builder-row">
+                    <span className="muted" style={{ fontSize: '0.72rem' }}>output</span>
+                    <select value={s.output_kind ?? 'text'} onChange={(e) => { const a = [...steps]; a[i] = { ...s, output_kind: e.target.value }; setSteps(a); }}>
+                      <option>text</option><option>json</option><option>audio_url</option>
+                    </select>
+                    <input value={s.output_from ?? ''} onChange={(e) => { const a = [...steps]; a[i] = { ...s, output_from: e.target.value }; setSteps(a); }} placeholder="from (key del JSON, opcional)" />
+                  </div>
+                </div>
+              ))}
+              {steps.length === 0 && <p className="muted" style={{ fontSize: '0.84rem' }}>Sin steps. Añade al menos uno.</p>}
+            </div>
+          </div>
+        </section>
+
+        {showYaml && (
+          <pre className="builder-yaml">{yaml}</pre>
+        )}
+
+        <div className="onb-actions">
+          <button className="secondary" onClick={onClose}>Cancelar</button>
+          <button onClick={save} disabled={saving || !meta.id || steps.length === 0}>
+            {saving ? '⏳…' : `💾 Guardar workflows/${meta.id}.yaml`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkflowsPanel({
-  open, onClose, onRun,
+  open, onClose, onRun, onNew,
 }: {
   open: boolean;
   onClose: () => void;
   onRun: (wf: WorkflowDef) => void;
+  onNew: () => void;
 }) {
   const [list, setList] = useState<WorkflowDef[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!open) return;
+  const reload = async () => {
     setLoading(true);
-    void (async () => {
-      const r = await tauriInvoke<WorkflowDef[]>('list_workflows');
-      setList(r ?? []);
-      setLoading(false);
-    })();
-  }, [open]);
+    const r = await tauriInvoke<WorkflowDef[]>('list_workflows');
+    setList(r ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { if (open) void reload(); }, [open]);
 
   if (!open) return null;
+
+  const onDelete = async (id: string) => {
+    if (!confirm(`¿Borrar workflows/${id}.yaml?`)) return;
+    const r = await tauriInvoke<ActionResult>('delete_workflow', { id });
+    if (r?.ok) { notify('success', 'Workflow borrado', id); void reload(); }
+  };
+
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-modal wf-modal" onClick={(e) => e.stopPropagation()}>
         <div className="section-header">
           <h2>🔗 Workflows</h2>
-          <button className="secondary" onClick={onClose}>✕</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => { onClose(); onNew(); }}>+ Nuevo workflow</button>
+            <button className="secondary" onClick={onClose}>✕</button>
+          </div>
         </div>
         <p className="muted" style={{ fontSize: '0.84rem' }}>
           Recetas declarativas que orquestan llamadas HTTP a tus tools locales. Definidas en <code>workflows/*.yaml</code>.
@@ -339,7 +607,10 @@ function WorkflowsPanel({
                   <span>requiere: {w.requires_tools.join(', ')}</span>
                 </>}
               </div>
-              <button onClick={() => { onClose(); onRun(w); }}>▶ Ejecutar</button>
+              <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+                <button onClick={() => { onClose(); onRun(w); }} style={{ flex: 1 }}>▶ Ejecutar</button>
+                <button className="secondary danger-soft" onClick={() => void onDelete(w.id)} title="Borrar workflow">🗑</button>
+              </div>
             </div>
           ))}
         </div>
@@ -1268,6 +1539,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showMarket, setShowMarket] = useState(false);
   const [showWorkflows, setShowWorkflows] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const [runningWorkflow, setRunningWorkflow] = useState<WorkflowDef | null>(null);
   const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
   const [lastTouchedToolId, setLastTouchedToolId] = useState<string | null>(null);
@@ -1685,6 +1957,12 @@ export default function App() {
         open={showWorkflows}
         onClose={() => setShowWorkflows(false)}
         onRun={(wf) => setRunningWorkflow(wf)}
+        onNew={() => setShowBuilder(true)}
+      />
+      <WorkflowBuilder
+        open={showBuilder}
+        onClose={() => setShowBuilder(false)}
+        onSaved={() => { setShowBuilder(false); setShowWorkflows(true); }}
       />
       {runningWorkflow && (
         <WorkflowRunner wf={runningWorkflow} onClose={() => setRunningWorkflow(null)} />
@@ -1986,8 +2264,9 @@ export default function App() {
                 return (
                   <article key={tool.id} className="tool-card">
                     <div className="tool-head">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <h4>{tool.name}</h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="tool-icon">{tool.icon || CATEGORY_EMOJI[tool.category] || '🧩'}</span>
+                        <h4 style={{ margin: 0 }}>{tool.name}</h4>
                         <HealthDot health={toolHealth} starting={Boolean(startingTools[tool.id])} />
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
