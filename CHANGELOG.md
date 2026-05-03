@@ -11,6 +11,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🚀 Added (Sprint 2 — onboarding, update checker, notificaciones nativas)
+
+- **First-run wizard de 4 pasos** (`Onboarding`): bienvenida → selector de `studio_home` con detección heurística de volumen externo y aviso para crear sparsebundle APFS si aplica → instalación opcional de whisper.cpp con un click → confirmación final con tips de UI. Persistencia en `localStorage` (`chofyai_onboarding_done`). Botón "👋 Tour" en la sidebar para reabrir cuando quieras.
+- **Update checker** (`UpdateChecker`): banner flotante arriba-derecha que consulta la API de GitHub Releases (`/repos/.../releases/latest`) al arrancar. Compara con `APP_VERSION` y, si hay versión más nueva, muestra link directo al release. Silent fail si offline o sin releases publicados. Sin telemetría.
+- **Notificaciones nativas macOS**: nuevo comando Rust `notify_macos(title, body)` que invoca `osascript display notification` (sin nuevo plugin Tauri ni dependencia adicional). Hooked en eventos `install-done` (éxito y error) — ahora aunque la app esté en segundo plano te enteras cuando termina una instalación. Helper `notifyNative()` en frontend hace silent fail fuera de Tauri.
+- **Banner CSS** y **modal del wizard** con animaciones `fadeIn` + `slideInUp`, dot-progress 4 pasos, validación de input.
+
 ### 🛡 Added (Sprint 1 — toasts, persistencia, logs in-app, empty state, health retry)
 
 - **Sistema de toasts global** (`Toaster` + helper `notify()` + wrapper de `tauriInvoke`): toda llamada a comando Tauri que falla emite un toast con título y mensaje. Toasts por kind (`info`/`success`/`warn`/`error`) con auto-dismiss (4–8 s) y botón cierre. Animación slide-in.

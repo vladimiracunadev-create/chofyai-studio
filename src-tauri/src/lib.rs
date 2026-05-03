@@ -34,6 +34,7 @@ pub fn run() {
             system::get_system_stats,
             system::list_running_pids,
             system::read_tool_log,
+            system::notify_macos,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

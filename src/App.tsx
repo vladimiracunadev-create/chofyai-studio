@@ -22,6 +22,17 @@ let pushToast: Toaster = () => {};
 function setToasterRef(fn: Toaster) { pushToast = fn; }
 export function notify(kind: ToastKind, title: string, body?: string) { pushToast(kind, title, body); }
 
+// Notificación nativa macOS (vía osascript). Silent fail si no está en Tauri.
+async function notifyNative(title: string, body: string) {
+  if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return;
+  try { await invoke('notify_macos', { title, body }); } catch { /* ignore */ }
+}
+
+// Versión actual hardcoded. Match con package.json version.
+const APP_VERSION = '0.5.0-dev';
+
+const ONBOARDING_KEY = 'chofyai_onboarding_done';
+
 // ─── Detección Tauri ─────────────────────────────────────────────────────────
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -96,6 +107,189 @@ function parseInstallLine(prev: LineParse, line: string): LineParse {
   else if (/INSTALL_OK\b/.test(stripped)) { out.phase = 'Listo'; out.progressPct = 100; }
 
   return out;
+}
+
+// ─── Onboarding (first-run wizard) ────────────────────────────────────────────
+function Onboarding({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const [studioHome, setStudioHome] = useState<string>('');
+  const [diskInfo, setDiskInfo] = useState<{ fs?: string; gbFree?: number; suggestion?: 'apfs' | 'sparsebundle' | 'ok' }>({});
+  const [installing, setInstalling] = useState(false);
+
+  useEffect(() => {
+    if (step !== 1) return;
+    void (async () => {
+      const sum = await tauriInvoke<SystemSummary>('get_system_summary', undefined, { silent: true });
+      const v = await tauriInvoke<VolumeCandidate[]>('list_volume_candidates', undefined, { silent: true });
+      const initial = sum?.studio_home_effective ?? sum?.studio_home ?? `${(window as any).__home__ ?? ''}/ChofyAIStudio`;
+      setStudioHome(initial);
+      // Adivinar FS heurísticamente desde el path (no podemos detectarlo sin un comando extra)
+      if (initial.startsWith('/Volumes/')) {
+        const target = v?.find((x) => initial.startsWith(x.path));
+        const free = target?.free_bytes ? target.free_bytes / (1024 ** 3) : undefined;
+        setDiskInfo({ fs: 'externo', gbFree: free, suggestion: 'sparsebundle' });
+      } else {
+        setDiskInfo({ fs: 'APFS interno', suggestion: 'ok' });
+      }
+    })();
+  }, [step]);
+
+  const finish = () => {
+    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch { /* ignore */ }
+    onDone();
+  };
+
+  const installWhisper = async () => {
+    const wsp = await tauriInvoke<ToolManifest[]>('list_tools', undefined, { silent: true });
+    const tool = wsp?.find((t) => t.id === 'whispercpp');
+    if (!tool) return;
+    setInstalling(true);
+    notify('info', 'Instalando whisper.cpp…', 'Esto toma ~2 min en Apple Silicon');
+    const r = await tauriInvoke<ActionResult>('install_tool', { toolId: tool.id });
+    setInstalling(false);
+    if (r) {
+      notify('success', 'whisper.cpp listo', 'Puedes pasar al siguiente paso');
+      void notifyNative('ChofyAI Studio', 'whisper.cpp instalado correctamente');
+      setStep(3);
+    }
+  };
+
+  const saveStudioHome = async () => {
+    const r = await tauriInvoke<ActionResult>('save_studio_home', { studioHome });
+    if (r) {
+      notify('success', 'Studio home guardado', studioHome);
+      setStep(2);
+    }
+  };
+
+  return (
+    <div className="onboarding-overlay">
+      <div className="onboarding-modal">
+        <div className="onb-progress">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className={`onb-dot ${i <= step ? 'active' : ''}`} />
+          ))}
+        </div>
+
+        {step === 0 && (
+          <div className="onb-step">
+            <span className="onb-emoji">🎨</span>
+            <h2>Bienvenido a ChofyAI Studio</h2>
+            <p>Un launcher local para tus herramientas creativas de IA en Apple Silicon. Te guío en 3 pasos rápidos.</p>
+            <ul className="onb-features">
+              <li>🎤 Voz · 🎙 ASR · 🎬 Video · 🖼 Imagen · 🎵 Música</li>
+              <li>💾 Modelos en disco externo o interno</li>
+              <li>👁 UI de cada herramienta dentro de esta ventana</li>
+            </ul>
+            <div className="onb-actions">
+              <button className="secondary" onClick={finish}>Saltar</button>
+              <button onClick={() => setStep(1)}>Empezar →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="onb-step">
+            <span className="onb-emoji">💾</span>
+            <h2>¿Dónde guardamos tus modelos?</h2>
+            <p className="muted">Las herramientas pueden ocupar 1–10 GB cada una. Recomendamos un volumen con espacio.</p>
+            <input
+              className="onb-input"
+              value={studioHome}
+              onChange={(e) => setStudioHome(e.target.value)}
+              placeholder="/ruta/absoluta"
+            />
+            {diskInfo.suggestion === 'sparsebundle' && (
+              <div className="onb-warn">
+                ⚠️ Esta ruta parece estar en un volumen externo. Si es <strong>exFAT/HFS+</strong> los wheels Python fallarán.
+                Te recomendamos crear una imagen <strong>APFS sparsebundle</strong>:
+                <pre className="onb-code">{`hdiutil create -size 100g -fs APFS \\
+  -volname ChofyAIStudio -type SPARSEBUNDLE \\
+  ${studioHome}.sparsebundle`}</pre>
+                Luego monta y apunta studio_home a <code>/Volumes/ChofyAIStudio</code>.
+              </div>
+            )}
+            {diskInfo.gbFree !== undefined && (
+              <p className="muted">Espacio libre detectado: <strong>{diskInfo.gbFree.toFixed(1)} GB</strong></p>
+            )}
+            <div className="onb-actions">
+              <button className="secondary" onClick={() => setStep(0)}>← Atrás</button>
+              <button onClick={saveStudioHome} disabled={!studioHome.trim()}>Guardar y continuar →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="onb-step">
+            <span className="onb-emoji">⚡</span>
+            <h2>Instala tu primera herramienta</h2>
+            <p>Sugerencia: <strong>whisper.cpp</strong> — transcripción local con Metal/MPS, compila en ~2 min, ocupa 247 MB.</p>
+            <div className="onb-card-mini">
+              <strong>🎙 whisper.cpp</strong>
+              <span className="muted">ASR · sin GPU · base.en model 141 MB</span>
+            </div>
+            <div className="onb-actions">
+              <button className="secondary" onClick={() => setStep(3)}>Lo haré después</button>
+              <button onClick={installWhisper} disabled={installing}>
+                {installing ? '⏳ Instalando…' : '⚡ Instalar ahora'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="onb-step">
+            <span className="onb-emoji">🎉</span>
+            <h2>Todo listo</h2>
+            <p>Cuando una herramienta esté activa, usa <strong>👁 Ver UI</strong> para abrirla dentro de esta ventana.</p>
+            <ul className="onb-features">
+              <li>📋 Botón log en cada tarjeta para ver logs en vivo</li>
+              <li>🔄 Botón refresh si los estados no cuadran</li>
+              <li>📍 Reubica modelos pesados a otro volumen sin reinstalar</li>
+            </ul>
+            <div className="onb-actions">
+              <button onClick={finish}>Empezar a usar ✨</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── UpdateChecker ───────────────────────────────────────────────────────────
+type ReleaseInfo = { tag_name: string; html_url: string; published_at: string };
+function UpdateChecker() {
+  const [latest, setLatest] = useState<ReleaseInfo | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetch('https://api.github.com/repos/vladimiracunadev-create/chofyai-studio/releases/latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+        });
+        if (!r.ok) return;
+        const data: ReleaseInfo = await r.json();
+        if (!data.tag_name) return;
+        const remote = data.tag_name.replace(/^v/, '');
+        const local = APP_VERSION.replace(/-dev$/, '');
+        if (remote !== local && remote > local) setLatest(data);
+      } catch { /* offline o sin releases — silencioso */ }
+    })();
+  }, []);
+
+  if (!latest || dismissed) return null;
+  return (
+    <div className="update-banner">
+      <span className="update-emoji">🆕</span>
+      <span>
+        Versión <strong>{latest.tag_name}</strong> disponible (tienes <code>{APP_VERSION}</code>).
+      </span>
+      <a href={latest.html_url} target="_blank" rel="noreferrer" className="update-link">Ver release →</a>
+      <button className="update-close" onClick={() => setDismissed(true)} title="Ocultar">×</button>
+    </div>
+  );
 }
 
 // ─── Toaster ─────────────────────────────────────────────────────────────────
@@ -345,6 +539,9 @@ export default function App() {
   const [viewingLogsFor, setViewingLogsFor] = useState<string | null>(null);
   const [startingTools, setStartingTools] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+    try { return !localStorage.getItem(ONBOARDING_KEY); } catch { return false; }
+  });
   const progressRef = useRef<Record<string, string[]>>({});
 
   // ─── Carga inicial ─────────────────────────────────────────────────────────
@@ -437,6 +634,14 @@ export default function App() {
         progressPct: ok ? 100 : q.progressPct, phase: ok ? 'Listo' : (q.phase ?? 'Error'),
       } : q));
       void reloadTools();
+      const t = tools.find((x) => x.id === tool_id);
+      if (ok) {
+        notify('success', `${t?.name ?? tool_id} instalado`, line);
+        void notifyNative('ChofyAI Studio', `${t?.name ?? tool_id} instalado correctamente`);
+      } else {
+        notify('error', `${t?.name ?? tool_id} falló`, line);
+        void notifyNative('ChofyAI Studio · error', `Falló la instalación de ${t?.name ?? tool_id}`);
+      }
     });
     return () => { void unP.then((fn) => fn()); void unD.then((fn) => fn()); };
   }, []);
@@ -635,6 +840,8 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <Toaster />
+      {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
+      <UpdateChecker />
       <main className="layout">
         <aside className="sidebar">
           <div className="brand">
@@ -653,6 +860,9 @@ export default function App() {
             <button className="nav-item">Logs</button>
             <button className="nav-item">Settings</button>
             <button className="nav-item">Doctor</button>
+            <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
+              👋 Tour
+            </button>
           </nav>
           {queue.length > 0 && (
             <button className="nav-item queue-trigger" onClick={() => setQueueVisible(!queueVisible)}>

@@ -71,6 +71,24 @@ pub fn list_running_pids(
 }
 
 #[tauri::command]
+pub fn notify_macos(title: String, body: String) -> Result<(), String> {
+    // Sanitize quotes para AppleScript
+    let safe = |s: &str| s.replace('"', "\\\"").replace('\n', " ");
+    let script = format!(
+        r#"display notification "{}" with title "{}""#,
+        safe(&body),
+        safe(&title)
+    );
+    Command::new("osascript")
+        .args(["-e", &script])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn read_tool_log(
     app: AppHandle,
     tool_id: String,
