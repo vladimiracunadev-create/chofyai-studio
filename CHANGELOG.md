@@ -15,6 +15,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 - **`.github/workflows/security.yml`**: el uso de `if: ${{ hashFiles(...) != '' }}` a nivel job-level fallaba porque GitHub Actions evalúa esa expresión **antes** del checkout (no hay archivos para hashear). Reemplazado por gating step-level: cada job hace `actions/checkout@v4` primero, luego un step `Skip si...` setea `outputs.skip` con `[ -f file ]`, y los siguientes steps usan `if: steps.check.outputs.skip != 'true'`. Compatible con `workflow_call:` desde otros repos.
 
+### 🌐 Added (Sprint 8 — i18n ES/EN)
+
+- **`src/i18n.ts`** sin dependencias externas: type `Lang = 'es' | 'en'`, dictionaries por idioma con ~70 keys agrupadas (sidebar, sections, buttons, states, empty, tool, toasts, onboarding), función `t(key, params?)` con sustitución `{name}` estilo MessageFormat lite, persistencia en `localStorage` (`chofyai_lang`), listener pattern para re-render reactivo.
+- **Hook `useT()`**: fuerza re-render del componente cuando el idioma cambia. Usado en `App` para que toda la UI hot-swap entre ES y EN sin recargar.
+- **Toggle en sidebar**: nuevo botón `🌐 Idioma · ES/EN` que alterna el idioma activo y persiste.
+- **Aplicado a strings clave**: nav-items del sidebar, headers de secciones (Herramientas, Cola, Empty), pills de estado (Recomendado, Activo, Reubicado), botones de tarjeta (Instalar, Iniciar, Stop, Restart, Update, Cola), estados (Instalado/Pendiente, Puerto OK/cerrado), empty state CTA, lead del sidebar.
+- **Fallback al default**: si una key no existe en el lang activo, cae al default (ES). Si tampoco existe, devuelve la key cruda.
+- **Tests Vitest** (`src/i18n.test.ts`): 7 casos cubriendo default lang, switch ES/EN, sustitución de params, fallback, validación de langs no soportadas, **paridad de dicts** (todas las keys de ES existen en EN).
+
 ### 🔗 Added (Sprint 7 — Workflows MVP)
 
 - **Schema YAML para workflows** en `workflows/`: descriptor declarativo con `id`, `name`, `category`, `emoji`, `description`, `requires_tools[]`, `inputs[]` y `steps[]`. Cada step soporta `type: http` (con `body_kind: multipart|json`, sustitución `{{inputs.X}}` en URL/fields/body) o `type: stub` (placeholder no ejecutable).

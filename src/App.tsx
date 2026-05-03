@@ -85,6 +85,8 @@ const CATEGORY_LABEL: Record<ToolManifest['category'], string> = {
 
 // ─── Helpers (en src/utils.ts para tests) ─────────────────────────────────────
 import { fmtBytes, fmtElapsed, parseInstallLine } from './utils';
+import { getLang, setLang, t as ti18n, useT } from './i18n';
+import type { Lang } from './i18n';
 
 async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?: { silent?: boolean }): Promise<T | null> {
   if (!inTauri) return null;
@@ -1233,6 +1235,8 @@ function VolumePicker({
 
 // ─── App principal ────────────────────────────────────────────────────────────
 export default function App() {
+  const t = useT();
+  const [lang, setLangState] = useState<Lang>(() => getLang());
   const [summary, setSummary] = useState<SystemSummary | null>(null);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [tools, setTools] = useState<ToolManifest[]>(fallbackTools);
@@ -1709,37 +1713,44 @@ export default function App() {
             <span className="logo">C</span>
             <div>
               <h1>ChofyAI Studio</h1>
-              <p>Launcher local para voz, video, imágenes y música.</p>
+              <p>{t('sidebar.lead')}</p>
             </div>
           </div>
           <nav>
-            <button className="nav-item active">Dashboard</button>
-            <button className="nav-item">Tools</button>
-            <button className="nav-item">Models</button>
-            <button className="nav-item">Voices</button>
-            <button className="nav-item">Outputs</button>
-            <button className="nav-item">Logs</button>
+            <button className="nav-item active">{t('sidebar.dashboard')}</button>
+            <button className="nav-item">{t('sidebar.tools')}</button>
+            <button className="nav-item">{t('sidebar.models')}</button>
+            <button className="nav-item">{t('sidebar.voices')}</button>
+            <button className="nav-item">{t('sidebar.outputs')}</button>
+            <button className="nav-item">{t('sidebar.logs')}</button>
             <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides (⌘,)">
-              ⚙️ Settings <kbd className="nav-kbd">⌘,</kbd>
+              ⚙️ {t('sidebar.settings')} <kbd className="nav-kbd">⌘,</kbd>
             </button>
-            <button className="nav-item">Doctor</button>
+            <button className="nav-item">{t('sidebar.doctor')}</button>
             <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
-              👋 Tour
+              👋 {t('sidebar.tour')}
             </button>
             <button className="nav-item" onClick={() => setShowCmdK(true)} title="Paleta de comandos">
-              🔎 Comandos <kbd className="nav-kbd">⌘K</kbd>
+              🔎 {t('sidebar.commands')} <kbd className="nav-kbd">⌘K</kbd>
             </button>
             <button className="nav-item" onClick={() => setShowHelp(true)} title="Atajos de teclado">
-              ⌨️ Atajos <kbd className="nav-kbd">⌘/</kbd>
+              ⌨️ {t('sidebar.shortcuts')} <kbd className="nav-kbd">⌘/</kbd>
             </button>
             <button className="nav-item" onClick={() => setShowMarket(true)} title="Catálogo curado de tools comunitarias">
-              🛒 Marketplace <kbd className="nav-kbd">⌘M</kbd>
+              🛒 {t('sidebar.marketplace')} <kbd className="nav-kbd">⌘M</kbd>
             </button>
             <button className="nav-item" onClick={() => setShowWorkflows(true)} title="Pipelines y chains entre tools">
-              🔗 Workflows <kbd className="nav-kbd">⌘W</kbd>
+              🔗 {t('sidebar.workflows')} <kbd className="nav-kbd">⌘W</kbd>
             </button>
             <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
-              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} Tema · {theme}
+              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} {t('sidebar.theme')} · {theme}
+            </button>
+            <button
+              className="nav-item"
+              onClick={() => { const next: Lang = lang === 'es' ? 'en' : 'es'; setLang(next); setLangState(next); }}
+              title="Toggle language ES/EN"
+            >
+              🌐 {t('sidebar.lang')} · {lang.toUpperCase()}
             </button>
           </nav>
           {queue.length > 0 && (
@@ -1814,12 +1825,12 @@ export default function App() {
           {queueVisible && queue.length > 0 && (
             <section className="card">
               <div className="section-header">
-                <h3>Cola de instalación</h3>
+                <h3>{t('section.queue')}</h3>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={runQueue} disabled={isQueueRunning || queue.every((q) => q.status !== 'pending')}>
-                    {isQueueRunning ? '⏳ Instalando...' : '▶ Iniciar cola'}
+                    {isQueueRunning ? t('btn.installing') : t('btn.start_queue')}
                   </button>
-                  <button className="secondary" onClick={clearQueue} disabled={isQueueRunning}>Limpiar</button>
+                  <button className="secondary" onClick={clearQueue} disabled={isQueueRunning}>{t('btn.clear')}</button>
                 </div>
               </div>
               <div className="queue-list">
@@ -1886,26 +1897,23 @@ export default function App() {
           })()}
 
           {/* Empty state si no hay tools instaladas */}
-          {tools.length > 0 && tools.every((t) => !t.installed) && (
+          {tools.length > 0 && tools.every((x) => !x.installed) && (
             <section className="card empty-state-card">
               <div className="empty-content">
                 <span className="empty-emoji">🚀</span>
-                <h3>Aún no tienes herramientas instaladas</h3>
-                <p className="muted">
-                  Instala tu primera herramienta para empezar. Recomendamos <strong>whisper.cpp</strong>:
-                  rápido (compila en ~2 min), funciona sin GPU, y descarga solo 141 MB.
-                </p>
+                <h3>{t('empty.title')}</h3>
+                <p className="muted">{t('empty.body')}</p>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {(() => {
                     const wsp = tools.find((x) => x.id === 'whispercpp');
                     return wsp ? (
                       <button onClick={() => handleInstall(wsp)} disabled={busyToolId === 'whispercpp'}>
-                        ⚡ Instalar whisper.cpp ahora
+                        {t('empty.install_whisper')}
                       </button>
                     ) : null;
                   })()}
                   <button className="secondary" onClick={addAllPendingToQueue} disabled={isQueueRunning}>
-                    📦 Encolar las 5 herramientas
+                    {t('empty.queue_all')}
                   </button>
                 </div>
               </div>
@@ -1942,7 +1950,7 @@ export default function App() {
           {/* Herramientas */}
           <section className="card">
             <div className="section-header">
-              <h3>Herramientas</h3>
+              <h3>{t('section.tools')}</h3>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="secondary"
@@ -1950,21 +1958,20 @@ export default function App() {
                   onClick={async () => {
                     setIsRefreshing(true);
                     await Promise.all([reloadTools(), reloadSummary(), reloadStats()]);
-                    // Health de cada tool con puerto
-                    for (const t of tools) {
-                      if (t.default_port) {
-                        const r = await tauriInvoke<HealthResult>('health_check_tool', { toolId: t.id });
-                        if (r) setHealth((prev) => ({ ...prev, [t.id]: r }));
-                        if (r?.running || r?.port_open) setRunningIds((prev) => new Set(prev).add(t.id));
+                    for (const x of tools) {
+                      if (x.default_port) {
+                        const r = await tauriInvoke<HealthResult>('health_check_tool', { toolId: x.id });
+                        if (r) setHealth((prev) => ({ ...prev, [x.id]: r }));
+                        if (r?.running || r?.port_open) setRunningIds((prev) => new Set(prev).add(x.id));
                       }
                     }
                     setIsRefreshing(false);
                   }}
                 >
-                  {isRefreshing ? '⏳ Refrescando…' : '🔄 Refrescar estado'}
+                  {isRefreshing ? '⏳ Refrescando…' : `🔄 ${t('btn.refresh_state')}`}
                 </button>
                 <button className="secondary" onClick={addAllPendingToQueue} disabled={isQueueRunning}>
-                  + Añadir pendientes a cola
+                  {t('btn.add_pending_to_queue')}
                 </button>
               </div>
             </div>
@@ -1984,46 +1991,46 @@ export default function App() {
                         <HealthDot health={toolHealth} starting={Boolean(startingTools[tool.id])} />
                       </div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {tool.recommended && <span className="pill">Recomendado</span>}
-                        {isRunning && <span className="pill pill-green">Activo</span>}
-                        {tool.relocated && <span className="pill" title="Tiene override de ubicación">📍 Reubicado</span>}
+                        {tool.recommended && <span className="pill">{t('state.recommended')}</span>}
+                        {isRunning && <span className="pill pill-green">{t('state.active')}</span>}
+                        {tool.relocated && <span className="pill" title="Tiene override de ubicación">{t('state.relocated')}</span>}
                       </div>
                     </div>
                     <p className="muted">{CATEGORY_LABEL[tool.category]} · {tool.runtime}</p>
                     <p>{tool.description}</p>
 
                     <dl className="tool-meta">
-                      <div><dt>Estado</dt><dd>{tool.installed ? '✅ Instalado' : '⏳ Pendiente'}</dd></div>
+                      <div><dt>{t('tool.state')}</dt><dd>{tool.installed ? t('state.installed') : t('state.pending')}</dd></div>
                       {toolHealth && (
-                        <div><dt>Health</dt><dd>{toolHealth.port_open ? '🟢 Puerto OK' : '🔴 Puerto cerrado'}{toolHealth.pid ? ` · PID ${toolHealth.pid}` : ''}</dd></div>
+                        <div><dt>{t('tool.health')}</dt><dd>{toolHealth.port_open ? t('state.port_open') : t('state.port_closed')}{toolHealth.pid ? ` · PID ${toolHealth.pid}` : ''}</dd></div>
                       )}
-                      <div><dt>Ruta</dt><dd style={{fontFamily:'monospace',fontSize:'0.82rem'}}>{tool.install_dir}</dd></div>
-                      {tool.default_port && <div><dt>Puerto</dt><dd>{tool.default_port}</dd></div>}
+                      <div><dt>{t('tool.path')}</dt><dd style={{fontFamily:'monospace',fontSize:'0.82rem'}}>{tool.install_dir}</dd></div>
+                      {tool.default_port && <div><dt>{t('tool.port')}</dt><dd>{tool.default_port}</dd></div>}
                     </dl>
 
                     <div className="tool-actions">
                       {!tool.installed && (
                         <button disabled={isBusy || !canInstall} onClick={() => requestInstall(tool)}>
-                          {isBusy ? '⏳' : '📦 Instalar'}
+                          {isBusy ? '⏳' : `📦 ${t('btn.install')}`}
                         </button>
                       )}
                       {tool.installed && !isRunning && (
                         <button disabled={isBusy} onClick={() => handleStart(tool)}>
-                          {isBusy ? '⏳' : '▶ Iniciar'}
+                          {isBusy ? '⏳' : `▶ ${t('btn.start')}`}
                         </button>
                       )}
                       {isRunning && (
                         <>
-                          <button className="secondary" disabled={isBusy} onClick={() => handleStop(tool)}>⏹ Stop</button>
-                          <button className="secondary" disabled={isBusy} onClick={() => handleRestart(tool)}>🔄 Restart</button>
+                          <button className="secondary" disabled={isBusy} onClick={() => handleStop(tool)}>⏹ {t('btn.stop')}</button>
+                          <button className="secondary" disabled={isBusy} onClick={() => handleRestart(tool)}>🔄 {t('btn.restart')}</button>
                         </>
                       )}
                       {tool.installed && canInstall && (
-                        <button className="secondary" disabled={isBusy} onClick={() => handleUpdate(tool)}>⬆ Update</button>
+                        <button className="secondary" disabled={isBusy} onClick={() => handleUpdate(tool)}>⬆ {t('btn.update')}</button>
                       )}
                       {!tool.installed && canInstall && (
                         <button className="secondary" disabled={isQueueRunning || queue.some((q) => q.toolId === tool.id)} onClick={() => addToQueue(tool)}>
-                          + Cola
+                          {t('btn.add_to_queue')}
                         </button>
                       )}
                       {tool.default_port && (toolHealth?.port_open || isRunning) && (
