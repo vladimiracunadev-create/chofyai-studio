@@ -1832,7 +1832,7 @@ export default function App() {
       setStudioHomeInput(sys.studio_home);
     } else {
       const fb = {
-        app_name: 'ChofyAI Studio', app_version: '0.3.0', os: 'macOS / Apple Silicon', arch: 'arm64',
+        app_name: 'ChofyAI Studio', app_version: APP_VERSION, os: 'macOS / Apple Silicon', arch: 'arm64',
         studio_home: '/Volumes/ORICO/ChofyIA/ChofyAIStudio',
         studio_home_effective: '/Volumes/ORICO/ChofyIA/ChofyAIStudio',
         using_fallback: false,
@@ -2202,11 +2202,11 @@ export default function App() {
               </button>
               <button className="nav-item" onClick={() => setShowOverview(true)} title="Resumen del sistema, recursos y studio_home">
                 <span className="nav-icon">📋</span>
-                <span className="nav-label">Resumen</span>
+                <span className="nav-label">{t('sidebar.summary')}</span>
               </button>
               <button className="nav-item" onClick={() => setShowOrphans(true)} title="Procesos huérfanos detectados">
                 <span className="nav-icon">👻</span>
-                <span className="nav-label">Huérfanos</span>
+                <span className="nav-label">{t('sidebar.orphans')}</span>
                 {orphans.length > 0 && <span className="nav-badge">{orphans.length}</span>}
               </button>
               <button className="nav-item" onClick={() => setShowDoctor(true)} title="Ejecuta scripts/mac/doctor.sh">
@@ -2281,28 +2281,28 @@ export default function App() {
           <div className="topbar">
             <div className="topbar-stats">
               <button className="topbar-chip" onClick={() => setShowOverview(true)}>
-                <span className="topbar-chip-label">Tools</span>
+                <span className="topbar-chip-label">{t('topbar.tools')}</span>
                 <span className="topbar-chip-value">{installedCount}/{tools.length}</span>
               </button>
               <button className="topbar-chip" onClick={() => setShowOverview(true)}>
-                <span className="topbar-chip-label">Activas</span>
+                <span className="topbar-chip-label">{t('topbar.active')}</span>
                 <span className="topbar-chip-value">{runningIds.size}</span>
               </button>
               {orphans.length > 0 && (
                 <button className="topbar-chip topbar-chip-warn" onClick={() => setShowOrphans(true)}>
-                  <span>👻 {orphans.length} huérfanos</span>
+                  <span>{t('topbar.orphans', { n: orphans.length })}</span>
                 </button>
               )}
               {summary?.using_fallback && (
                 <button className="topbar-chip topbar-chip-warn" onClick={() => setShowOverview(true)}>
-                  <span>⚠ Fallback</span>
+                  <span>{t('topbar.fallback')}</span>
                 </button>
               )}
             </div>
             <div className="topbar-actions">
-              <button className="secondary" onClick={() => setShowCmdK(true)} title="⌘K">🔎 Buscar</button>
-              <button className="secondary" onClick={() => setShowMarket(true)}>🛒 Marketplace</button>
-              <button className="secondary" onClick={() => setShowWorkflows(true)}>🔗 Workflows</button>
+              <button className="secondary" onClick={() => setShowCmdK(true)} title="⌘K">{t('topbar.search')}</button>
+              <button className="secondary" onClick={() => setShowMarket(true)}>🛒 {t('sidebar.marketplace')}</button>
+              <button className="secondary" onClick={() => setShowWorkflows(true)}>🔗 {t('sidebar.workflows')}</button>
             </div>
           </div>
 
@@ -2487,7 +2487,7 @@ export default function App() {
                         {tool.relocated && <span className="pill" title="Tiene override de ubicación">{t('state.relocated')}</span>}
                       </div>
                     </div>
-                    <p className="muted">{CATEGORY_LABEL[tool.category]} · {tool.runtime}</p>
+                    <p className="muted">{t(`cat.${tool.category}`)} · {tool.runtime}</p>
                     <p>{tool.description}</p>
 
                     <dl className="tool-meta">
@@ -2539,7 +2539,7 @@ export default function App() {
                         <button className="secondary" onClick={() => setViewingModelsFor(viewingModelsFor === tool.id ? null : tool.id)} title="Ver/borrar modelos">📦</button>
                       )}
                       <button className="secondary" disabled={isBusy || isRunning} onClick={() => startRelocate(tool)} title="Reubicar a zona modules">
-                        📍 Mover
+                        {t('btn.move')}
                       </button>
                       {tool.relocated && (
                         <button className="secondary" disabled={isBusy} onClick={() => handleClearOverride(tool)} title="Quitar override">
