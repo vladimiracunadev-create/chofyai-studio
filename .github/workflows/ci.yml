@@ -70,6 +70,48 @@ jobs:
         run: npx tsc --noEmit
 
   # ─────────────────────────────────────────────
+  # Frontend unit tests con Vitest
+  # ─────────────────────────────────────────────
+  test-frontend:
+    name: "Vitest (frontend)"
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm test
+
+  # ─────────────────────────────────────────────
+  # Backend Rust unit tests con cargo test
+  # ─────────────────────────────────────────────
+  test-rust:
+    name: "cargo test (backend)"
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GTK/WebKit deps (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev \
+            libsoup-3.0-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test --no-default-features
+
+  # ─────────────────────────────────────────────
   # Validación de manifests YAML
   # Campos siempre requeridos: id, name, category,
   #   runtime, description, platforms, installed_if

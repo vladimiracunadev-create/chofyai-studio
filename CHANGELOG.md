@@ -11,6 +11,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### ✨ Added (Sprint 4 — comandos visibles, atajos, tema claro, pre-install check, CI con tests)
+
+- **Atajos de teclado expandidos**: `⌘K` (paleta), `⌘,` (Settings), `⌘/` (Help), `⌘R` (refrescar), `⌘L` (logs del último tool), `⌘B` (toggle tema), `Esc` (cierra modal/panel actual). Listener global con detección de `metaKey`/`ctrlKey`.
+- **Help panel `⌘/`**: nuevo modal `HelpPanel` con catálogo agrupado de todos los atajos disponibles. Render con `<kbd>` styled.
+- **Hints de atajos visibles en sidebar**: cada nav-item relevante muestra el shortcut (`⌘,` para Settings, `⌘K` para Comandos, `⌘/` para Atajos) en un `<kbd>` pequeño alineado a la derecha.
+- **Toggle de tema** dark/light/system con persistencia en `localStorage` (`chofyai_theme`) y respeto a `prefers-color-scheme` cuando `system`. Aplicado vía `data-theme` en `:root`. Override CSS específico para sidebar, cards, modales, kbds, toasts, statusbar, input/log surfaces.
+- **Pre-install check** (`PreInstallCheck`): modal de confirmación antes de instalar mostrando estimación de tamaño por tool (ranges 250 MB–8 GB), espacio libre detectado del studio_home, comparación con buffer 1.2× y bloqueo del botón si no alcanza.
+- **`lastTouchedToolId`** rastreado en handlers (Install/Start/Logs) para que `⌘L` abra el log del último tool tocado.
+
+### 🤖 Added (Sprint 4 — CI con tests)
+
+- **GitHub Actions**: dos jobs nuevos en `.github/workflows/ci.yml`:
+  - `test-frontend`: `npm ci && npm test` (Vitest 13 tests).
+  - `test-rust`: instala deps GTK/WebKit/AppIndicator en Ubuntu, cachea `cargo` con `Swatinem/rust-cache@v2`, ejecuta `cargo test --no-default-features` (4 tests).
+- Ambos disparados solo si `src/**` o `src-tauri/**` cambia (path-filter).
+
 ### 🎛 Added (Sprint 3 — paleta ⌘K, Settings UI, gestión de modelos, tests baseline)
 
 - **Command palette `⌘K` / `Ctrl+K`** (`CommandPalette`): modal con search, navegación con flechas, ejecución con `↵`. Auto-genera comandos por tool: instalar / iniciar / detener / reiniciar / ver UI / ver logs / ver modelos / abrir carpeta + comandos globales (refrescar, abrir settings, abrir tour, limpiar cola). Atajo global registrado en `window`.

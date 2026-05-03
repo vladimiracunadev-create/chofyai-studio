@@ -33,6 +33,33 @@ async function notifyNative(title: string, body: string) {
 const APP_VERSION = '0.5.0-dev';
 
 const ONBOARDING_KEY = 'chofyai_onboarding_done';
+const THEME_KEY = 'chofyai_theme';
+
+type Theme = 'dark' | 'light' | 'system';
+function applyTheme(theme: Theme) {
+  const root = document.documentElement;
+  let resolved: 'dark' | 'light' = 'dark';
+  if (theme === 'system') {
+    resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  } else {
+    resolved = theme;
+  }
+  root.dataset.theme = resolved;
+}
+
+// ─── Catálogo de atajos de teclado ───────────────────────────────────────────
+type Shortcut = { keys: string; label: string; group: string };
+const SHORTCUTS: Shortcut[] = [
+  { keys: '⌘K', label: 'Paleta de comandos', group: 'Navegación' },
+  { keys: '⌘,', label: 'Abrir Settings', group: 'Navegación' },
+  { keys: '⌘/', label: 'Mostrar ayuda y atajos', group: 'Navegación' },
+  { keys: '⌘R', label: 'Refrescar tools y stats', group: 'Acciones' },
+  { keys: '⌘L', label: 'Ver logs (último tool tocado)', group: 'Acciones' },
+  { keys: '⌘B', label: 'Toggle modo claro/oscuro', group: 'Apariencia' },
+  { keys: 'Esc', label: 'Cerrar modal/panel actual', group: 'Navegación' },
+  { keys: '↑↓', label: 'Navegar lista en paleta ⌘K', group: 'Navegación' },
+  { keys: '↵', label: 'Ejecutar comando seleccionado', group: 'Navegación' },
+];
 
 // ─── Detección Tauri ─────────────────────────────────────────────────────────
 const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -64,6 +91,87 @@ async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?
     }
     return null;
   }
+}
+
+// ─── Help Panel (⌘/) ─────────────────────────────────────────────────────────
+function HelpPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  const groups = SHORTCUTS.reduce<Record<string, Shortcut[]>>((acc, s) => {
+    (acc[s.group] = acc[s.group] || []).push(s); return acc;
+  }, {});
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal help-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>⌨️ Atajos de teclado</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+        <p className="muted" style={{ fontSize: '0.86rem' }}>
+          Pulsa <kbd>⌘K</kbd> para acceder al catálogo completo de comandos disponibles.
+        </p>
+        {Object.entries(groups).map(([g, items]) => (
+          <section key={g} style={{ marginTop: 14 }}>
+            <h4 style={{ marginBottom: 6 }}>{g}</h4>
+            <div className="shortcut-list">
+              {items.map((s) => (
+                <div key={s.keys} className="shortcut-row">
+                  <kbd>{s.keys}</kbd>
+                  <span>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── PreInstallCheck (modal de confirmación con info de espacio) ─────────────
+function PreInstallCheck({
+  tool, freeBytes, onConfirm, onCancel,
+}: {
+  tool: ToolManifest | null;
+  freeBytes: number | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!tool) return null;
+  const ESTIMATES: Record<string, number> = {
+    'whispercpp': 250 * 1024 ** 2,
+    'comfyui': 2 * 1024 ** 3,
+    'aceforge': 1.5 * 1024 ** 3,
+    'facefusion': 1.5 * 1024 ** 3,
+    'qwen3-tts': 8 * 1024 ** 3,
+  };
+  const est = ESTIMATES[tool.id] ?? 1 * 1024 ** 3;
+  const free = freeBytes ?? 0;
+  const enough = free > est * 1.2;
+  return (
+    <div className="settings-overlay" onClick={onCancel}>
+      <div className="settings-modal" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>📦 Instalar {tool.name}</h2>
+          <button className="secondary" onClick={onCancel}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+          <p className="muted" style={{ margin: 0 }}>{tool.description}</p>
+          <div className="precheck-grid">
+            <div><dt>Estimado</dt><dd><strong>{fmtBytes(est)}</strong></dd></div>
+            <div><dt>Libre en disco</dt><dd>{free > 0 ? <strong>{fmtBytes(free)}</strong> : '—'}</dd></div>
+            <div><dt>Destino</dt><dd style={{fontSize:'0.74rem',fontFamily:'ui-monospace'}}>{tool.install_dir}</dd></div>
+          </div>
+          {!enough && free > 0 && (
+            <div className="onb-warn">⚠️ Espacio insuficiente. Necesitas al menos {fmtBytes(est * 1.2)} libres (estimado × 1.2 buffer).</div>
+          )}
+        </div>
+        <div className="onb-actions">
+          <button className="secondary" onClick={onCancel}>Cancelar</button>
+          <button onClick={onConfirm} disabled={!enough && free > 0}>Instalar ahora</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Command Palette (⌘K) ────────────────────────────────────────────────────
@@ -725,19 +833,55 @@ export default function App() {
   });
   const [showCmdK, setShowCmdK] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
+  const [lastTouchedToolId, setLastTouchedToolId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => {
+    try { return (localStorage.getItem(THEME_KEY) as Theme) || 'dark'; } catch { return 'dark'; }
+  });
+  const [preInstallTool, setPreInstallTool] = useState<ToolManifest | null>(null);
 
-  // Atajo global ⌘K / Ctrl+K
+  // Aplica el tema al DOM y persiste
+  useEffect(() => {
+    applyTheme(theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
+  }, [theme]);
+
+  // Listener para cambios de "system" si aplica
+  useEffect(() => {
+    if (theme !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const cb = () => applyTheme('system');
+    mq.addEventListener('change', cb);
+    return () => mq.removeEventListener('change', cb);
+  }, [theme]);
+
+  // Atajos globales
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) {
+        if (e.key === 'Escape') {
+          setShowCmdK(false); setShowSettings(false); setShowHelp(false);
+          setViewingTool(null); setViewingLogsFor(null); setViewingModelsFor(null);
+          setPreInstallTool(null);
+        }
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'k') { e.preventDefault(); setShowCmdK((v) => !v); }
+      else if (k === ',') { e.preventDefault(); setShowSettings((v) => !v); }
+      else if (k === '/') { e.preventDefault(); setShowHelp((v) => !v); }
+      else if (k === 'r') { e.preventDefault(); void reloadTools(); void reloadStats(); notify('info', 'Refrescado'); }
+      else if (k === 'b') { e.preventDefault(); setTheme((t) => t === 'dark' ? 'light' : 'dark'); }
+      else if (k === 'l') {
         e.preventDefault();
-        setShowCmdK((v) => !v);
+        if (lastTouchedToolId) setViewingLogsFor((v) => v === lastTouchedToolId ? null : lastTouchedToolId);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [lastTouchedToolId]);
 
   // Acciones para la paleta
   const cmdActions = useMemo<CmdAction[]>(() => {
@@ -938,9 +1082,15 @@ export default function App() {
     }
   };
 
+  const requestInstall = (tool: ToolManifest) => {
+    setLastTouchedToolId(tool.id);
+    setPreInstallTool(tool);
+  };
+
   const handleInstall = async (tool: ToolManifest) => {
     setBusyToolId(tool.id);
     setMessage(`Instalando ${tool.name}...`);
+    setLastTouchedToolId(tool.id);
     const result = await tauriInvoke<ActionResult>('install_tool', { toolId: tool.id });
     await reloadTools();
     if (result) setMessage(result.message + (result.log_path ? ` · Log: ${result.log_path}` : ''));
@@ -959,6 +1109,7 @@ export default function App() {
   const handleStart = async (tool: ToolManifest) => {
     setBusyToolId(tool.id);
     setMessage(`Iniciando ${tool.name}...`);
+    setLastTouchedToolId(tool.id);
     setStartingTools((prev) => ({ ...prev, [tool.id]: Date.now() }));
     const r = await tauriInvoke<ActionResult>('start_tool', { toolId: tool.id });
     setRunningIds((prev) => new Set([...prev, tool.id]));
@@ -996,6 +1147,7 @@ export default function App() {
   };
 
   const handleOpenLog = (tool: ToolManifest) => {
+    setLastTouchedToolId(tool.id);
     setViewingLogsFor(viewingLogsFor === tool.id ? null : tool.id);
   };
 
@@ -1068,6 +1220,17 @@ export default function App() {
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       <UpdateChecker />
       <CommandPalette open={showCmdK} onClose={() => setShowCmdK(false)} actions={cmdActions} />
+      <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} />
+      <PreInstallCheck
+        tool={preInstallTool}
+        freeBytes={stats?.disk_free_bytes ?? null}
+        onCancel={() => setPreInstallTool(null)}
+        onConfirm={() => {
+          const t = preInstallTool;
+          setPreInstallTool(null);
+          if (t) void handleInstall(t);
+        }}
+      />
       <SettingsModal
         open={showSettings}
         onClose={() => setShowSettings(false)}
@@ -1092,15 +1255,21 @@ export default function App() {
             <button className="nav-item">Voices</button>
             <button className="nav-item">Outputs</button>
             <button className="nav-item">Logs</button>
-            <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides">
-              ⚙️ Settings
+            <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides (⌘,)">
+              ⚙️ Settings <kbd className="nav-kbd">⌘,</kbd>
             </button>
             <button className="nav-item">Doctor</button>
             <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
               👋 Tour
             </button>
-            <button className="nav-item" onClick={() => setShowCmdK(true)} title="⌘K paleta de comandos">
-              ⌘K Comandos
+            <button className="nav-item" onClick={() => setShowCmdK(true)} title="Paleta de comandos">
+              🔎 Comandos <kbd className="nav-kbd">⌘K</kbd>
+            </button>
+            <button className="nav-item" onClick={() => setShowHelp(true)} title="Atajos de teclado">
+              ⌨️ Atajos <kbd className="nav-kbd">⌘/</kbd>
+            </button>
+            <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
+              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} Tema · {theme}
             </button>
           </nav>
           {queue.length > 0 && (
@@ -1361,7 +1530,7 @@ export default function App() {
 
                     <div className="tool-actions">
                       {!tool.installed && (
-                        <button disabled={isBusy || !canInstall} onClick={() => handleInstall(tool)}>
+                        <button disabled={isBusy || !canInstall} onClick={() => requestInstall(tool)}>
                           {isBusy ? '⏳' : '📦 Instalar'}
                         </button>
                       )}
