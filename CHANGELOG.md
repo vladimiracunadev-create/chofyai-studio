@@ -11,6 +11,40 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🛡 Added (Sprint 5 — seguridad portable, huérfanos, crash log)
+
+- **Workflow `security.yml` portable**: nuevo job dedicado de seguridad en CI con 5 checks paralelos:
+  - 🔐 **TruffleHog** secret scan (verified only) en push/PR + cron lunes 06:00 UTC.
+  - 📦 **npm audit** que falla PRs con `high+critical` (auto-detecta `package-lock.json`).
+  - 🦀 **cargo audit** que cruza todos los `Cargo.lock` del repo contra RustSec advisories.
+  - 🔬 **CodeQL** análisis SAST con queries `security-extended,security-and-quality` para JS/TS.
+  - 📌 **Pin actions check** que avisa si alguna `uses:` no está pinneada a SHA.
+  - Habilitado `workflow_call:` para invocación desde otros repos del ecosistema (`trihorn-chat`, etc.).
+  - TruffleHog removido de `ci.yml` (consolidado en `security.yml`).
+- **`docs/SECURITY_WORKFLOW.md`**: guía portable de ~250 líneas con instrucciones de drop-in para repos npm/pnpm/cargo/python, ejemplo de `workflow_call`, checklist "secure-by-default", recetas de pre-commit hooks y mejoras opcionales por capas (SBOM, container scan, license check).
+- **`.github/dependabot.yml`**: PRs semanales agrupados (`@tauri-apps/*`, React, Vitest, etc.) para npm + cargo + github-actions.
+- **`SECURITY.md`** actualizado: nueva sección "Workflow de seguridad automatizado" con tabla de cobertura, link al doc portable, comandos de auditoría local actualizados.
+
+### 👻 Added (Sprint 5 — detección y resolución de procesos huérfanos)
+
+- **Comando Rust `list_orphan_ports(app, registry)`**: para cada manifest con `default_port`, ejecuta `lsof -nP -iTCP:<port> -sTCP:LISTEN -Fpc` y compara los PIDs encontrados contra el `ProcessRegistry`. Devuelve `Vec<OrphanPort { tool_id, tool_name, port, pid, command }>`.
+- **`adopt_orphan(tool_id, pid)`**: añade un PID huérfano al registry tras validar `pid_is_alive`. Persiste a `processes.json`.
+- **`kill_orphan(pid)`**: envía SIGTERM al proceso sin adoptarlo.
+- **UI `OrphanBanner`**: tarjeta destacada amarilla en el dashboard cuando se detectan huérfanos. Auto-escaneo cada 60 s. Cada fila tiene botones `👋 Adoptar` y `🛑 Matar` con confirmación.
+
+### 💥 Added (Sprint 5 — crash log persistente)
+
+- **`append_crash_log(message)`** y **`read_crash_log()`** en Rust: append-only log en `<studio_home>/storage/state/crash.log` con timestamp Unix.
+- **`AppErrorBoundary` extendido**: en `componentDidCatch`, además de toast y `console.error`, persiste el error + componentStack al crash log (truncado a 4 KB).
+- **Documentación**: nueva entrada §15 en `TROUBLESHOOTING.md` explicando cómo recuperarse del crash y leer el histórico desde DevTools.
+
+### 📚 Docs (Sprint 5 — barrido completo)
+
+- **`ROADMAP.md`**: Fase 4 actualizada con sparsebundle como completado, **Fase 5 reescrita** con los 5 sprints aplicados (8/11 items), Fase 2 marcada como completa (huérfanos + cleanup ahora implementados).
+- **`docs/STATUS.md`**: bullet list completa de funciones nuevas por sprint, tabla de comandos Tauri ampliada con los 8 nuevos.
+- **`docs/TROUBLESHOOTING.md`**: §14 (huérfanos) + §15 (crash log).
+- **`README.md`**: sección Seguridad ampliada con link al workflow + comandos locales.
+
 ### ✨ Added (Sprint 4 — comandos visibles, atajos, tema claro, pre-install check, CI con tests)
 
 - **Atajos de teclado expandidos**: `⌘K` (paleta), `⌘,` (Settings), `⌘/` (Help), `⌘R` (refrescar), `⌘L` (logs del último tool), `⌘B` (toggle tema), `Esc` (cierra modal/panel actual). Listener global con detección de `metaKey`/`ctrlKey`.

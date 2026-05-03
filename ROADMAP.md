@@ -2,8 +2,9 @@
 
 > **Hoja de ruta de ChofyAI Studio — qué está hecho, qué viene y por qué.**
 
-[![Estado](https://img.shields.io/badge/Estado-Fase%204%20activa-2d7a66)](docs/STATUS.md)
-[![Versión](https://img.shields.io/badge/versión-0.4.0--dev-7c5cff)](CHANGELOG.md)
+[![Estado](https://img.shields.io/badge/Estado-Fase%205%20activa-2d7a66)](docs/STATUS.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](CHANGELOG.md)
+[![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](docs/STATUS.md)
 
 ---
 
@@ -35,8 +36,8 @@
 - [x] ⏱️ Cola de instalación con progreso y streaming
 - [x] 📋 Registro interno con `ProcessRegistry`
 - [x] ⬆️ Flujo de actualización automática (`update_tool`)
-- [ ] 🔌 Detección de puertos ocupados antes de iniciar
-- [ ] 🔁 Reintentos y limpieza automática ante fallos
+- [x] 🔌 **Detección de puertos ocupados** y huérfanos (`list_orphan_ports` + UI banner)
+- [x] 🔁 **Limpieza automática ante fallos** (PIDs persistidos en `processes.json`, restore filtrado por `kill -0` al startup)
 
 ---
 
@@ -56,6 +57,7 @@
 - [x] 📦 Base de empaquetado `.app` / `.dmg`
 - [x] ✅ Build verificado en macOS real (Apple Silicon)
 - [x] 🆓 Build ad-hoc sin Apple Developer ID (uso personal)
+- [x] 💾 Soporte oficial de **APFS sparsebundle** para discos externos no-APFS
 - [ ] 🤖 **Configurar Mac Mini como Self-Hosted Runner para GitHub Actions**
 - [ ] 🎨 Branding e iconografía final
 - [ ] 🔐 Firma Apple Developer ID
@@ -64,15 +66,19 @@
 
 ---
 
-## 🔮 Fase 5 — UX y operación avanzada
+## 🟢 Fase 5 — UX profesional, comandos y seguridad *(en curso)*
 
-- [ ] 🪟 Multi-window
-- [ ] 📑 Menús más completos
-- [ ] ⚙️ Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) en UI
-- [ ] 📤 Export / Import de configuración
-- [ ] 🩺 Doctor ampliado con reporte exportable
-- [ ] 🔌 Detección de puertos ocupados pre-inicio
-- [ ] 🧹 Cleanup automático de procesos huérfanos al reiniciar la app
+- [x] 💎 **Cola de instalación pro** (parser de fases, MB/s, mini-terminal)
+- [x] 👁 **Vista embebida** `<iframe>` de cada tool en la ventana principal
+- [x] 🔄 **Auto-refresh** + health probe global + estado `starting` con tolerancia 60s
+- [x] 🛡 **Sprint 1**: toasts globales, ErrorBoundary, persistencia de PIDs, logs in-app, empty state
+- [x] 🚀 **Sprint 2**: onboarding wizard (4 pasos), update checker, notificaciones nativas macOS
+- [x] 🎛 **Sprint 3**: paleta `⌘K`, Settings UI completo, gestión de modelos, tests baseline (Vitest 13 + cargo 4)
+- [x] ✨ **Sprint 4**: catálogo de atajos, help panel `⌘/`, tema claro/oscuro/sistema, pre-install check
+- [x] 🛡 **Sprint 5**: workflow de seguridad portable (TruffleHog + npm/cargo audit + CodeQL + Dependabot), detección y adopción de **procesos huérfanos**, **crash log** persistente
+- [ ] 🧱 Marketplace de tools comunitarias
+- [ ] 🔗 Workflows / chains entre tools
+- [ ] 🌐 i18n (ES/EN)
 
 ---
 
@@ -82,6 +88,7 @@
 - [ ] ⚡ Sidecars / binarios dedicados
 - [ ] 📦 Gestor avanzado de modelos (descarga, versionado, GC)
 - [ ] 🌐 Plugins de comunidad por manifests externos
+- [ ] 🤖 Workflows guiados (audio → STT → LLM → TTS → video lipsync)
 
 ---
 
@@ -91,10 +98,10 @@
 |:---:|:---|:---:|
 | 0 — Base | `✅ COMPLETA` | 100% |
 | 1 — MVP local | `✅ COMPLETA` | 100% |
-| 2 — Robustez launcher | `🟢 EN CURSO` | 5/7 |
+| 2 — Robustez launcher | `✅ COMPLETA` | 7/7 (huérfanos resueltos en Sprint 5) |
 | 3 — Disco dual + módulos | `✅ COMPLETA` | 100% |
-| 4 — Producto instalable | `🚧 EN CURSO` | 3/8 |
-| 5 — UX avanzada | `🔮 PLANIFICADA` | 0/7 |
-| 6 — Expansión catálogo | `🌱 FUTURO` | 0/4 |
+| 4 — Producto instalable | `🚧 EN CURSO` | 4/9 (falta firma + notarización) |
+| 5 — UX profesional | `🟢 EN CURSO` | 8/11 (faltan marketplace + workflows + i18n) |
+| 6 — Expansión catálogo | `🌱 FUTURO` | 0/5 |
 
 > Ver detalle del estado actual en [`docs/STATUS.md`](docs/STATUS.md) y bitácora en [`CHANGELOG.md`](CHANGELOG.md).

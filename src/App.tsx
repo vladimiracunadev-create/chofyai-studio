@@ -622,6 +622,11 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error('UI ErrorBoundary:', error, info);
     notify('error', 'Error de interfaz', error.message);
+    // Persistir en crash log para post-mortem
+    const stack = (error.stack ?? '') + '\n--- componentStack ---\n' + (info.componentStack ?? '');
+    void tauriInvoke('append_crash_log', {
+      message: `[UI] ${error.message}\n${stack.slice(0, 4000)}`,
+    }, { silent: true });
   }
   render() {
     if (this.state.error) {
@@ -635,6 +640,48 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
     }
     return this.props.children;
   }
+}
+
+// ─── Orphan banner ───────────────────────────────────────────────────────────
+type OrphanPort = { tool_id: string; tool_name: string; port: number; pid?: number; command?: string };
+
+function OrphanBanner({ orphans, onResolved }: { orphans: OrphanPort[]; onResolved: () => void }) {
+  if (orphans.length === 0) return null;
+  const adopt = async (o: OrphanPort) => {
+    if (!o.pid) return;
+    const r = await tauriInvoke<ActionResult>('adopt_orphan', { toolId: o.tool_id, pid: o.pid });
+    if (r) { notify('success', `${o.tool_name} adoptado`, `PID ${o.pid}`); onResolved(); }
+  };
+  const kill = async (o: OrphanPort) => {
+    if (!o.pid) return;
+    if (!confirm(`¿Enviar SIGTERM a ${o.command ?? 'proceso'} (PID ${o.pid}) en ${o.port}?`)) return;
+    const r = await tauriInvoke<ActionResult>('kill_orphan', { pid: o.pid });
+    if (r) { notify('info', 'SIGTERM enviado', `PID ${o.pid}`); onResolved(); }
+  };
+  return (
+    <section className="card orphan-card">
+      <div className="section-header">
+        <h3>👻 Procesos huérfanos detectados ({orphans.length})</h3>
+        <button className="secondary" onClick={onResolved}>Re-escanear</button>
+      </div>
+      <p className="muted" style={{ fontSize: '0.84rem' }}>
+        Estos procesos están escuchando en puertos de tools conocidas pero la app no los registró —
+        probablemente quedaron de una sesión previa o se lanzaron desde CLI.
+      </p>
+      <div className="orphan-list">
+        {orphans.map((o) => (
+          <div key={`${o.tool_id}-${o.port}`} className="orphan-row">
+            <div className="orphan-info">
+              <strong>{o.tool_name}</strong>
+              <span className="muted">:{o.port} · PID {o.pid} · {o.command ?? '?'}</span>
+            </div>
+            <button className="primary-soft" onClick={() => void adopt(o)}>👋 Adoptar</button>
+            <button className="secondary danger-soft" onClick={() => void kill(o)}>🛑 Matar</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 // ─── LogsViewer (panel inline) ───────────────────────────────────────────────
@@ -840,6 +887,20 @@ export default function App() {
     try { return (localStorage.getItem(THEME_KEY) as Theme) || 'dark'; } catch { return 'dark'; }
   });
   const [preInstallTool, setPreInstallTool] = useState<ToolManifest | null>(null);
+  const [orphans, setOrphans] = useState<OrphanPort[]>([]);
+
+  const reloadOrphans = async () => {
+    const r = await tauriInvoke<OrphanPort[]>('list_orphan_ports', undefined, { silent: true });
+    setOrphans(r ?? []);
+  };
+
+  // Escanea orphans al cargar y cada 60s
+  useEffect(() => {
+    if (!inTauri) return;
+    void reloadOrphans();
+    const id = setInterval(() => { void reloadOrphans(); }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Aplica el tema al DOM y persiste
   useEffect(() => {
@@ -1397,6 +1458,9 @@ export default function App() {
               </div>
             </section>
           )}
+
+          {/* Orphan banner */}
+          <OrphanBanner orphans={orphans} onResolved={() => { void reloadOrphans(); void reloadTools(); }} />
 
           {/* Logs viewer panel */}
           {viewingLogsFor && (() => {

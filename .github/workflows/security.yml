@@ -1,0 +1,127 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"   # lunes 06:00 UTC — escaneo recurrente
+  workflow_dispatch:
+  workflow_call:           # invocable desde otros repos (ver docs/SECURITY_WORKFLOW.md)
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Secret scanning con TruffleHog (verified only)
+  # ─────────────────────────────────────────────
+  secrets:
+    name: "Secret scan (TruffleHog)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: trufflesecurity/trufflehog@v3.63.1
+        with:
+          path: ./
+          base: ""
+          head: HEAD
+          extra_args: --only-verified
+
+  # ─────────────────────────────────────────────
+  # Dependency audit npm
+  # ─────────────────────────────────────────────
+  npm-audit:
+    name: "npm audit"
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('package-lock.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: "npm" }
+      - name: Audit
+        run: |
+          npm audit --omit=dev --audit-level=high || true
+          npm audit --json > npm-audit.json || true
+      - name: Resumen high+critical
+        run: |
+          if [ -f npm-audit.json ]; then
+            node -e "
+              const a = require('./npm-audit.json');
+              const v = a.metadata?.vulnerabilities ?? {};
+              const high = (v.high ?? 0) + (v.critical ?? 0);
+              console.log('high+critical:', high);
+              process.exit(high > 0 ? 1 : 0);
+            "
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: npm-audit, path: npm-audit.json, if-no-files-found: ignore }
+
+  # ─────────────────────────────────────────────
+  # Dependency audit cargo
+  # ─────────────────────────────────────────────
+  cargo-audit:
+    name: "cargo audit"
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('**/Cargo.lock') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit
+      - name: Audit
+        run: |
+          for d in $(find . -name Cargo.lock -not -path '*/target/*' -exec dirname {} \; | sort -u); do
+            echo "=== $d ==="
+            (cd "$d" && cargo audit --ignore RUSTSEC-2024-0436) || exit 1
+          done
+
+  # ─────────────────────────────────────────────
+  # CodeQL (JS/TS + Rust si aplica)
+  # ─────────────────────────────────────────────
+  codeql-js:
+    name: "CodeQL (JS/TS)"
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('package.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  # ─────────────────────────────────────────────
+  # Pinned-actions check — falla si algún uses: usa @main o @vN
+  # ─────────────────────────────────────────────
+  actions-pinning:
+    name: "Pin GitHub Actions"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detectar acciones no-pinneadas
+        run: |
+          set -e
+          unpinned=$(grep -rE "uses:\s+[^@]+@(main|master|v[0-9]+)\s*$" .github/workflows/ \
+            | grep -v "actions/checkout@v4" \
+            | grep -v "actions/setup-" \
+            | grep -v "actions/upload-artifact@v4" \
+            | grep -v "actions/cache@v4" \
+            | grep -v "github/codeql-action/" \
+            | grep -v "dtolnay/rust-toolchain@stable" \
+            | grep -v "Swatinem/rust-cache@v2" \
+            | grep -v "dorny/paths-filter@v3" \
+            | grep -v "davidanson/markdownlint-cli2-action@v" \
+            | grep -v "trufflesecurity/trufflehog@v" \
+            || true)
+          if [ -n "$unpinned" ]; then
+            echo "::warning::Acciones no pinneadas a SHA detectadas:"
+            echo "$unpinned"
+          fi

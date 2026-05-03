@@ -191,6 +191,8 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 | 📦 **Empaquetado** | [`docs/packaging.md`](docs/packaging.md) | `.app` y `.dmg` |
 | 🗺️ **Roadmap** | [`ROADMAP.md`](ROADMAP.md) | Qué viene en Fase 5+ |
 | ☁️ **Migración a AWS** | [`docs/cloud/README.md`](docs/cloud/README.md) | Plan completo: arquitectura, servicios, costos y despliegue |
+| 🛡️ **Workflow de seguridad** | [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) | TruffleHog + npm/cargo audit + CodeQL + Dependabot, portable a otros repos |
+| ⌨️ **Atajos de teclado** | Sidebar `⌨️ Atajos` o `⌘/` | `⌘K` paleta, `⌘,` settings, `⌘R` refresh, `⌘L` logs, `⌘B` tema |
 
 ---
 
@@ -291,7 +293,14 @@ npm run package:mac       # Pipeline completo
 
 ## 🛡️ Seguridad
 
-Política de reporte de vulnerabilidades en [`SECURITY.md`](SECURITY.md).
+- **Política de reporte**: [`SECURITY.md`](SECURITY.md) — disclosure responsable + alcance + tiempos de respuesta.
+- **Workflow de seguridad CI**: [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) — TruffleHog + npm/cargo audit + CodeQL + Dependabot. Portable a otros repos vía `workflow_call`.
+- **Auditoría local**:
+
+  ```bash
+  npm audit --omit=dev --audit-level=high
+  cd src-tauri && cargo audit
+  ```
 
 ## 📜 Licencia
 

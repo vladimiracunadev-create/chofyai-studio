@@ -37,6 +37,11 @@ pub fn run() {
             system::notify_macos,
             system::list_tool_models,
             system::delete_tool_model,
+            system::list_orphan_ports,
+            system::adopt_orphan,
+            system::kill_orphan,
+            system::append_crash_log,
+            system::read_crash_log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

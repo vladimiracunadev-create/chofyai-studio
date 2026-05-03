@@ -290,6 +290,50 @@ Después actualiza `default_port: NNNN` en el manifest YAML correspondiente para
 
 ---
 
+## 👻 14. Procesos huérfanos en puertos de tools
+
+### 🚨 Síntoma
+
+Al abrir la app aparece un banner amarillo: **"Procesos huérfanos detectados"** con uno o más servicios listening en los puertos declarados (`5056`, `7860`, `7862`, `8178`, `8188`).
+
+### 🔍 Causa
+
+Un proceso quedó vivo de una sesión previa de la app (cierre forzado, crash, o lanzado desde CLI sin pasar por la UI). El comando `list_orphan_ports` ejecuta `lsof -nP -iTCP:<port> -sTCP:LISTEN` y compara los PIDs encontrados con `ProcessRegistry`.
+
+### ✅ Mitigación
+
+Tienes 3 opciones desde el banner:
+
+| Acción | Qué hace |
+|:---|:---|
+| 👋 **Adoptar** | Añade el PID al `ProcessRegistry` → pasa a aparecer como activo en la UI normal |
+| 🛑 **Matar** | Envía `SIGTERM` al PID y lo descarta |
+| ↻ **Re-escanear** | Vuelve a llamar `list_orphan_ports` |
+
+> El escaneo automático corre cada 60 s mientras la app está abierta.
+
+---
+
+## 💥 15. Recuperar un crash de la UI
+
+### 🚨 Síntoma
+
+La interfaz mostró la pantalla **"💥 La interfaz se rompió"** con un stack trace.
+
+### ✅ Mitigación
+
+1. Click `🔄 Recargar` para volver al estado normal.
+2. El crash queda persistido en `<studio_home>/storage/state/crash.log` (vía `append_crash_log`).
+3. Para revisar histórico: `tail -100 <studio_home>/storage/state/crash.log` o usar el comando Tauri `read_crash_log` desde la consola DevTools:
+
+   ```js
+   await window.__TAURI__.core.invoke('read_crash_log')
+   ```
+
+4. Reportar como issue público (no es vulnerabilidad — solo bug de UI). Adjunta las últimas 30 líneas del crash log.
+
+---
+
 ## 🆘 No encuentro mi error aquí
 
 - 🩺 Ejecuta `bash scripts/mac/doctor.sh "$STUDIO_HOME"` y mira el output completo.

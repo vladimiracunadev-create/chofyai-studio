@@ -10,9 +10,24 @@
 
 | Versión | Soporte de seguridad |
 |:---:|:---:|
-| `0.4.x` (Fase 4 actual) | ✅ Activa |
-| `0.3.x` | ⚠️ Solo bugs críticos |
-| `< 0.3.0` | ❌ Sin soporte |
+| `0.5.x` (Fase 5 actual) | ✅ Activa |
+| `0.4.x` | ⚠️ Solo bugs críticos |
+| `< 0.4.0` | ❌ Sin soporte |
+
+---
+
+## 🤖 Workflow de seguridad automatizado
+
+| Job | Cobertura | Cuándo |
+|:---|:---|:---:|
+| 🔐 **TruffleHog** | Secret scan (verified only) | push + PR + cron lunes |
+| 📦 **npm audit** | Falla PR si hay `high+critical` | si existe `package-lock.json` |
+| 🦀 **cargo audit** | Cruza `Cargo.lock` con RustSec | si existe `Cargo.lock` |
+| 🔬 **CodeQL** | SAST `security-extended` JS/TS | si existe `package.json` |
+| 📌 **Pin actions** | Avisa si alguna acción no está pinneada | siempre |
+| 🤖 **Dependabot** | PRs semanales (npm + cargo + actions) | configurado en `.github/dependabot.yml` |
+
+> El workflow `security.yml` es **portable a otros repos** del ecosistema vía `workflow_call` o copia directa. Ver guía completa en [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md).
 
 ---
 
@@ -75,12 +90,14 @@ Los scripts de instalación en `scripts/mac/` ejecutan comandos con privilegios 
 
 ### 📦 Integridad de dependencias
 
-Las dependencias npm están fijadas en `package-lock.json`. Auditar con:
+Las dependencias npm están fijadas en `package-lock.json` y las de Rust en `Cargo.lock`. **Auditar localmente**:
 
 ```bash
-npm audit
-cargo audit       # si está instalado
+npm audit --omit=dev --audit-level=high
+cd src-tauri && cargo install --locked cargo-audit && cargo audit
 ```
+
+CI las audita automáticamente en cada push/PR (ver `.github/workflows/security.yml`). Dependabot abre PRs semanales con upgrades agrupados (`@tauri-apps/*`, React, Vitest, etc.).
 
 ### 🦀 Memory safety
 

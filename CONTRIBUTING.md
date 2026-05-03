@@ -109,7 +109,18 @@ npm run tauri:dev
 # y los botones de instalar/iniciar responden correctamente
 ```
 
-### 5️⃣ Documentar
+### 5️⃣ Correr la suite de tests
+
+```bash
+npm test                # Vitest — unit tests del frontend (parsers, formatters)
+npm run test:rust       # cargo test — tests del backend (PIDs, paths, traversal)
+npx tsc --noEmit        # typecheck TypeScript estricto
+npx markdownlint-cli2 "**/*.md"   # lint de docs
+```
+
+CI corre automáticamente todo lo anterior + auditoría de seguridad (TruffleHog, npm/cargo audit, CodeQL) en cada PR. Ver [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md).
+
+### 6️⃣ Documentar
 
 Añade la herramienta a [`docs/TOOLS.md`](docs/TOOLS.md) con su rol, script, checks de instalación y observaciones relevantes.
 

@@ -39,9 +39,28 @@ Esto arranca **Vite** en `http://localhost:1420` + ventana **Tauri** con backend
 
 | Forma | Ventaja |
 |:---|:---|
+| 👋 **Onboarding wizard** (primer arranque) | 4 pasos guiados, detecta volumen externo y sugiere sparsebundle si exFAT |
+| ⚙️ **Settings UI** (`⌘,` o sidebar) | Selector visual de volúmenes con espacio libre y permisos. Un clic basta. |
 | 🖱️ **Selector de la UI** | Lista volúmenes con espacio libre y permisos. Un clic basta. |
 | 📝 **Editar `storage/state/settings.json`** | Control total para entornos automatizados |
 | 🤷 **No hacer nada** | Si tu path no es escribible, fallback automático a `~/ChofyAIStudio` |
+
+> [!IMPORTANT]
+> Si tu disco externo es **exFAT/HFS+/NTFS**, los wheels Python fallarán por archivos AppleDouble (`._*`). Crea una imagen APFS sparsebundle — receta en [`docs/INSTALL_MAC.md` § Disco externo no-APFS](docs/INSTALL_MAC.md#-disco-externo-no-apfs).
+
+---
+
+## ⌨️ Atajos clave
+
+| Atajo | Acción |
+|:---|:---|
+| `⌘K` | Paleta de comandos (instalar/iniciar/parar/ver UI/logs/modelos) |
+| `⌘,` | Settings |
+| `⌘/` | Help · catálogo de atajos |
+| `⌘R` | Refrescar tools y stats |
+| `⌘L` | Logs del último tool tocado |
+| `⌘B` | Toggle tema (dark/light/system) |
+| `Esc` | Cerrar modal/panel actual |
 
 ---
 

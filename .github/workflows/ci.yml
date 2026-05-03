@@ -184,20 +184,4 @@ jobs:
           print(f"OK: {count} manifests válidos")
           EOF
 
-  # ─────────────────────────────────────────────
-  # Secret scanning — TruffleHog
-  # ─────────────────────────────────────────────
-  secret-scanning:
-    name: "Secret Scanning (TruffleHog)"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@v3.63.1
-        with:
-          path: ./
-          base: ""
-          head: HEAD
-          extra_args: --debug --only-verified
+  # Nota: secret scanning + dependency audit + CodeQL viven en security.yml

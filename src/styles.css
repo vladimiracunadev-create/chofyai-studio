@@ -803,6 +803,27 @@ button.danger-soft {
 }
 button.danger-soft:hover { background: rgba(255,80,80,0.18); }
 
+/* === Orphan banner === */
+.orphan-card {
+  border-color: rgba(245,166,35,0.4);
+  background: linear-gradient(180deg, rgba(245,166,35,0.06), transparent 60%);
+}
+.orphan-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.orphan-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #0f1115;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.orphan-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.orphan-info span {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.74rem;
+}
+
 /* === Help panel === */
 .help-modal { width: 540px; }
 .shortcut-list { display: flex; flex-direction: column; gap: 4px; }

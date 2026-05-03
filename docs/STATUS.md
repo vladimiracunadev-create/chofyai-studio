@@ -13,7 +13,7 @@
 
 ## 🏷️ Versión del repositorio
 
-**`v0.5.0-dev`** — Fase 5 en curso: cola de instalación profesional, vista embebida, sparsebundle APFS, 5/5 tools verificadas en runtime.
+**`v0.5.0-dev`** — Fase 5 en curso: 5 sprints aplicados (cola pro, vista embebida, sparsebundle APFS, onboarding wizard, paleta `⌘K`, atajos visibles, tema light/dark/system, security workflow portable, detección de huérfanos, crash log persistente). 5/5 tools verificadas en runtime.
 
 ---
 
@@ -65,6 +65,12 @@ Fallback:    ~/ChofyAIStudio (APFS interno) si el sparsebundle no está montado
 - **🆕 Vista embebida `<iframe>`** — botón `👁 Ver UI` en cada tool con server activo abre la herramienta dentro de la ventana de ChofyAI Studio (sin saltar al navegador).
 - **🆕 Botón `🔄 Refrescar estado`** + auto-refresh cada 8 s — detecta tools instaladas o arrancadas desde CLI sin relanzar la app.
 - **🆕 Health probe global** — todas las tools con `default_port` se chequean en cada ciclo, no solo las arrancadas desde la UI.
+- **🆕 Toasts globales** + `AppErrorBoundary` (Sprint 1).
+- **🆕 LogsViewer inline** con filtro y auto-refresh; **ModelsPanel** por tool con tamaños y borrado seguro.
+- **🆕 Onboarding wizard** de 4 pasos + **UpdateChecker** banner + **notificaciones nativas macOS** (Sprint 2).
+- **🆕 Paleta `⌘K`** + **Settings modal** completo + **gestión de modelos** (Sprint 3).
+- **🆕 Catálogo de atajos** `⌘K`/`⌘,`/`⌘/`/`⌘R`/`⌘L`/`⌘B`/`Esc` + **Help panel** + **tema claro/oscuro/sistema** + **pre-install check** (Sprint 4).
+- **🆕 Banner de procesos huérfanos** con opciones Adoptar/Matar + **crash log** persistente exportable (Sprint 5).
 
 ### 🦀 Backend Rust (comandos Tauri)
 
@@ -85,6 +91,12 @@ Fallback:    ~/ChofyAIStudio (APFS interno) si el sparsebundle no está montado
 | `clear_module_override` | ↺ Quita override (no mueve archivos) |
 | `open_tool_directory` | 📁 Abre Finder en la carpeta del tool |
 | `open_tool_log` | 📋 Abre log de install/run con app por defecto |
+| `read_tool_log` | 📋 Lee últimas N líneas del log para el panel inline |
+| `list_running_pids` | 📋 Devuelve los PIDs adoptados (UI sync) |
+| `notify_macos` | 🔔 Notificación nativa vía `osascript` |
+| `list_tool_models` / `delete_tool_model` | 📦 Listar y borrar modelos (con guarda anti-traversal) |
+| `list_orphan_ports` / `adopt_orphan` / `kill_orphan` | 👻 Detectar puertos LISTEN sin owner registrado y resolverlos |
+| `append_crash_log` / `read_crash_log` | 💥 Crash log persistente para post-mortem |
 
 ### 🛠️ Herramientas con integración operativa
 

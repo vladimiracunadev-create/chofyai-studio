@@ -168,6 +168,152 @@ pub fn delete_tool_model(
     })
 }
 
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct OrphanPort {
+    pub tool_id: String,
+    pub tool_name: String,
+    pub port: u16,
+    pub pid: Option<u32>,
+    pub command: Option<String>,
+}
+
+/// Detecta procesos que están escuchando en los puertos declarados por los manifests
+/// pero que la app no tiene registrados — útil tras un crash o cierre forzado.
+#[tauri::command]
+pub fn list_orphan_ports(
+    app: AppHandle,
+    registry: tauri::State<'_, ProcessRegistry>,
+) -> Result<Vec<OrphanPort>, String> {
+    let registered_pids: std::collections::HashSet<u32> = registry
+        .0
+        .lock()
+        .map_err(|e| e.to_string())?
+        .values()
+        .copied()
+        .collect();
+
+    let mut orphans = Vec::new();
+    for (_, manifest) in collect_manifests(&app)? {
+        let port = match manifest.default_port {
+            Some(p) => p,
+            None => continue,
+        };
+        // lsof -nP -iTCP:<port> -sTCP:LISTEN
+        let out = match Command::new("lsof")
+            .args([
+                "-nP",
+                &format!("-iTCP:{}", port),
+                "-sTCP:LISTEN",
+                "-Fpc",
+            ])
+            .output()
+        {
+            Ok(o) if o.status.success() => o,
+            _ => continue,
+        };
+        let s = String::from_utf8_lossy(&out.stdout);
+        // Format -F: p<PID>\nc<COMMAND>
+        let mut pid: Option<u32> = None;
+        let mut cmd: Option<String> = None;
+        for line in s.lines() {
+            if let Some(rest) = line.strip_prefix('p') {
+                pid = rest.parse().ok();
+            } else if let Some(rest) = line.strip_prefix('c') {
+                cmd = Some(rest.to_string());
+            }
+        }
+        if let Some(p) = pid {
+            if !registered_pids.contains(&p) {
+                orphans.push(OrphanPort {
+                    tool_id: manifest.id.clone(),
+                    tool_name: manifest.name.clone(),
+                    port,
+                    pid: Some(p),
+                    command: cmd,
+                });
+            }
+        }
+    }
+    Ok(orphans)
+}
+
+/// Adopta un PID huérfano: lo añade al ProcessRegistry y persiste.
+#[tauri::command]
+pub fn adopt_orphan(
+    app: AppHandle,
+    tool_id: String,
+    pid: u32,
+    registry: tauri::State<'_, ProcessRegistry>,
+) -> Result<ActionResult, String> {
+    if !pid_is_alive(pid) {
+        return Err(format!("PID {} no está vivo", pid));
+    }
+    {
+        let mut guard = registry.0.lock().map_err(|e| e.to_string())?;
+        guard.insert(tool_id.clone(), pid);
+        persist_registry(&app, &guard);
+    }
+    Ok(ActionResult {
+        ok: true,
+        message: format!("{} adoptado (PID {})", tool_id, pid),
+        log_path: None,
+        opened_url: None,
+    })
+}
+
+/// Mata un proceso huérfano sin adoptarlo.
+#[tauri::command]
+pub fn kill_orphan(pid: u32) -> Result<ActionResult, String> {
+    Command::new("kill")
+        .args(["-TERM", &pid.to_string()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    Ok(ActionResult {
+        ok: true,
+        message: format!("SIGTERM enviado a PID {}", pid),
+        log_path: None,
+        opened_url: None,
+    })
+}
+
+/// Append a un crash log persistente (storage/state/crash.log) — para debug en producción.
+#[tauri::command]
+pub fn append_crash_log(app: AppHandle, message: String) -> Result<String, String> {
+    use std::io::Write;
+    let p = processes_state_path(&app)?
+        .parent()
+        .ok_or("sin parent")?
+        .join("crash.log");
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&p)
+        .map_err(|e| e.to_string())?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    writeln!(f, "[{}] {}", ts, message).map_err(|e| e.to_string())?;
+    Ok(p.display().to_string())
+}
+
+/// Lee el crash log (last 200 entries).
+#[tauri::command]
+pub fn read_crash_log(app: AppHandle) -> Result<String, String> {
+    let p = processes_state_path(&app)?
+        .parent()
+        .ok_or("sin parent")?
+        .join("crash.log");
+    if !p.exists() {
+        return Ok(String::new());
+    }
+    let s = fs::read_to_string(&p).map_err(|e| e.to_string())?;
+    let lines: Vec<&str> = s.lines().collect();
+    let n = 200;
+    let tail = if lines.len() > n { &lines[lines.len() - n..] } else { &lines[..] };
+    Ok(tail.join("\n"))
+}
+
 #[tauri::command]
 pub fn notify_macos(title: String, body: String) -> Result<(), String> {
     // Sanitize quotes para AppleScript
