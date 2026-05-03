@@ -79,6 +79,21 @@ export type VolumeCandidate = {
   total_bytes?: number | null;
 };
 
+export type MarketplaceEntry = {
+  id: string;
+  name: string;
+  category: string;
+  runtime: string;
+  short_description: string;
+  homepage?: string | null;
+  repo?: string | null;
+  default_port?: number | null;
+  estimated_size_gb?: number | null;
+  requires?: string[] | null;
+  install_hint?: string | null;
+  notes?: string | null;
+};
+
 export type ModelEntry = {
   name: string;
   relative_path: string;

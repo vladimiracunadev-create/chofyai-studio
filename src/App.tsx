@@ -7,6 +7,7 @@ import type {
   AppSettings,
   HealthResult,
   InstallEvent,
+  MarketplaceEntry,
   ModelEntry,
   QueueItem,
   SystemStats,
@@ -56,6 +57,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: '⌘R', label: 'Refrescar tools y stats', group: 'Acciones' },
   { keys: '⌘L', label: 'Ver logs (último tool tocado)', group: 'Acciones' },
   { keys: '⌘B', label: 'Toggle modo claro/oscuro', group: 'Apariencia' },
+  { keys: '⌘M', label: 'Abrir Marketplace', group: 'Navegación' },
   { keys: 'Esc', label: 'Cerrar modal/panel actual', group: 'Navegación' },
   { keys: '↑↓', label: 'Navegar lista en paleta ⌘K', group: 'Navegación' },
   { keys: '↵', label: 'Ejecutar comando seleccionado', group: 'Navegación' },
@@ -91,6 +93,134 @@ async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>, opts?
     }
     return null;
   }
+}
+
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+const CATEGORY_EMOJI: Record<string, string> = {
+  voice: '🎤', asr: '🎙', video: '🎬', image: '🖼', music: '🎵', system: '⚙️',
+};
+
+function MarketplacePanel({
+  open, onClose, alreadyInstalledIds, onImported,
+}: {
+  open: boolean;
+  onClose: () => void;
+  alreadyInstalledIds: Set<string>;
+  onImported: () => void;
+}) {
+  const [entries, setEntries] = useState<MarketplaceEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    void (async () => {
+      const r = await tauriInvoke<MarketplaceEntry[]>('list_marketplace_tools');
+      setEntries(r ?? []);
+      setLoading(false);
+    })();
+  }, [open]);
+
+  if (!open) return null;
+
+  const filtered = entries.filter((e) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (e.name + ' ' + e.short_description + ' ' + e.category + ' ' + e.runtime + ' ' + (e.id ?? ''))
+      .toLowerCase().includes(q);
+  });
+
+  const onImport = async (entry: MarketplaceEntry) => {
+    if (alreadyInstalledIds.has(entry.id)) {
+      notify('warn', 'Ya está en tu catálogo', `apps/${entry.id}.yaml ya existe`);
+      return;
+    }
+    if (!confirm(`Importar manifest de "${entry.name}" a apps/${entry.id}.yaml?\n\nEsto añade la tool a tu catálogo. La instalación real (clone + venv) la harás después.`)) return;
+    setBusy(entry.id);
+    const r = await tauriInvoke<ActionResult>('import_marketplace_tool', { id: entry.id });
+    setBusy(null);
+    if (r?.ok) {
+      notify('success', `${entry.name} importado`, r.message);
+      void notifyNative('Marketplace', `${entry.name} añadido al catálogo`);
+      onImported();
+    }
+  };
+
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal market-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>🛒 Marketplace de tools</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+        <p className="muted" style={{ fontSize: '0.84rem' }}>
+          Catálogo curado de herramientas adicionales. Importa el manifest y luego configura el `install_script` y `run.command` según el tool.
+        </p>
+        <input
+          className="onb-input"
+          placeholder="🔎 Buscar por nombre, categoría o palabra clave…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ marginTop: 10 }}
+        />
+        {loading && <p className="muted" style={{ marginTop: 16 }}>Cargando catálogo…</p>}
+        {!loading && (
+          <div className="market-grid">
+            {filtered.length === 0 && (
+              <p className="muted" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 30 }}>
+                Sin resultados para "{query}".
+              </p>
+            )}
+            {filtered.map((e) => {
+              const installed = alreadyInstalledIds.has(e.id);
+              return (
+                <div key={e.id} className={`market-card ${installed ? 'installed' : ''}`}>
+                  <div className="market-head">
+                    <span className="market-emoji">{CATEGORY_EMOJI[e.category] ?? '🧩'}</span>
+                    <strong>{e.name}</strong>
+                    {installed && <span className="pill pill-green">✓ Instalado</span>}
+                  </div>
+                  <p className="market-desc muted">{e.short_description}</p>
+                  <div className="market-meta">
+                    <span>{e.category}</span>
+                    <span>·</span>
+                    <span>{e.runtime}</span>
+                    {e.estimated_size_gb && <><span>·</span><span>~{e.estimated_size_gb} GB</span></>}
+                    {e.default_port && <><span>·</span><span>:{e.default_port}</span></>}
+                  </div>
+                  {e.requires && e.requires.length > 0 && (
+                    <div className="market-requires">
+                      {e.requires.map((r) => <span key={r} className="market-req">{r}</span>)}
+                    </div>
+                  )}
+                  <div className="market-actions">
+                    <button
+                      onClick={() => void onImport(e)}
+                      disabled={installed || busy === e.id}
+                      className={installed ? 'secondary' : ''}
+                    >
+                      {busy === e.id ? '⏳…' : installed ? 'Ya importado' : '+ Importar manifest'}
+                    </button>
+                    {e.homepage && (
+                      <a href={e.homepage} target="_blank" rel="noreferrer" className="market-link">↗ Web</a>
+                    )}
+                    {e.repo && (
+                      <a href={e.repo} target="_blank" rel="noreferrer" className="market-link">↗ Repo</a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="muted" style={{ fontSize: '0.74rem', marginTop: 14 }}>
+          Catálogo: <code>marketplace/registry.yaml</code> · {entries.length} tool(s) disponibles
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // ─── Help Panel (⌘/) ─────────────────────────────────────────────────────────
@@ -881,6 +1011,7 @@ export default function App() {
   const [showCmdK, setShowCmdK] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showMarket, setShowMarket] = useState(false);
   const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
   const [lastTouchedToolId, setLastTouchedToolId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -939,6 +1070,7 @@ export default function App() {
         e.preventDefault();
         if (lastTouchedToolId) setViewingLogsFor((v) => v === lastTouchedToolId ? null : lastTouchedToolId);
       }
+      else if (k === 'm') { e.preventDefault(); setShowMarket((v) => !v); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -949,6 +1081,8 @@ export default function App() {
     const list: CmdAction[] = [
       { id: 'open-settings', label: '⚙️ Abrir configuración', group: 'App', run: () => setShowSettings(true) },
       { id: 'open-tour', label: '👋 Re-abrir tour', group: 'App', run: () => setShowOnboarding(true) },
+      { id: 'open-market', label: '🛒 Abrir Marketplace', group: 'App', run: () => setShowMarket(true) },
+      { id: 'open-help', label: '⌨️ Mostrar atajos', group: 'App', run: () => setShowHelp(true) },
       { id: 'refresh-all', label: '🔄 Refrescar tools y stats', group: 'App', run: () => { void reloadTools(); void reloadStats(); } },
       { id: 'clear-queue', label: '🧹 Limpiar cola', group: 'App', run: () => { if (!isQueueRunning) { setQueue([]); setQueueVisible(false); } } },
     ];
@@ -1282,6 +1416,12 @@ export default function App() {
       <UpdateChecker />
       <CommandPalette open={showCmdK} onClose={() => setShowCmdK(false)} actions={cmdActions} />
       <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} />
+      <MarketplacePanel
+        open={showMarket}
+        onClose={() => setShowMarket(false)}
+        alreadyInstalledIds={new Set(tools.map((t) => t.id))}
+        onImported={() => { void reloadTools(); }}
+      />
       <PreInstallCheck
         tool={preInstallTool}
         freeBytes={stats?.disk_free_bytes ?? null}
@@ -1328,6 +1468,9 @@ export default function App() {
             </button>
             <button className="nav-item" onClick={() => setShowHelp(true)} title="Atajos de teclado">
               ⌨️ Atajos <kbd className="nav-kbd">⌘/</kbd>
+            </button>
+            <button className="nav-item" onClick={() => setShowMarket(true)} title="Catálogo curado de tools comunitarias">
+              🛒 Marketplace <kbd className="nav-kbd">⌘M</kbd>
             </button>
             <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
               {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} Tema · {theme}

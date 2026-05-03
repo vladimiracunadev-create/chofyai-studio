@@ -11,6 +11,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### 🛒 Added (Sprint 6 — Marketplace MVP)
+
+- **Catálogo `marketplace/registry.yaml`** con 10 herramientas comunitarias curadas: Bark, RVC, Stable Audio Open, AnimateDiff, Coqui TTS, Open WebUI, Vosk, MusicGen, InvokeAI, SDXL workflow para ComfyUI. Cada entrada documenta categoría, runtime, descripción corta, repo, tamaño estimado, requisitos y notas de instalación.
+- **Comando Rust `list_marketplace_tools()`**: lee el `registry.yaml` desde `marketplace/` (repo root o resource bundle) y lo deserializa.
+- **Comando Rust `import_marketplace_tool(id)`**: traduce una entrada del marketplace a un manifest YAML mínimo en `apps/<id>.yaml`. No sobrescribe si ya existe. Embebe notas, install_hint y URL del repo como comentarios para el dev que complete `install_script` y `run.command` después.
+- **`MarketplacePanel`** en frontend: modal grid responsivo con search, badges por categoría/runtime/tamaño/puerto, chips de requisitos, link a homepage/repo, marca como `✓ Instalado` si ya está en el catálogo local. Importación con confirmación + toast + notificación nativa.
+- **Atajo `⌘M`** y botón `🛒 Marketplace` en sidebar. Acción "Abrir Marketplace" añadida a la paleta `⌘K`.
+- **`marketplace/`** registrado como recurso del bundle Tauri en `tauri.conf.json` para que el `.app` distribuible incluya el catálogo.
+
 ### 🛡 Added (Sprint 5 — seguridad portable, huérfanos, crash log)
 
 - **Workflow `security.yml` portable**: nuevo job dedicado de seguridad en CI con 5 checks paralelos:

@@ -42,6 +42,8 @@ pub fn run() {
             system::kill_orphan,
             system::append_crash_log,
             system::read_crash_log,
+            system::list_marketplace_tools,
+            system::import_marketplace_tool,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

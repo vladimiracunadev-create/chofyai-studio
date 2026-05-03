@@ -1,0 +1,149 @@
+# 📦 Marketplace de tools — catálogo curado
+#
+# Cada entrada describe una herramienta de IA que NO viene preinstalada
+# en el manifest base del repo, pero que puede importarse con un click.
+# El backend la traduce a un manifest YAML estándar (apps/<id>.yaml)
+# y opcionalmente a un script bash de instalación.
+#
+# Esta lista se mantiene aquí por simplicidad. En el futuro podría servirse
+# desde un endpoint remoto o un repo aparte (community-tools).
+
+tools:
+  - id: bark
+    name: Bark
+    category: voice
+    runtime: python
+    short_description: Generative TTS multi-idioma de Suno (laughs, music, SFX inline).
+    homepage: https://github.com/suno-ai/bark
+    repo: https://github.com/suno-ai/bark
+    default_port: 7861
+    estimated_size_gb: 5
+    requires:
+      - python>=3.10
+      - ffmpeg
+    install_hint: pip install git+https://github.com/suno-ai/bark
+    notes: |
+      Modelos descargados al primer uso desde HuggingFace (~5 GB).
+      Apple Silicon: usa `device='mps'`.
+
+  - id: rvc
+    name: RVC (Retrieval Voice Conversion)
+    category: voice
+    runtime: python
+    short_description: Conversión de voz a voz objetivo con embeddings entrenados.
+    homepage: https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
+    repo: https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
+    default_port: 7897
+    estimated_size_gb: 4
+    requires:
+      - python>=3.10
+      - ffmpeg
+      - "PyTorch (MPS o CUDA)"
+    notes: Necesita modelos entrenados (.pth) descargados aparte.
+
+  - id: stable-audio
+    name: Stable Audio Open
+    category: music
+    runtime: python
+    short_description: Generación de audio (música/SFX) condicionada por texto.
+    homepage: https://huggingface.co/stabilityai/stable-audio-open-1.0
+    repo: https://github.com/Stability-AI/stable-audio-tools
+    default_port: 7869
+    estimated_size_gb: 6
+    requires:
+      - python>=3.10
+      - "PyTorch >= 2.1"
+    notes: Modelo de 1B parámetros. Funciona en MPS pero lento.
+
+  - id: animatediff
+    name: AnimateDiff
+    category: video
+    runtime: python
+    short_description: Animación de difusión a partir de prompt + LoRA de movimiento.
+    homepage: https://animatediff.github.io/
+    repo: https://github.com/guoyww/AnimateDiff
+    estimated_size_gb: 8
+    requires:
+      - python>=3.10
+      - PyTorch
+    notes: Recomendado integrarlo como custom_node de ComfyUI en lugar de standalone.
+
+  - id: coqui-tts
+    name: Coqui TTS
+    category: voice
+    runtime: python
+    short_description: Toolkit de TTS multi-modelo (XTTS, Tacotron, FastPitch, etc.).
+    homepage: https://github.com/coqui-ai/TTS
+    repo: https://github.com/coqui-ai/TTS
+    default_port: 5002
+    estimated_size_gb: 3
+    requires:
+      - python>=3.9,<3.12
+    notes: XTTS-v2 soporta clonación de voz multilingüe con ~6 s de muestra.
+
+  - id: open-webui
+    name: Open WebUI
+    category: system
+    runtime: python
+    short_description: Frontend para LLMs locales (Ollama, llama.cpp).
+    homepage: https://openwebui.com
+    repo: https://github.com/open-webui/open-webui
+    default_port: 8080
+    estimated_size_gb: 1
+    requires:
+      - python>=3.11
+      - "Ollama (separado)"
+    notes: Pareja natural con Ollama para chat local.
+
+  - id: vosk
+    name: Vosk
+    category: asr
+    runtime: python
+    short_description: ASR offline ligero (alternativa a Whisper para CPU/edge).
+    homepage: https://alphacephei.com/vosk/
+    repo: https://github.com/alphacep/vosk-api
+    estimated_size_gb: 2
+    requires:
+      - python>=3.8
+    notes: Modelos por idioma desde 50 MB. Útil cuando whisper.cpp es demasiado.
+
+  - id: musicgen
+    name: MusicGen (audiocraft)
+    category: music
+    runtime: python
+    short_description: Generación de música por prompt (Meta).
+    homepage: https://github.com/facebookresearch/audiocraft
+    repo: https://github.com/facebookresearch/audiocraft
+    default_port: 7866
+    estimated_size_gb: 5
+    requires:
+      - python>=3.10
+    notes: Funciona en MPS. Modelo `medium` ~1.5B params.
+
+  - id: invokeai
+    name: InvokeAI
+    category: image
+    runtime: python
+    short_description: Generación de imagen tipo SD con UI propia (alternativa a ComfyUI).
+    homepage: https://invoke-ai.github.io/InvokeAI/
+    repo: https://github.com/invoke-ai/InvokeAI
+    default_port: 9090
+    estimated_size_gb: 10
+    requires:
+      - python>=3.10,<3.12
+    notes: Más opinionado que ComfyUI; setup guiado.
+
+  - id: sdxl-comfy
+    name: SDXL workflow para ComfyUI
+    category: image
+    runtime: python
+    short_description: Workflow JSON pre-armado SDXL Base + Refiner para tu ComfyUI.
+    homepage: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0
+    repo: ""
+    estimated_size_gb: 13
+    requires:
+      - "ComfyUI ya instalado"
+    install_hint: |
+      Descarga sd_xl_base_1.0.safetensors (~6.5 GB) y sd_xl_refiner_1.0.safetensors
+      (~6 GB) en tools/comfyui/source/models/checkpoints/.
+    notes: No es un servicio independiente; añade modelos al ComfyUI existente.

@@ -803,6 +803,74 @@ button.danger-soft {
 }
 button.danger-soft:hover { background: rgba(255,80,80,0.18); }
 
+/* === Marketplace === */
+.market-modal { width: 880px; max-width: 96vw; }
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.market-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #0f1115;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
+}
+.market-card:hover { border-color: rgba(124,92,255,0.4); }
+.market-card.installed { opacity: 0.7; border-color: rgba(54,215,183,0.35); }
+.market-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.market-emoji { font-size: 1.4rem; line-height: 1; }
+.market-head strong { font-size: 0.94rem; flex: 1; }
+.market-desc { margin: 0; font-size: 0.82rem; line-height: 1.4; }
+.market-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: #7c8ea8;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  flex-wrap: wrap;
+}
+.market-requires {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.market-req {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  background: rgba(124,92,255,0.12);
+  color: #b8a8ff;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.market-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+.market-link {
+  font-size: 0.74rem;
+  color: #7c5cff;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(124,92,255,0.06);
+}
+.market-link:hover { background: rgba(124,92,255,0.14); }
+
 /* === Orphan banner === */
 .orphan-card {
   border-color: rgba(245,166,35,0.4);

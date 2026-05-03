@@ -47,6 +47,7 @@
       "../apps",
       "../docs",
       "../scripts/mac",
+      "../marketplace",
       "../storage/state/settings.json"
     ]
   }

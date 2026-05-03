@@ -314,6 +314,107 @@ pub fn read_crash_log(app: AppHandle) -> Result<String, String> {
     Ok(tail.join("\n"))
 }
 
+#[derive(Debug, Deserialize, serde::Serialize, Clone)]
+pub struct MarketplaceEntry {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub runtime: String,
+    pub short_description: String,
+    pub homepage: Option<String>,
+    pub repo: Option<String>,
+    pub default_port: Option<u16>,
+    pub estimated_size_gb: Option<u32>,
+    pub requires: Option<Vec<String>>,
+    pub install_hint: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MarketplaceFile {
+    tools: Vec<MarketplaceEntry>,
+}
+
+#[tauri::command]
+pub fn list_marketplace_tools(app: AppHandle) -> Result<Vec<MarketplaceEntry>, String> {
+    // Buscar registry.yaml en el repo o en resources del bundle
+    let candidates: Vec<PathBuf> = match repo_root() {
+        Some(root) => vec![root.join("marketplace").join("registry.yaml")],
+        None => match app.path().resolve("marketplace/registry.yaml", BaseDirectory::Resource) {
+            Ok(p) => vec![p],
+            Err(_) => vec![],
+        },
+    };
+    for path in candidates {
+        if path.exists() {
+            let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            let parsed: MarketplaceFile = serde_yaml::from_str(&raw).map_err(|e| e.to_string())?;
+            return Ok(parsed.tools);
+        }
+    }
+    Ok(vec![])
+}
+
+/// Importa un manifiesto del marketplace al directorio `apps/` para que aparezca
+/// en la lista normal de tools. Para el MVP genera un manifest mínimo con los
+/// campos que tenemos. La instalación real (clone + venv) la hace después el
+/// usuario manualmente o un install_script futuro.
+#[tauri::command]
+pub fn import_marketplace_tool(app: AppHandle, id: String) -> Result<ActionResult, String> {
+    let entries = list_marketplace_tools(app.clone())?;
+    let entry = entries.into_iter().find(|e| e.id == id)
+        .ok_or_else(|| format!("Tool '{}' no está en el marketplace", id))?;
+
+    let apps_dir = match repo_root() {
+        Some(root) => root.join("apps"),
+        None => app.path().resolve("apps", BaseDirectory::Resource).map_err(|e| e.to_string())?,
+    };
+    fs::create_dir_all(&apps_dir).map_err(|e| e.to_string())?;
+    let target = apps_dir.join(format!("{}.yaml", entry.id));
+    if target.exists() {
+        return Err(format!("Ya existe apps/{}.yaml — no se sobrescribe", entry.id));
+    }
+
+    let mut yaml = String::new();
+    yaml.push_str(&format!("id: {}\n", entry.id));
+    yaml.push_str(&format!("name: {}\n", entry.name));
+    yaml.push_str(&format!("category: {}\n", entry.category));
+    yaml.push_str(&format!("runtime: {}\n", entry.runtime));
+    yaml.push_str(&format!("description: {}\n", entry.short_description.replace('\n', " ")));
+    yaml.push_str("recommended: false\n");
+    if let Some(p) = entry.default_port {
+        yaml.push_str(&format!("default_port: {}\n", p));
+    }
+    yaml.push_str(&format!("studio_home_subdir: tools/{}\n", entry.id));
+    yaml.push_str("platforms:\n  - mac-arm64\n");
+    yaml.push_str("installed_if:\n  - source/.git\n");
+    if let Some(notes) = entry.notes.as_ref() {
+        yaml.push_str("# Notas del marketplace:\n");
+        for line in notes.lines() {
+            yaml.push_str(&format!("#   {}\n", line));
+        }
+    }
+    if let Some(hint) = entry.install_hint.as_ref() {
+        yaml.push_str("# Hint de instalación:\n");
+        for line in hint.lines() {
+            yaml.push_str(&format!("#   {}\n", line));
+        }
+    }
+    if let Some(repo) = entry.repo.as_ref() {
+        if !repo.is_empty() {
+            yaml.push_str(&format!("# Repo: {}\n", repo));
+        }
+    }
+
+    fs::write(&target, yaml).map_err(|e| e.to_string())?;
+    Ok(ActionResult {
+        ok: true,
+        message: format!("{} importado a apps/{}.yaml — añade install_script y run cuando esté listo", entry.name, entry.id),
+        log_path: Some(target.display().to_string()),
+        opened_url: entry.homepage.clone(),
+    })
+}
+
 #[tauri::command]
 pub fn notify_macos(title: String, body: String) -> Result<(), String> {
     // Sanitize quotes para AppleScript
