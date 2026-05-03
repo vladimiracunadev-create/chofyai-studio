@@ -47,6 +47,7 @@ pub fn run() {
             system::list_workflows,
             system::save_workflow,
             system::delete_workflow,
+            system::run_doctor,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

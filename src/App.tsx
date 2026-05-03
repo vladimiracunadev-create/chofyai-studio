@@ -287,6 +287,182 @@ function WorkflowRunner({
   );
 }
 
+// ─── Overview modal (Resumen + Estado + System stats + Studio Home) ─────────
+function OverviewModal({
+  open, onClose, summary, stats, tools, runningIds, message,
+}: {
+  open: boolean;
+  onClose: () => void;
+  summary: SystemSummary | null;
+  stats: SystemStats | null;
+  tools: ToolManifest[];
+  runningIds: Set<string>;
+  message: string;
+}) {
+  if (!open) return null;
+  const installed = tools.filter((t) => t.installed).length;
+  const cpuPct = stats ? Math.round(stats.cpu_usage) : 0;
+  const memPct = stats?.mem_total_bytes ? Math.round((stats.mem_used_bytes / stats.mem_total_bytes) * 100) : 0;
+  const diskUsed = stats ? stats.disk_total_bytes - stats.disk_free_bytes : 0;
+  const diskPct = stats?.disk_total_bytes ? Math.round((diskUsed / stats.disk_total_bytes) * 100) : 0;
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal" style={{ width: 640 }} onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>📋 Resumen del sistema</h2>
+          <button className="secondary" onClick={onClose}>✕</button>
+        </div>
+
+        <section style={{ marginTop: 12 }}>
+          <h4>App</h4>
+          <dl className="kv-list">
+            <div><dt>Versión</dt><dd>{summary?.app_name ?? 'ChofyAI Studio'} v{summary?.app_version ?? APP_VERSION}</dd></div>
+            <div><dt>OS / Arch</dt><dd>{summary?.os ?? '—'} · {summary?.arch ?? ''}</dd></div>
+            <div><dt>Settings</dt><dd style={{ fontFamily: 'ui-monospace', fontSize: '0.78rem' }}>{summary?.settings_file ?? '—'}</dd></div>
+          </dl>
+        </section>
+
+        <section style={{ marginTop: 16 }}>
+          <h4>💾 Studio Home</h4>
+          <dl className="kv-list">
+            <div><dt>Solicitado</dt><dd style={{ fontFamily: 'ui-monospace', fontSize: '0.78rem' }}>{summary?.studio_home ?? '—'}</dd></div>
+            <div><dt>Efectivo</dt><dd style={{ fontFamily: 'ui-monospace', fontSize: '0.78rem' }}>
+              {summary?.studio_home_effective ?? '—'}
+              {summary?.using_fallback && <span className="pill" style={{ marginLeft: 6, background: 'rgba(255,165,0,0.18)', color: '#ffcd80', borderColor: 'rgba(255,165,0,0.3)' }}>fallback</span>}
+            </dd></div>
+          </dl>
+        </section>
+
+        <section style={{ marginTop: 16 }}>
+          <h4>🛠 Tools</h4>
+          <dl className="kv-list">
+            <div><dt>Instaladas</dt><dd><strong>{installed}</strong> / {tools.length}</dd></div>
+            <div><dt>En ejecución</dt><dd>{runningIds.size}</dd></div>
+            <div><dt>Mensaje</dt><dd className="muted" style={{ fontSize: '0.82rem' }}>{message}</dd></div>
+          </dl>
+        </section>
+
+        {stats && (
+          <section style={{ marginTop: 16 }}>
+            <h4>📊 Recursos del equipo</h4>
+            <div className="overview-stats">
+              <div className="overview-stat">
+                <div className="overview-stat-row">
+                  <span>CPU</span>
+                  <span>{cpuPct}% · {stats.cpu_cores} núcleos · load {stats.load_avg_1m.toFixed(2)}</span>
+                </div>
+                <div className="overview-bar"><div className="overview-bar-fill" style={{ width: `${cpuPct}%` }} /></div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-stat-row">
+                  <span>RAM</span>
+                  <span>{fmtBytes(stats.mem_used_bytes)} / {fmtBytes(stats.mem_total_bytes)} ({memPct}%)</span>
+                </div>
+                <div className="overview-bar"><div className="overview-bar-fill" style={{ width: `${memPct}%` }} /></div>
+              </div>
+              <div className="overview-stat">
+                <div className="overview-stat-row">
+                  <span>Disco</span>
+                  <span>{fmtBytes(stats.disk_free_bytes)} libres ({100 - diskPct}%)</span>
+                </div>
+                <div className="overview-bar"><div className="overview-bar-fill" style={{ width: `${diskPct}%` }} /></div>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Orphans modal ───────────────────────────────────────────────────────────
+function OrphansModal({
+  open, onClose, orphans, onResolved,
+}: {
+  open: boolean; onClose: () => void; orphans: OrphanPort[]; onResolved: () => void;
+}) {
+  if (!open) return null;
+  const adopt = async (o: OrphanPort) => {
+    if (!o.pid) return;
+    const r = await tauriInvoke<ActionResult>('adopt_orphan', { toolId: o.tool_id, pid: o.pid });
+    if (r) { notify('success', `${o.tool_name} adoptado`, `PID ${o.pid}`); onResolved(); }
+  };
+  const kill = async (o: OrphanPort) => {
+    if (!o.pid) return;
+    if (!confirm(`¿Enviar SIGTERM a ${o.command ?? 'proceso'} (PID ${o.pid}) en ${o.port}?`)) return;
+    const r = await tauriInvoke<ActionResult>('kill_orphan', { pid: o.pid });
+    if (r) { notify('info', 'SIGTERM enviado', `PID ${o.pid}`); onResolved(); }
+  };
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal" style={{ width: 600 }} onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>👻 Procesos huérfanos ({orphans.length})</h2>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="secondary" onClick={onResolved}>↻ Re-escanear</button>
+            <button className="secondary" onClick={onClose}>✕</button>
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: '0.84rem' }}>
+          Procesos escuchando en puertos de tools conocidas pero no registrados en la app —
+          probablemente quedaron de una sesión previa o se lanzaron desde CLI.
+        </p>
+        {orphans.length === 0 ? (
+          <p className="muted" style={{ marginTop: 14 }}>No hay procesos huérfanos detectados. ✅</p>
+        ) : (
+          <div className="orphan-list" style={{ marginTop: 12 }}>
+            {orphans.map((o) => (
+              <div key={`${o.tool_id}-${o.port}`} className="orphan-row">
+                <div className="orphan-info">
+                  <strong>{o.tool_name}</strong>
+                  <span className="muted">:{o.port} · PID {o.pid} · {o.command ?? '?'}</span>
+                </div>
+                <button className="primary-soft" onClick={() => void adopt(o)}>👋 Adoptar</button>
+                <button className="secondary danger-soft" onClick={() => void kill(o)}>🛑 Matar</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Doctor modal (ejecuta scripts/mac/doctor.sh) ────────────────────────────
+function DoctorModal({ open, onClose, studioHome }: { open: boolean; onClose: () => void; studioHome: string }) {
+  const [output, setOutput] = useState<string>('');
+  const [running, setRunning] = useState(false);
+
+  const runDoctor = async () => {
+    setRunning(true);
+    setOutput('Ejecutando doctor.sh…');
+    const r = await tauriInvoke<string>('run_doctor', { studioHome }, { silent: true });
+    setOutput(r ?? '(sin output o comando no disponible — revisa que run_doctor esté registrado)');
+    setRunning(false);
+  };
+
+  useEffect(() => { if (open) void runDoctor(); }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="settings-overlay" onClick={onClose}>
+      <div className="settings-modal" style={{ width: 700 }} onClick={(e) => e.stopPropagation()}>
+        <div className="section-header">
+          <h2>🩺 Doctor</h2>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="secondary" disabled={running} onClick={runDoctor}>{running ? '⏳…' : '↻ Re-ejecutar'}</button>
+            <button className="secondary" onClick={onClose}>✕</button>
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: '0.84rem' }}>
+          Ejecuta <code>scripts/mac/doctor.sh "{studioHome}"</code> y muestra el reporte.
+        </p>
+        <pre className="logs-pre" style={{ marginTop: 12 }}>{output}</pre>
+      </div>
+    </div>
+  );
+}
+
 // ─── Workflow Builder (drag & drop) ──────────────────────────────────────────
 type BuilderInput = { id: string; type: 'file' | 'text'; label: string; required?: boolean; default?: string; accept?: string; placeholder?: string };
 type BuilderStep = {
@@ -1541,6 +1717,9 @@ export default function App() {
   const [showWorkflows, setShowWorkflows] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [runningWorkflow, setRunningWorkflow] = useState<WorkflowDef | null>(null);
+  const [showOverview, setShowOverview] = useState(false);
+  const [showOrphans, setShowOrphans] = useState(false);
+  const [showDoctor, setShowDoctor] = useState(false);
   const [viewingModelsFor, setViewingModelsFor] = useState<string | null>(null);
   const [lastTouchedToolId, setLastTouchedToolId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -1967,6 +2146,26 @@ export default function App() {
       {runningWorkflow && (
         <WorkflowRunner wf={runningWorkflow} onClose={() => setRunningWorkflow(null)} />
       )}
+      <OverviewModal
+        open={showOverview}
+        onClose={() => setShowOverview(false)}
+        summary={summary}
+        stats={stats}
+        tools={tools}
+        runningIds={runningIds}
+        message={message}
+      />
+      <OrphansModal
+        open={showOrphans}
+        onClose={() => setShowOrphans(false)}
+        orphans={orphans}
+        onResolved={() => { void reloadOrphans(); void reloadTools(); }}
+      />
+      <DoctorModal
+        open={showDoctor}
+        onClose={() => setShowDoctor(false)}
+        studioHome={summary?.studio_home_effective ?? ''}
+      />
       <PreInstallCheck
         tool={preInstallTool}
         freeBytes={stats?.disk_free_bytes ?? null}
@@ -1995,41 +2194,80 @@ export default function App() {
             </div>
           </div>
           <nav>
-            <button className="nav-item active">{t('sidebar.dashboard')}</button>
-            <button className="nav-item">{t('sidebar.tools')}</button>
-            <button className="nav-item">{t('sidebar.models')}</button>
-            <button className="nav-item">{t('sidebar.voices')}</button>
-            <button className="nav-item">{t('sidebar.outputs')}</button>
-            <button className="nav-item">{t('sidebar.logs')}</button>
-            <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides (⌘,)">
-              ⚙️ {t('sidebar.settings')} <kbd className="nav-kbd">⌘,</kbd>
-            </button>
-            <button className="nav-item">{t('sidebar.doctor')}</button>
-            <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
-              👋 {t('sidebar.tour')}
-            </button>
-            <button className="nav-item" onClick={() => setShowCmdK(true)} title="Paleta de comandos">
-              🔎 {t('sidebar.commands')} <kbd className="nav-kbd">⌘K</kbd>
-            </button>
-            <button className="nav-item" onClick={() => setShowHelp(true)} title="Atajos de teclado">
-              ⌨️ {t('sidebar.shortcuts')} <kbd className="nav-kbd">⌘/</kbd>
-            </button>
-            <button className="nav-item" onClick={() => setShowMarket(true)} title="Catálogo curado de tools comunitarias">
-              🛒 {t('sidebar.marketplace')} <kbd className="nav-kbd">⌘M</kbd>
-            </button>
-            <button className="nav-item" onClick={() => setShowWorkflows(true)} title="Pipelines y chains entre tools">
-              🔗 {t('sidebar.workflows')} <kbd className="nav-kbd">⌘W</kbd>
-            </button>
-            <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
-              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'} {t('sidebar.theme')} · {theme}
-            </button>
-            <button
-              className="nav-item"
-              onClick={() => { const next: Lang = lang === 'es' ? 'en' : 'es'; setLang(next); setLangState(next); }}
-              title="Toggle language ES/EN"
-            >
-              🌐 {t('sidebar.lang')} · {lang.toUpperCase()}
-            </button>
+            <div className="nav-group">
+              <span className="nav-group-label">Workspace</span>
+              <button className="nav-item active" title="Vista principal con tarjetas de tools">
+                <span className="nav-icon">🏠</span>
+                <span className="nav-label">{t('sidebar.dashboard')}</span>
+              </button>
+              <button className="nav-item" onClick={() => setShowOverview(true)} title="Resumen del sistema, recursos y studio_home">
+                <span className="nav-icon">📋</span>
+                <span className="nav-label">Resumen</span>
+              </button>
+              <button className="nav-item" onClick={() => setShowOrphans(true)} title="Procesos huérfanos detectados">
+                <span className="nav-icon">👻</span>
+                <span className="nav-label">Huérfanos</span>
+                {orphans.length > 0 && <span className="nav-badge">{orphans.length}</span>}
+              </button>
+              <button className="nav-item" onClick={() => setShowDoctor(true)} title="Ejecuta scripts/mac/doctor.sh">
+                <span className="nav-icon">🩺</span>
+                <span className="nav-label">{t('sidebar.doctor')}</span>
+              </button>
+            </div>
+
+            <div className="nav-group">
+              <span className="nav-group-label">Tools</span>
+              <button className="nav-item" onClick={() => setShowMarket(true)} title="Catálogo curado de tools comunitarias">
+                <span className="nav-icon">🛒</span>
+                <span className="nav-label">{t('sidebar.marketplace')}</span>
+                <kbd className="nav-kbd">⌘M</kbd>
+              </button>
+              <button className="nav-item" onClick={() => setShowWorkflows(true)} title="Pipelines y chains entre tools">
+                <span className="nav-icon">🔗</span>
+                <span className="nav-label">{t('sidebar.workflows')}</span>
+                <kbd className="nav-kbd">⌘W</kbd>
+              </button>
+            </div>
+
+            <div className="nav-group">
+              <span className="nav-group-label">Sistema</span>
+              <button className="nav-item" onClick={() => setShowSettings(true)} title="Editar studio_home, volúmenes y overrides">
+                <span className="nav-icon">⚙️</span>
+                <span className="nav-label">{t('sidebar.settings')}</span>
+                <kbd className="nav-kbd">⌘,</kbd>
+              </button>
+              <button className="nav-item" onClick={() => setShowCmdK(true)} title="Paleta de comandos">
+                <span className="nav-icon">🔎</span>
+                <span className="nav-label">{t('sidebar.commands')}</span>
+                <kbd className="nav-kbd">⌘K</kbd>
+              </button>
+              <button className="nav-item" onClick={() => setShowHelp(true)} title="Atajos de teclado">
+                <span className="nav-icon">⌨️</span>
+                <span className="nav-label">{t('sidebar.shortcuts')}</span>
+                <kbd className="nav-kbd">⌘/</kbd>
+              </button>
+              <button className="nav-item" onClick={() => setShowOnboarding(true)} title="Re-abrir onboarding">
+                <span className="nav-icon">👋</span>
+                <span className="nav-label">{t('sidebar.tour')}</span>
+              </button>
+            </div>
+
+            <div className="nav-group nav-group-bottom">
+              <button className="nav-item" onClick={() => setTheme((t) => t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark')} title="Toggle tema (⌘B)">
+                <span className="nav-icon">{theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥'}</span>
+                <span className="nav-label">{t('sidebar.theme')}</span>
+                <span className="nav-value">{theme}</span>
+              </button>
+              <button
+                className="nav-item"
+                onClick={() => { const next: Lang = lang === 'es' ? 'en' : 'es'; setLang(next); setLangState(next); }}
+                title="Toggle language ES/EN"
+              >
+                <span className="nav-icon">🌐</span>
+                <span className="nav-label">{t('sidebar.lang')}</span>
+                <span className="nav-value">{lang.toUpperCase()}</span>
+              </button>
+            </div>
           </nav>
           {queue.length > 0 && (
             <button className="nav-item queue-trigger" onClick={() => setQueueVisible(!queueVisible)}>
@@ -2039,65 +2277,34 @@ export default function App() {
         </aside>
 
         <section className="content">
-          <header className="hero card">
-            <div>
-              <span className="badge">Fase 4</span>
-              <h2>Disco dual · Zona de módulos · Stats en vivo</h2>
-              <p>Soporte para volúmenes externos con fallback automático al disco principal. Reubica módulos sin perder configuración.</p>
+          {/* Top bar: chips de acceso rápido + stats colapsado */}
+          <div className="topbar">
+            <div className="topbar-stats">
+              <button className="topbar-chip" onClick={() => setShowOverview(true)}>
+                <span className="topbar-chip-label">Tools</span>
+                <span className="topbar-chip-value">{installedCount}/{tools.length}</span>
+              </button>
+              <button className="topbar-chip" onClick={() => setShowOverview(true)}>
+                <span className="topbar-chip-label">Activas</span>
+                <span className="topbar-chip-value">{runningIds.size}</span>
+              </button>
+              {orphans.length > 0 && (
+                <button className="topbar-chip topbar-chip-warn" onClick={() => setShowOrphans(true)}>
+                  <span>👻 {orphans.length} huérfanos</span>
+                </button>
+              )}
+              {summary?.using_fallback && (
+                <button className="topbar-chip topbar-chip-warn" onClick={() => setShowOverview(true)}>
+                  <span>⚠ Fallback</span>
+                </button>
+              )}
             </div>
-            <div className="hero-meta">
-              <strong>{summary?.os ?? '—'} · {summary?.arch ?? ''}</strong>
-              <span>Studio Home: {summary?.studio_home_effective ?? '—'}</span>
+            <div className="topbar-actions">
+              <button className="secondary" onClick={() => setShowCmdK(true)} title="⌘K">🔎 Buscar</button>
+              <button className="secondary" onClick={() => setShowMarket(true)}>🛒 Marketplace</button>
+              <button className="secondary" onClick={() => setShowWorkflows(true)}>🔗 Workflows</button>
             </div>
-          </header>
-
-          <section className="grid two">
-            <article className="card">
-              <h3>Resumen</h3>
-              <dl className="kv-list">
-                <div><dt>App</dt><dd>{summary?.app_name ?? '—'} v{summary?.app_version ?? '—'}</dd></div>
-                <div><dt>Solicitado</dt><dd>{summary?.studio_home ?? '—'}</dd></div>
-                <div><dt>Efectivo</dt><dd>{summary?.studio_home_effective ?? '—'} {summary?.using_fallback && <span className="pill" style={{background:'rgba(255,165,0,0.18)',color:'#ffcd80',borderColor:'rgba(255,165,0,0.3)'}}>fallback</span>}</dd></div>
-                <div><dt>Settings</dt><dd>{summary?.settings_file ?? '—'}</dd></div>
-              </dl>
-            </article>
-
-            <article className="card">
-              <h3>Estado</h3>
-              <p className="muted">{message}</p>
-              <p className="muted">Instaladas: {installedCount} / {tools.length} · En ejecución: {runningIds.size}</p>
-              <ul className="check-list">
-                <li>✅ Disco externo + fallback automático</li>
-                <li>✅ Zona de módulos / reubicación</li>
-                <li>✅ 5 herramientas con scripts</li>
-                <li>✅ Stats en vivo (CPU/RAM/disco)</li>
-              </ul>
-            </article>
-          </section>
-
-          {/* Studio Home + selector de volúmenes */}
-          <section className="card">
-            <div className="section-header">
-              <h3>Studio Home</h3>
-              <span className="muted">Volumen externo recomendado para modelos pesados</span>
-            </div>
-
-            <VolumePicker
-              volumes={volumes}
-              currentPath={summary?.studio_home ?? ''}
-              onPick={(p) => { setStudioHomeInput(p); void saveStudioHome(p); }}
-            />
-
-            <div className="settings-row" style={{ marginTop: 14 }}>
-              <input
-                value={studioHomeInput}
-                onChange={(e) => setStudioHomeInput(e.target.value)}
-                placeholder="/Volumes/ChofyStudioAPFS/ChofyAIStudio"
-              />
-              <button onClick={() => saveStudioHome()}>Guardar ruta personalizada</button>
-            </div>
-            {saveMessage && <p className="muted" style={{ marginTop: 8 }}>{saveMessage}</p>}
-          </section>
+          </div>
 
           {/* Cola */}
           {queueVisible && queue.length > 0 && (
@@ -2156,9 +2363,6 @@ export default function App() {
               </div>
             </section>
           )}
-
-          {/* Orphan banner */}
-          <OrphanBanner orphans={orphans} onResolved={() => { void reloadOrphans(); void reloadTools(); }} />
 
           {/* Logs viewer panel */}
           {viewingLogsFor && (() => {

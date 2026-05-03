@@ -475,6 +475,31 @@ pub fn delete_workflow(app: AppHandle, id: String) -> Result<ActionResult, Strin
 }
 
 #[tauri::command]
+pub fn run_doctor(app: AppHandle, studio_home: Option<String>) -> Result<String, String> {
+    let script_path = match repo_root() {
+        Some(root) => root.join("scripts").join("mac").join("doctor.sh"),
+        None => app.path().resolve("scripts/mac/doctor.sh", BaseDirectory::Resource).map_err(|e| e.to_string())?,
+    };
+    if !script_path.exists() {
+        return Err(format!("doctor.sh no existe en {}", script_path.display()));
+    }
+    let target = studio_home.unwrap_or_else(default_studio_home);
+    let out = Command::new("bash")
+        .arg(&script_path)
+        .arg(&target)
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    let mut combined = stdout;
+    if !stderr.is_empty() {
+        combined.push_str("\n--- stderr ---\n");
+        combined.push_str(&stderr);
+    }
+    Ok(combined)
+}
+
+#[tauri::command]
 pub fn list_workflows(app: AppHandle) -> Result<Vec<serde_json::Value>, String> {
     let dir = workflows_dir(&app)?;
     if !dir.exists() {
