@@ -1,3 +1,5 @@
 {
-  "studio_home": "/Volumes/ORICO/ChofyIA/ChofyAIStudio"
+  "studio_home": "/Volumes/ChofyAIStudio",
+  "tool_overrides": {},
+  "fallback_home": null
 }

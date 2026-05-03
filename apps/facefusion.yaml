@@ -7,10 +7,11 @@ description: Face swap y utilidades de video/cara.
 platforms:
   - mac-arm64
 recommended: true
+default_port: 7862
 studio_home_subdir: tools/facefusion
 install_script: scripts/mac/install-facefusion.sh
 run:
-  command: source env/bin/activate && cd source && python facefusion.py run --open-browser
+  command: source env/bin/activate && cd source && GRADIO_SERVER_PORT=7862 GRADIO_SERVER_NAME=127.0.0.1 python facefusion.py run
 installed_if:
   - source/.git
   - env

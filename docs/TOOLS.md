@@ -13,7 +13,7 @@
 |:-:|:---|:---|:---:|:---:|:---:|:---|
 | 1 | 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | `python` | ✅ | `install-qwen3-tts.sh` |
 | 2 | 🎙️ **whisper.cpp** | ASR | `8178` | `binary` | — | `install-whispercpp.sh` |
-| 3 | 🎬 **FaceFusion** | Video / Cara | — | `python` | ✅ | `install-facefusion.sh` |
+| 3 | 🎬 **FaceFusion** | Video / Cara | `7862` | `python` (conda) | — | `install-facefusion.sh` |
 | 4 | 🎵 **AceForge** | Música | `5056` | `python` | ✅ | `install-aceforge.sh` |
 | 5 | 🖼️ **ComfyUI** | Imagen | `8188` | `python` | ✅ | `install-comfyui.sh` |
 
@@ -103,8 +103,9 @@ scripts/mac/install-facefusion.sh
 ### Observaciones
 
 - depende de `ffmpeg`
-- crea un `venv` local
-- usa `python install.py --onnxruntime default`
+- **requiere `conda`** — su `install.py` aborta con `conda is not activated` si no detecta `CONDA_PREFIX`. El `env` debe ser un environment **conda**, no un `venv` plano. Ver [`TROUBLESHOOTING.md` § 11](TROUBLESHOOTING.md#-11-facefusion-conda-is-not-activated)
+- usa `python install.py --onnxruntime default` para descargar pesos ONNX (~400 MB en el primer run)
+- **puerto `7862`** (Gradio) — declarado vía `GRADIO_SERVER_PORT=7862` para no chocar con Qwen3-TTS (`:7860`)
 
 ---
 

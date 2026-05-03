@@ -44,6 +44,44 @@ async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Prom
   try { return await invoke<T>(cmd, args); } catch { return null; }
 }
 
+function fmtElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const mm = Math.floor(s / 60), ss = s % 60;
+  return `${mm}:${ss.toString().padStart(2, '0')}`;
+}
+
+type LineParse = { phase?: string; progressPct?: number; speed?: string; eta?: string };
+function parseInstallLine(prev: LineParse, line: string): LineParse {
+  const out: LineParse = { ...prev };
+  const stripped = line.replace(/\x1b\[[0-9;]*m/g, '');
+
+  if (/^Clonando|^Cloning into/i.test(stripped)) out.phase = 'Clonando repositorio';
+  else if (/Receiving objects:\s+(\d+)%/i.test(stripped)) {
+    const m = stripped.match(/Receiving objects:\s+(\d+)%/i)!;
+    out.phase = 'Descargando objetos git'; out.progressPct = +m[1];
+  }
+  else if (/Resolving deltas:\s+(\d+)%/i.test(stripped)) {
+    const m = stripped.match(/Resolving deltas:\s+(\d+)%/i)!;
+    out.phase = 'Resolviendo deltas'; out.progressPct = +m[1];
+  }
+  else if (/Creating virtual environment|Creando venv/i.test(stripped)) out.phase = 'Creando entorno Python';
+  else if (/Resolved \d+ packages|Installing collected|Downloading|Installed \d+ packages/i.test(stripped)) out.phase = 'Instalando dependencias Python';
+  else if (/^\[\s*(\d+)%\]/.test(stripped)) {
+    const m = stripped.match(/^\[\s*(\d+)%\]/)!;
+    out.phase = 'Compilando (cmake/make)'; out.progressPct = Math.min(+m[1], 100);
+  }
+  else if (/Linking CXX|Linking C /i.test(stripped)) out.phase = 'Enlazando binarios';
+  else if (/Downloading .*model|saved in.*\.bin|Downloading ggml/i.test(stripped)) out.phase = 'Descargando modelo';
+  else if (/^\s*(\d{1,3})\s+\d+[KMG]?\s+(\d{1,3})\s+\d+[KMG]?\s+\d+\s+\d+\s+(\d+[KMG]?)\s/.test(stripped)) {
+    const m = stripped.match(/^\s*(\d{1,3})\s+(\d+[KMG]?)\s+(\d{1,3})\s+(\d+[KMG]?)\s+\d+\s+\d+\s+(\d+[KMG]?)/)!;
+    out.progressPct = +m[1];
+    out.speed = `${m[5]}B/s`;
+  }
+  else if (/INSTALL_OK\b/.test(stripped)) { out.phase = 'Listo'; out.progressPct = 100; }
+
+  return out;
+}
+
 // ─── Componentes ─────────────────────────────────────────────────────────────
 function HealthDot({ health }: { health?: HealthResult }) {
   if (!health) return null;
@@ -57,7 +95,16 @@ function HealthDot({ health }: { health?: HealthResult }) {
   );
 }
 
+const APP_STARTED_AT = Date.now();
+
 function StatusBar({ stats, summary }: { stats: SystemStats | null; summary: SystemSummary | null }) {
+  // Re-render cada 30s para que Uptime de la app avance
+  const [, setT] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setT((n) => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   if (!stats) {
     return (
       <footer className="statusbar">
@@ -69,8 +116,10 @@ function StatusBar({ stats, summary }: { stats: SystemStats | null; summary: Sys
   const memPct = stats.mem_total_bytes ? Math.round((stats.mem_used_bytes / stats.mem_total_bytes) * 100) : 0;
   const diskUsed = stats.disk_total_bytes - stats.disk_free_bytes;
   const diskPct = stats.disk_total_bytes ? Math.round((diskUsed / stats.disk_total_bytes) * 100) : 0;
-  const upH = Math.floor(stats.uptime_secs / 3600);
-  const upM = Math.floor((stats.uptime_secs % 3600) / 60);
+  // Uptime = tiempo desde que esta sesión de la app abrió
+  const appUpSecs = Math.floor((Date.now() - APP_STARTED_AT) / 1000);
+  const upH = Math.floor(appUpSecs / 3600);
+  const upM = Math.floor((appUpSecs % 3600) / 60);
 
   return (
     <footer className="statusbar">
@@ -95,7 +144,7 @@ function StatusBar({ stats, summary }: { stats: SystemStats | null; summary: Sys
       </span>
       <span className="sep">│</span>
       <span className="stat">
-        <span className="stat-label">Uptime</span>
+        <span className="stat-label" title="Tiempo de esta sesión de ChofyAI Studio">App</span>
         <span>{upH}h {upM}m</span>
       </span>
       {summary?.using_fallback && (
@@ -162,6 +211,8 @@ export default function App() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isQueueRunning, setIsQueueRunning] = useState(false);
   const [queueVisible, setQueueVisible] = useState(false);
+  const [viewingTool, setViewingTool] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const progressRef = useRef<Record<string, string[]>>({});
 
   // ─── Carga inicial ─────────────────────────────────────────────────────────
@@ -215,37 +266,72 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Re-render cada 1s mientras hay instalación activa (para elapsed time)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const hasActive = queue.some((q) => q.status === 'installing');
+    if (!hasActive) return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [queue]);
+
+  // Auto-refresh de tools cada 8s para detectar instalaciones lanzadas desde CLI
+  useEffect(() => {
+    if (!inTauri) return;
+    const id = setInterval(() => { void reloadTools(); }, 8000);
+    return () => clearInterval(id);
+  }, []);
+
   // Eventos de instalación
   useEffect(() => {
     if (!inTauri) return;
     const unP = listen<InstallEvent>('install-progress', (event) => {
       const { tool_id, line } = event.payload;
-      progressRef.current[tool_id] = [...(progressRef.current[tool_id] ?? []), line];
-      setQueue((prev) => prev.map((q) => q.toolId === tool_id ? { ...q, lines: progressRef.current[tool_id] } : q));
+      const arr = progressRef.current[tool_id] ?? [];
+      arr.push(line);
+      if (arr.length > 400) arr.splice(0, arr.length - 400);
+      progressRef.current[tool_id] = arr;
+      setQueue((prev) => prev.map((q) => {
+        if (q.toolId !== tool_id) return q;
+        const parsed = parseInstallLine({ phase: q.phase, progressPct: q.progressPct, speed: q.speed, eta: q.eta }, line);
+        return { ...q, lines: arr.slice(-30), ...parsed };
+      }));
     });
     const unD = listen<InstallEvent>('install-done', (event) => {
       const { tool_id, line } = event.payload;
       const ok = line.startsWith('OK:');
-      setQueue((prev) => prev.map((q) => q.toolId === tool_id ? { ...q, status: ok ? 'done' : 'failed', message: line } : q));
+      setQueue((prev) => prev.map((q) => q.toolId === tool_id ? {
+        ...q, status: ok ? 'done' : 'failed', message: line, endedAt: Date.now(),
+        progressPct: ok ? 100 : q.progressPct, phase: ok ? 'Listo' : (q.phase ?? 'Error'),
+      } : q));
+      void reloadTools();
     });
     return () => { void unP.then((fn) => fn()); void unD.then((fn) => fn()); };
   }, []);
 
-  // Health periódico
+  // Health periódico — CADA tool con puerto (no solo runningIds)
   useEffect(() => {
-    if (!inTauri || runningIds.size === 0) return;
-    const interval = setInterval(async () => {
-      for (const toolId of runningIds) {
-        const result = await tauriInvoke<HealthResult>('health_check_tool', { toolId });
+    if (!inTauri || tools.length === 0) return;
+    const probe = async () => {
+      for (const t of tools) {
+        if (!t.default_port) continue;
+        const result = await tauriInvoke<HealthResult>('health_check_tool', { toolId: t.id });
         if (!result) continue;
-        setHealth((prev) => ({ ...prev, [toolId]: result }));
-        if (!result.running && !result.port_open) {
-          setRunningIds((prev) => { const s = new Set(prev); s.delete(toolId); return s; });
+        setHealth((prev) => ({ ...prev, [t.id]: result }));
+        if (result.running || result.port_open) {
+          setRunningIds((prev) => prev.has(t.id) ? prev : new Set(prev).add(t.id));
+        } else {
+          setRunningIds((prev) => {
+            if (!prev.has(t.id)) return prev;
+            const s = new Set(prev); s.delete(t.id); return s;
+          });
         }
       }
-    }, 5000);
+    };
+    void probe();
+    const interval = setInterval(probe, 5000);
     return () => clearInterval(interval);
-  }, [runningIds]);
+  }, [tools]);
 
   const installedCount = useMemo(() => tools.filter((t) => t.installed).length, [tools]);
 
@@ -365,7 +451,10 @@ export default function App() {
     for (const item of queue) {
       if (item.status !== 'pending') continue;
       progressRef.current[item.toolId] = [];
-      setQueue((prev) => prev.map((q) => q.toolId === item.toolId ? { ...q, status: 'installing', lines: [] } : q));
+      setQueue((prev) => prev.map((q) => q.toolId === item.toolId ? {
+        ...q, status: 'installing', lines: [], startedAt: Date.now(), endedAt: undefined,
+        progressPct: 0, phase: 'Iniciando…', source: 'ui',
+      } : q));
       const r = await tauriInvoke<ActionResult>('install_tool', { toolId: item.toolId });
       if (!r) {
         setQueue((prev) => prev.map((q) => q.toolId === item.toolId ? { ...q, status: 'failed', message: 'Sin backend' } : q));
@@ -480,34 +569,106 @@ export default function App() {
                 </div>
               </div>
               <div className="queue-list">
-                {queue.map((item) => (
-                  <div key={item.toolId} className={`queue-item queue-${item.status}`}>
-                    <span className="queue-icon">
-                      {item.status === 'pending' && '⏳'}
-                      {item.status === 'installing' && '🔄'}
-                      {item.status === 'done' && '✅'}
-                      {item.status === 'failed' && '❌'}
-                    </span>
-                    <div className="queue-info">
-                      <strong>{item.name}</strong>
-                      {item.message && <p className="muted">{item.message}</p>}
+                {queue.map((item) => {
+                  const elapsedMs = item.startedAt
+                    ? (item.endedAt ?? Date.now()) - item.startedAt : 0;
+                  const pct = Math.max(0, Math.min(100, item.progressPct ?? 0));
+                  return (
+                    <div key={item.toolId} className={`queue-item queue-${item.status}`}>
+                      <div className="queue-row">
+                        <span className="queue-icon">
+                          {item.status === 'pending' && '⏳'}
+                          {item.status === 'installing' && <span className="spin">🔄</span>}
+                          {item.status === 'done' && '✅'}
+                          {item.status === 'failed' && '❌'}
+                        </span>
+                        <div className="queue-info">
+                          <div className="queue-title-row">
+                            <strong>{item.name}</strong>
+                            {item.phase && <span className="queue-phase">{item.phase}</span>}
+                            {item.startedAt && (
+                              <span className="queue-elapsed">⏱ {fmtElapsed(elapsedMs)}</span>
+                            )}
+                            {item.speed && <span className="queue-speed">⇣ {item.speed}</span>}
+                          </div>
+                          {(item.status === 'installing' || (item.progressPct ?? 0) > 0) && (
+                            <div className="queue-progress">
+                              <div className="queue-progress-bar" style={{ width: `${pct}%` }} />
+                              <span className="queue-progress-pct">{pct}%</span>
+                            </div>
+                          )}
+                          {item.message && <p className="muted queue-msg">{item.message}</p>}
+                        </div>
+                      </div>
                       {item.status === 'installing' && item.lines.length > 0 && (
-                        <p className="muted queue-last-line">{item.lines[item.lines.length - 1]}</p>
+                        <pre className="queue-log">
+                          {item.lines.slice(-8).map((l, i) => (
+                            <div key={i} className="queue-log-line">{l.replace(/\x1b\[[0-9;]*m/g, '')}</div>
+                          ))}
+                        </pre>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           )}
+
+          {/* Vista embebida del tool en uso */}
+          {viewingTool && (() => {
+            const t = tools.find((x) => x.id === viewingTool);
+            if (!t || !t.default_port) return null;
+            const url = `http://127.0.0.1:${t.default_port}/`;
+            return (
+              <section className="card embed-card">
+                <div className="section-header">
+                  <h3>👁 {t.name} <span className="muted" style={{fontFamily:'ui-monospace',fontSize:'0.78rem'}}>{url}</span></h3>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="secondary" onClick={() => {
+                      const ifr = document.getElementById('embed-iframe') as HTMLIFrameElement | null;
+                      if (ifr) ifr.src = ifr.src;
+                    }}>🔄 Reload</button>
+                    <button className="secondary" onClick={() => setViewingTool(null)}>✕ Cerrar</button>
+                  </div>
+                </div>
+                <iframe
+                  id="embed-iframe"
+                  title={`${t.name} embed`}
+                  src={url}
+                  className="tool-embed-iframe"
+                />
+              </section>
+            );
+          })()}
 
           {/* Herramientas */}
           <section className="card">
             <div className="section-header">
               <h3>Herramientas</h3>
-              <button className="secondary" onClick={addAllPendingToQueue} disabled={isQueueRunning}>
-                + Añadir pendientes a cola
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="secondary"
+                  disabled={isRefreshing}
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    await Promise.all([reloadTools(), reloadSummary(), reloadStats()]);
+                    // Health de cada tool con puerto
+                    for (const t of tools) {
+                      if (t.default_port) {
+                        const r = await tauriInvoke<HealthResult>('health_check_tool', { toolId: t.id });
+                        if (r) setHealth((prev) => ({ ...prev, [t.id]: r }));
+                        if (r?.running || r?.port_open) setRunningIds((prev) => new Set(prev).add(t.id));
+                      }
+                    }
+                    setIsRefreshing(false);
+                  }}
+                >
+                  {isRefreshing ? '⏳ Refrescando…' : '🔄 Refrescar estado'}
+                </button>
+                <button className="secondary" onClick={addAllPendingToQueue} disabled={isQueueRunning}>
+                  + Añadir pendientes a cola
+                </button>
+              </div>
             </div>
             <div className="tool-grid">
               {tools.map((tool) => {
@@ -565,6 +726,15 @@ export default function App() {
                       {!tool.installed && canInstall && (
                         <button className="secondary" disabled={isQueueRunning || queue.some((q) => q.toolId === tool.id)} onClick={() => addToQueue(tool)}>
                           + Cola
+                        </button>
+                      )}
+                      {tool.default_port && (toolHealth?.port_open || isRunning) && (
+                        <button
+                          className="primary-soft"
+                          onClick={() => setViewingTool(viewingTool === tool.id ? null : tool.id)}
+                          title={`Abrir UI en panel embebido (http://127.0.0.1:${tool.default_port})`}
+                        >
+                          {viewingTool === tool.id ? '✕ Cerrar UI' : '👁 Ver UI'}
                         </button>
                       )}
                       <button className="secondary" disabled={isBusy} onClick={() => handleOpenFolder(tool)} title="Abrir carpeta">📁</button>

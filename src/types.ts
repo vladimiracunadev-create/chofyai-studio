@@ -60,6 +60,13 @@ export type QueueItem = {
   status: QueueStatus;
   message?: string;
   lines: string[];
+  startedAt?: number;
+  endedAt?: number;
+  phase?: string;
+  progressPct?: number;
+  speed?: string;
+  eta?: string;
+  source?: 'ui' | 'cli';
 };
 
 export type VolumeCandidate = {

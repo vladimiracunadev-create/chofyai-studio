@@ -53,6 +53,65 @@ bash scripts/mac/preflight-build.sh
 
 ---
 
+## 💾 Disco externo no-APFS
+
+> [!IMPORTANT]
+> Si tu `studio_home` apunta a un volumen **exFAT, HFS+ o NTFS**, los wheels Python con scripts ejecutables (`numba`, `sympy`, `markupsafe`, `antlr4-python3-runtime`) **fallarán** al instalar. macOS escribe archivos sidecar `._*` (AppleDouble) que `uv` interpreta como entradas reales del wheel.
+
+### Solución: imagen APFS sparsebundle
+
+Crea una imagen elástica APFS dentro del disco externo. Vive en exFAT físicamente, pero internamente es APFS:
+
+```bash
+EXT="/Volumes/MiDiscoExterno"
+SBUNDLE="$EXT/ChofyAIStudio.sparsebundle"
+
+# 1. Crear (100 GB, crece on-demand, ocupa ~35 MB inicial)
+hdiutil create -size 100g -fs APFS -volname ChofyAIStudio \
+  -type SPARSEBUNDLE "$SBUNDLE"
+
+# 2. Montar
+hdiutil attach "$SBUNDLE" -mountpoint /Volumes/ChofyAIStudio -nobrowse
+
+# 3. Apuntar settings al volumen montado
+cat > storage/state/settings.json <<JSON
+{
+  "studio_home": "/Volumes/ChofyAIStudio",
+  "tool_overrides": {},
+  "fallback_home": null
+}
+JSON
+
+# 4. Verifica
+diskutil info /Volumes/ChofyAIStudio | grep "File System Personality"
+# debe imprimir: APFS
+```
+
+### Operaciones comunes
+
+| Acción | Comando |
+|:---|:---|
+| 🔄 Re-montar al boot/reconectar disco | `hdiutil attach "$SBUNDLE" -mountpoint /Volumes/ChofyAIStudio -nobrowse` |
+| ⏏️ Desmontar antes de extraer disco | `hdiutil detach /Volumes/ChofyAIStudio` |
+| 📐 Redimensionar (crecer) | `hdiutil resize -size 200g "$SBUNDLE"` |
+| 📉 Redimensionar (achicar — requiere desmontar + compactar) | `hdiutil detach ...; hdiutil compact "$SBUNDLE"; hdiutil resize -size 100g "$SBUNDLE"; hdiutil attach ...` |
+| 📊 Ver tamaño real ocupado | `du -sh "$SBUNDLE"` |
+| 🚚 Mover a otro Mac | copia el `.sparsebundle` y monta en el destino |
+
+> [!TIP]
+> Recomendado **100 GB** para empezar. Las 5 herramientas integradas ocupan ~12 GB; el resto crece con tus modelos descargados. Compacta cada cierto tiempo si borraste mucho contenido.
+
+### Alternativa — SSD interno
+
+Si no necesitas el disco externo, apunta `studio_home` a `~/ChofyAIStudio` (APFS nativo, funciona out-of-the-box):
+
+```bash
+echo '{"studio_home":"~/ChofyAIStudio","tool_overrides":{},"fallback_home":null}' \
+  > storage/state/settings.json
+```
+
+---
+
 ## 🚀 Instalación paso a paso
 
 ### 1️⃣ Clonar el proyecto

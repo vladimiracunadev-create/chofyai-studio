@@ -163,6 +163,133 @@ bash scripts/mac/cleanup-tool.sh "$HOME/ChofyAIStudio" "qwen3-tts"
 
 ---
 
+## 🎬 11. FaceFusion: "conda is not activated"
+
+### 🚨 Síntoma
+
+```text
+Installed 4 packages in 4.11s
+ + packaging==26.2
+ + pip==26.1
+conda is not activated
+```
+
+> El `install.py` oficial de FaceFusion aborta si no detecta la variable `CONDA_PREFIX`. No acepta venv plano de Python.
+
+### ✅ Mitigación
+
+1. Instala `miniconda` si no lo tienes (`brew install --cask miniconda` o usa el ya instalado en `/opt/miniconda3`).
+2. Borra el venv fallido y crea un env conda en la ruta esperada:
+
+```bash
+ENV_DIR="$STUDIO_HOME/tools/facefusion/env"
+SOURCE_DIR="$STUDIO_HOME/tools/facefusion/source"
+
+rm -rf "$ENV_DIR"
+source /opt/miniconda3/etc/profile.d/conda.sh
+conda create -y --prefix "$ENV_DIR" python=3.11 conda-forge::pip
+conda activate "$ENV_DIR"
+cd "$SOURCE_DIR"
+python install.py --onnxruntime default
+```
+
+1. Para arrancar, usa siempre `conda activate "$ENV_DIR"` antes de `python facefusion.py run`.
+
+> [!TIP]
+> El manifest `apps/facefusion.yaml` declara `default_port: 7862` con `GRADIO_SERVER_PORT=7862` en el `run.command` para evitar chocar con Qwen3-TTS (`:7860`).
+
+---
+
+## 💾 12. exFAT / HFS+ rompen wheels Python (`._*` AppleDouble)
+
+### 🚨 Síntoma
+
+```text
+error: Failed to install: numba-0.65.1-cp310-cp310-macosx_12_0_arm64.whl
+  Caused by: failed to open file `.../site-packages/numba-0.65.1.data/scripts/._numba`:
+  No such file or directory (os error 2)
+```
+
+> Los volúmenes no-APFS (exFAT, HFS+, NTFS) crean archivos sidecar `._*` (AppleDouble) que `uv` interpreta como entradas reales del wheel y luego no encuentra. Afecta a `numba`, `sympy`, `antlr4-python3-runtime`, `markupsafe` y otros wheels que contienen scripts ejecutables.
+
+### ✅ Mitigación recomendada — APFS sparsebundle
+
+Crea una imagen elástica APFS dentro del disco externo. Físicamente vive en exFAT, internamente es APFS:
+
+```bash
+# 1. Detach previo si existía
+hdiutil detach /Volumes/ChofyAIStudio 2>/dev/null
+
+# 2. Crear sparsebundle (100 GB, crece on-demand)
+hdiutil create -size 100g -fs APFS -volname ChofyAIStudio \
+  -type SPARSEBUNDLE \
+  /Volumes/MiDiscoExterno/ChofyAIStudio.sparsebundle
+
+# 3. Montar
+hdiutil attach /Volumes/MiDiscoExterno/ChofyAIStudio.sparsebundle \
+  -mountpoint /Volumes/ChofyAIStudio -nobrowse
+
+# 4. Apuntar settings al volumen montado
+cat > storage/state/settings.json <<JSON
+{
+  "studio_home": "/Volumes/ChofyAIStudio",
+  "tool_overrides": {},
+  "fallback_home": null
+}
+JSON
+```
+
+| Operación | Cómo |
+|:---|:---|
+| Redimensionar | `hdiutil compact <bundle>` + `hdiutil resize -size 200g <bundle>` |
+| Desmontar | `hdiutil detach /Volumes/ChofyAIStudio` |
+| Re-montar | `hdiutil attach <bundle> -mountpoint /Volumes/ChofyAIStudio -nobrowse` |
+| Auto-mount al boot | crear LaunchAgent (opcional) |
+
+> [!NOTE]
+> El sparsebundle es portátil: cópialo a otro Mac y monta igual. El doctor (`bash scripts/mac/doctor.sh "$STUDIO_HOME"`) confirmará `File System: APFS` cuando esté correctamente montado.
+
+### Alternativa — usar SSD interno
+
+```bash
+echo '{"studio_home":"~/ChofyAIStudio","tool_overrides":{},"fallback_home":null}' > storage/state/settings.json
+```
+
+Internal APFS funciona out-of-the-box. Útil si el disco externo no es crítico.
+
+---
+
+## 🔌 13. Colisión de puertos entre tools
+
+### 🚨 Síntoma
+
+Una de las herramientas no aparece como activa, log dice:
+
+```text
+OSError: [Errno 48] Address already in use
+```
+
+### ✅ Asignación oficial
+
+| Tool | Puerto |
+|:---|:---:|
+| AceForge | `5056` |
+| Qwen3-TTS | `7860` |
+| FaceFusion | `7862` |
+| whisper-server | `8178` |
+| ComfyUI | `8188` |
+
+### Cambiar manualmente
+
+- **Gradio (FaceFusion / AceForge)**: `GRADIO_SERVER_PORT=NNNN python ...`
+- **Uvicorn (Qwen3-TTS)**: `--port NNNN`
+- **ComfyUI**: `python main.py --port NNNN`
+- **whisper-server**: `--port NNNN`
+
+Después actualiza `default_port: NNNN` en el manifest YAML correspondiente para que la UI pruebe el health en el puerto correcto.
+
+---
+
 ## 🆘 No encuentro mi error aquí
 
 - 🩺 Ejecuta `bash scripts/mac/doctor.sh "$STUDIO_HOME"` y mira el output completo.

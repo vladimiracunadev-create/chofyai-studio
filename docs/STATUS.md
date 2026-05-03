@@ -2,17 +2,18 @@
 
 > **Snapshot técnico — qué funciona hoy, qué está pendiente y con qué versiones se ha verificado.**
 
-[![Versión](https://img.shields.io/badge/versión-0.4.0--dev-7c5cff)](../CHANGELOG.md)
-[![Fase](https://img.shields.io/badge/Fase-4%20activa-2d7a66)](../ROADMAP.md)
-[![Última actualización](https://img.shields.io/badge/Actualizado-2026--04--30-informational)](../CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](../CHANGELOG.md)
+[![Fase](https://img.shields.io/badge/Fase-5%20activa-2d7a66)](../ROADMAP.md)
+[![Última actualización](https://img.shields.io/badge/Actualizado-2026--05--03-informational)](../CHANGELOG.md)
+[![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](../CHANGELOG.md)
 
-> Última actualización: **2026-04-30** · Ver [CHANGELOG](../CHANGELOG.md) para historial · Ver [ROADMAP](../ROADMAP.md) para fases futuras.
+> Última actualización: **2026-05-03** · Ver [CHANGELOG](../CHANGELOG.md) para historial · Ver [ROADMAP](../ROADMAP.md) para fases futuras.
 
 ---
 
 ## 🏷️ Versión del repositorio
 
-**`v0.4.0-dev`** — Fase 4 implementada: disco dual, zona de módulos, stats en vivo, ComfyUI operativo y empaquetado `.app` ad-hoc.
+**`v0.5.0-dev`** — Fase 5 en curso: cola de instalación profesional, vista embebida, sparsebundle APFS, 5/5 tools verificadas en runtime.
 
 ---
 
@@ -36,9 +37,13 @@
 ## 💾 Studio Home configurado
 
 ```text
-Solicitado:  /Volumes/ORICO/ChofyIA/ChofyAIStudio
-Efectivo:    /Volumes/ORICO/ChofyIA/ChofyAIStudio  (fallback: ~/ChofyAIStudio si el volumen no está disponible)
+Solicitado:  /Volumes/ChofyAIStudio        (sparsebundle APFS)
+Físicamente: /Volumes/ORICO/ChofyIA/ChofyAIStudio.sparsebundle  (100 GB elásticos sobre exFAT)
+Fallback:    ~/ChofyAIStudio (APFS interno) si el sparsebundle no está montado
 ```
+
+> [!IMPORTANT]
+> El disco externo `/Volumes/ORICO` es **exFAT** → wheels Python con scripts ejecutables fallan por archivos AppleDouble. La solución oficial del proyecto es una imagen sparsebundle APFS montada desde el disco externo. Ver [`INSTALL_MAC.md` § Disco externo no-APFS](INSTALL_MAC.md#-disco-externo-no-apfs).
 
 ---
 
@@ -55,7 +60,11 @@ Efectivo:    /Volumes/ORICO/ChofyIA/ChofyAIStudio  (fallback: ~/ChofyAIStudio si
 - **Health check visual**: indicador pulsante cuando la herramienta responde en su puerto TCP.
 - **📍 Mover** herramienta a `studio_home/modules/<id>` (o cualquier ruta absoluta) y **↺ Reset ruta** para quitar el override.
 - Abrir carpeta / log de herramienta.
-- **Barra inferior fija** con CPU%, RAM, disco libre, uptime y load average — refresco cada 3 s.
+- **Barra inferior fija** con CPU%, RAM, disco libre, **App** (tiempo de la sesión actual) y load average — refresco cada 3 s, barras proporcionales con gradiente glow.
+- **🆕 Cola de instalación profesional** — fase detectada (`Clonando` / `Compilando` / `Descargando modelo` / `Instalando dependencias`), barra de progreso animada %, MB/s, tiempo `⏱ MM:SS` y mini-terminal con últimas 8 líneas por ítem.
+- **🆕 Vista embebida `<iframe>`** — botón `👁 Ver UI` en cada tool con server activo abre la herramienta dentro de la ventana de ChofyAI Studio (sin saltar al navegador).
+- **🆕 Botón `🔄 Refrescar estado`** + auto-refresh cada 8 s — detecta tools instaladas o arrancadas desde CLI sin relanzar la app.
+- **🆕 Health probe global** — todas las tools con `default_port` se chequean en cada ciclo, no solo las arrancadas desde la UI.
 
 ### 🦀 Backend Rust (comandos Tauri)
 
@@ -79,13 +88,19 @@ Efectivo:    /Volumes/ORICO/ChofyIA/ChofyAIStudio  (fallback: ~/ChofyAIStudio si
 
 ### 🛠️ Herramientas con integración operativa
 
-| Herramienta | Categoría | Puerto | Requisitos | uv ⚡ |
-|:---|:---|:---:|:---|:---:|
-| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | python 3.10 | ✅ |
-| 🎙️ **whisper.cpp** | ASR | `8178` | cmake, curl | — |
-| 🎬 **FaceFusion** | Video / Cara | — | ffmpeg, python 3.x | ✅ |
-| 🎵 **AceForge** | Música | `5056` | ffmpeg, python 3.x | ✅ |
-| 🖼️ **ComfyUI** | Imagen | `8188` | python 3.11/3.10, PyTorch MPS | ✅ |
+Verificado **2026-05-03** — los 5 servicios responden HTTP y son visibles desde el panel embebido en la ventana principal.
+
+| Herramienta | Categoría | Puerto | Estado runtime | Manager Python |
+|:---|:---|:---:|:---:|:---:|
+| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | ✅ HTTP 307 (redirect a /static) | uv ⚡ (python 3.10) |
+| 🎙️ **whisper.cpp** | ASR | `8178` | ✅ HTTP 200 (Metal/MPS) | — (binario nativo) |
+| 🎬 **FaceFusion** | Video / Cara | `7862` | ✅ HTTP 200 (Gradio) | conda (python 3.11) |
+| 🎵 **AceForge** | Música | `5056` | ✅ HTTP 200 (Gradio) | uv ⚡ (python 3.11) |
+| 🖼️ **ComfyUI** | Imagen | `8188` | ✅ HTTP 200 (PyTorch MPS) | uv ⚡ (python 3.11) |
+
+> [!NOTE]
+> **FaceFusion requiere `conda`** — su `install.py` aborta sin `CONDA_PREFIX`. Ver [`TROUBLESHOOTING.md` § 11](TROUBLESHOOTING.md#-11-facefusion-conda-is-not-activated).
+> **Qwen3-TTS y FaceFusion** comparten familia de puertos Gradio — FaceFusion declara `default_port: 7862` para evitar colisión.
 
 ---
 

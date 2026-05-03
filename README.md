@@ -9,8 +9,9 @@
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![uv](https://img.shields.io/badge/uv-supported-DE5FE9?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
-[![Versión](https://img.shields.io/badge/versión-0.4.0--dev-7c5cff)](CHANGELOG.md)
-[![Status](https://img.shields.io/badge/Estado-Fase%204%20activa-2d7a66)](docs/STATUS.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.0--dev-7c5cff)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/Estado-Fase%205%20activa-2d7a66)](docs/STATUS.md)
+[![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](docs/STATUS.md)
 
 > [!NOTE]
 > ChofyAI Studio **no es** un launcher genérico al estilo Pinokio. Es un orquestador con un set acotado de herramientas creativas, instalación reproducible, control real de procesos y soporte dual de disco (externo + principal con fallback automático).
@@ -23,7 +24,7 @@
 |:---:|:---|:---:|:---:|
 | 🎤 **Voz / TTS** | [Qwen3-TTS](docs/TOOLS.md) | `✅ OPERATIVA` | `7860` |
 | 🎙️ **ASR** | [whisper.cpp](docs/TOOLS.md) | `✅ OPERATIVA` | `8178` |
-| 🎬 **Video / Cara** | [FaceFusion](docs/TOOLS.md) | `✅ OPERATIVA` | — |
+| 🎬 **Video / Cara** | [FaceFusion](docs/TOOLS.md) | `✅ OPERATIVA` | `7862` |
 | 🎵 **Música** | [AceForge](docs/TOOLS.md) | `✅ OPERATIVA` | `5056` |
 | 🖼️ **Imagen** | [ComfyUI](docs/TOOLS.md) | `✅ OPERATIVA` | `8188` |
 
@@ -67,19 +68,30 @@ graph TD
 
 ---
 
-## ✨ Características clave (Fase 4)
+## ✨ Características clave
+
+### 💎 Fase 5 (en curso)
+
+| # | Pilar | Descripción |
+|:-:|:---|:---|
+| 1 | 👁 **Vista embebida** | Botón `👁 Ver UI` en cada tool con server activo abre `<iframe>` inline — todas las herramientas dentro de la ventana principal, sin saltar al navegador |
+| 2 | 📊 **Cola pro** | Barra de progreso animada, fase detectada (Clonando / Compilando / Descargando), MB/s, `⏱ MM:SS` y mini-terminal con últimas 8 líneas |
+| 3 | 🔄 **Refresh inteligente** | Auto-refresh cada 8 s + botón manual. Detecta tools instaladas o arrancadas desde CLI sin reiniciar la app |
+| 4 | 💚 **Health probe global** | TODAS las tools con `default_port` se chequean en cada ciclo, no solo las arrancadas desde la UI |
+| 5 | 💾 **APFS sparsebundle** | Soporte oficial para discos externos exFAT/HFS+ vía imagen APFS elástica — wheels Python funcionan sin trampas |
+
+### 🏗 Fase 4 (consolidada)
 
 | # | Pilar | Descripción |
 |:-:|:---|:---|
 | 1 | 💾 **Disco dual** | `studio_home` solicitado vs. efectivo. Fallback automático a `~/ChofyAIStudio` si el volumen externo no está disponible |
 | 2 | 🔍 **Selector de volúmenes** | Lista `~` y todos los `/Volumes/*` con espacio libre y permisos. Cambio con un clic |
 | 3 | 📍 **Zona de módulos** | Reubica cualquier herramienta a una ruta absoluta arbitraria. Override persistente sin tocar manifests |
-| 4 | 📊 **Stats en vivo** | Barra inferior con CPU, RAM, disco, uptime y load — refresco cada 3 s, sin dependencias extra |
+| 4 | 📊 **Stats en vivo** | Barra inferior con CPU, RAM, disco, App-uptime y load — refresco cada 3 s, sin dependencias extra |
 | 5 | 🚀 **Instalación reproducible** | 5 scripts Bash con streaming de progreso por evento Tauri |
 | 6 | ⏱️ **Cola secuencial** | Encola múltiples herramientas e instala una a una con barra de avance por ítem |
-| 7 | 💚 **Health checks** | PID vivo (`kill -0`) + puerto TCP cada 5 s con indicador visual pulsante |
-| 8 | 🛑 **Control de procesos** | Stop / Restart / Update con SIGTERM y `git pull` interno |
-| 9 | 📦 **`.app` ad-hoc** | Build sin Apple Developer ID para uso personal — listo para distribución cuando consigas la firma |
+| 7 | 🛑 **Control de procesos** | Stop / Restart / Update con SIGTERM y `git pull` interno |
+| 8 | 📦 **`.app` ad-hoc** | Build sin Apple Developer ID para uso personal — listo para distribución cuando consigas la firma |
 
 ---
 

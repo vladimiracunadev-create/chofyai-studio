@@ -11,6 +11,35 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ## 🚧 [Unreleased]
 
+### ☁️ Added (docs — migración a AWS)
+
+- **Suite `docs/cloud/`** con 6 documentos (~1 800 líneas) que cubren el plan completo de migración a AWS: visión global ([`AWS_MIGRATION.md`](docs/cloud/AWS_MIGRATION.md)), arquitectura objetivo con diagramas Mermaid ([`AWS_ARCHITECTURE.md`](docs/cloud/AWS_ARCHITECTURE.md)), mapa de 22 servicios ([`AWS_SERVICES.md`](docs/cloud/AWS_SERVICES.md)), análisis de costos por escenario ([`AWS_COSTS.md`](docs/cloud/AWS_COSTS.md)), modelo de seguridad y hardening ([`AWS_SECURITY.md`](docs/cloud/AWS_SECURITY.md)), guía hands-on con Terraform ([`AWS_STEP_BY_STEP.md`](docs/cloud/AWS_STEP_BY_STEP.md)).
+- **README principal** con sección dedicada y enlace en la tabla "Por dónde empezar".
+
+### 💎 Added (Fase 5 — UX profesional + sparsebundle APFS)
+
+- **Cola de instalación profesional**: parser inteligente que extrae fase (`Clonando` / `Compilando` / `Descargando modelo` / `Instalando dependencias Python`), porcentaje, velocidad de descarga (MB/s) y tiempo transcurrido en vivo desde los logs `cmake`, `git`, `curl` y `uv`. Render con barra de progreso animada (gradiente violeta→verde), badges por fase, contador `⏱ MM:SS` y mini-terminal con las últimas 8 líneas (estilo `pre` monoespacio).
+- **Auto-refresh de tools cada 8 s** — la UI detecta instalaciones lanzadas desde CLI sin necesidad de relanzar la app.
+- **Health probe de TODAS las tools con puerto** (no solo `runningIds`) — el `🟢` aparece para servicios externos arrancados manualmente o por scripts.
+- **Botón `🔄 Refrescar estado`** en la sección Herramientas para forzar `list_tools` + health check inmediato.
+- **Vista embebida `<iframe>` en la ventana principal**: nuevo botón `👁 Ver UI` en cada tool con server activo abre un panel inline cargando `http://127.0.0.1:<port>/` — todo dentro de ChofyAI Studio, sin saltar al navegador. Botón `🔄 Reload` por iframe.
+- **Bottom bar arreglado**: `.stat-bar` cambia de `<span>` inline (que ignoraba `width: 60px`) a `inline-block` 90 px con `display: block` en `.stat-bar-fill` → la barra ahora pinta proporción real de CPU/RAM/Disco con `box-shadow` glow.
+- **Métrica "App"** en lugar de "Uptime" del sistema: cuenta el tiempo transcurrido desde que la sesión actual de ChofyAI Studio abrió (timestamp en JS, no `kern.boottime`). Se refresca cada 30 s.
+
+### 🐛 Fixed (Fase 5)
+
+- **exFAT incompatible con wheels Python**: discos formateados exFAT/HFS+ generan archivos AppleDouble (`._*`) que rompen la extracción de wheels (`numba`, `sympy`, `antlr4-python3-runtime`) por `uv`. Documentado y resuelto vía **imagen APFS sparsebundle** (`hdiutil create -size Ng -fs APFS -volname ChofyAIStudio -type SPARSEBUNDLE`) montada desde el disco externo. La imagen es elástica (crece on-demand), portátil entre Macs y respeta semántica APFS para todo el contenido. Ver [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md#-disco-externo-no-apfs).
+- **FaceFusion requiere conda**: su `install.py` aborta con `conda is not activated` si no detecta `CONDA_PREFIX`. El script `install-facefusion.sh` ahora documenta el requisito y se incluye runbook para crear un env conda en la ruta esperada (`<studio_home>/tools/facefusion/env`). Ver [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md#-11-facefusion-conda-is-not-activated).
+- **Colisión de puerto Qwen3-TTS / FaceFusion**: ambos usaban `:7860` por defecto. `apps/facefusion.yaml` ahora declara `default_port: 7862` y el `run.command` exporta `GRADIO_SERVER_PORT=7862` y `GRADIO_SERVER_NAME=127.0.0.1`.
+
+### 📚 Docs
+
+- **`docs/INSTALL_MAC.md`** ampliado con sección "Disco externo no-APFS" + receta de sparsebundle.
+- **`docs/TROUBLESHOOTING.md`** con 3 nuevas entradas: 11 (conda en FaceFusion), 12 (exFAT y AppleDouble en wheels Python), 13 (colisión de puertos).
+- **`docs/STATUS.md`** actualizado al estado real con 5/5 tools verificadas en runtime + URLs locales.
+
+---
+
 ### ✨ Added (Fase 4 — disco dual, zona de módulos, stats y empaquetado ad-hoc)
 
 - **Resolución dual de `studio_home`**: `resolve_effective_home` decide en runtime si el path solicitado es usable; si el volumen externo está desmontado o sin permisos, fallback automático a `~/ChofyAIStudio` (configurable vía `fallback_home`). El `SystemSummary` expone `studio_home`, `studio_home_effective` y `using_fallback`.
