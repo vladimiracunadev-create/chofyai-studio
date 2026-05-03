@@ -1792,3 +1792,92 @@ textarea:focus {
 .kv-list div:last-child { border-bottom: none; }
 .kv-list dt { color: var(--text-muted); font-weight: 500; }
 .kv-list dd { margin: 0; color: var(--text); word-break: break-all; }
+
+/* ════════════════════════════════════════════════════════════════
+   FIX: sidebar bottom no debe quedar oculta tras la statusbar
+   ════════════════════════════════════════════════════════════════ */
+.sidebar { padding-bottom: 56px; }   /* ~ alto de la statusbar */
+.sidebar nav { padding-bottom: 8px; }
+
+/* ════════════════════════════════════════════════════════════════
+   WORKSPACE: vista del tool en lugar del grid Herramientas
+   ════════════════════════════════════════════════════════════════ */
+.workspace-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+}
+.workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
+  border-bottom: 1px solid var(--border);
+}
+.workspace-back {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.workspace-back:hover {
+  background: rgba(124,92,255,0.16);
+  border-color: rgba(124,92,255,0.4);
+  color: var(--text);
+  transform: none;
+  box-shadow: none;
+}
+.workspace-sep { color: var(--text-subtle); font-weight: 300; }
+.workspace-icon { font-size: 1.2rem; }
+.workspace-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.workspace-url {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.workspace-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.workspace-actions button {
+  font-size: 0.78rem;
+  padding: 6px 10px;
+}
+.workspace-body {
+  flex: 1;
+  background: #fff;
+  min-height: 0;
+}
+.workspace-iframe {
+  width: 100%;
+  height: calc(100vh - 240px);  /* alto generoso, deja sidebar y topbar visibles */
+  min-height: 480px;
+  border: 0;
+  display: block;
+  background: #fff;
+}
+
+/* En light theme, header del workspace mantiene look pero más limpio */
+:root[data-theme="light"] .workspace-header {
+  background: linear-gradient(180deg, #fafbfd 0%, #ffffff 100%);
+}

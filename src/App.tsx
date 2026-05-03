@@ -2402,34 +2402,42 @@ export default function App() {
             </section>
           )}
 
-          {/* Vista embebida del tool en uso */}
-          {viewingTool && (() => {
-            const t = tools.find((x) => x.id === viewingTool);
-            if (!t || !t.default_port) return null;
-            const url = `http://127.0.0.1:${t.default_port}/`;
+          {/* Sección principal: Herramientas (grid) ó Vista del tool (iframe en lugar del grid) */}
+          {viewingTool ? (() => {
+            const tool = tools.find((x) => x.id === viewingTool);
+            if (!tool || !tool.default_port) { setViewingTool(null); return null; }
+            const url = `http://127.0.0.1:${tool.default_port}/`;
             return (
-              <section className="card embed-card">
-                <div className="section-header">
-                  <h3>👁 {t.name} <span className="muted" style={{fontFamily:'ui-monospace',fontSize:'0.78rem'}}>{url}</span></h3>
-                  <div style={{ display: 'flex', gap: 8 }}>
+              <section className="card workspace-card">
+                <div className="workspace-header">
+                  <button className="workspace-back" onClick={() => setViewingTool(null)} title="Volver a Herramientas">
+                    ← {t('section.tools')}
+                  </button>
+                  <span className="workspace-sep">/</span>
+                  <span className="workspace-icon">{tool.icon || CATEGORY_EMOJI[tool.category] || '🧩'}</span>
+                  <h3 className="workspace-title">{tool.name}</h3>
+                  <span className="workspace-url">{url}</span>
+                  <div className="workspace-actions">
+                    <button className="secondary" onClick={() => handleRestart(tool)} title="Reiniciar el servicio">🔄 {t('btn.restart')}</button>
                     <button className="secondary" onClick={() => {
                       const ifr = document.getElementById('embed-iframe') as HTMLIFrameElement | null;
                       if (ifr) ifr.src = ifr.src;
-                    }}>🔄 Reload</button>
-                    <button className="secondary" onClick={() => setViewingTool(null)}>✕ Cerrar</button>
+                    }} title="Recargar el iframe">↻ Reload UI</button>
+                    <button className="secondary" onClick={() => window.open(url, '_blank')} title="Abrir en navegador">↗</button>
+                    <button className="secondary" onClick={() => setViewingTool(null)} title="Cerrar y volver">✕</button>
                   </div>
                 </div>
-                <iframe
-                  id="embed-iframe"
-                  title={`${t.name} embed`}
-                  src={url}
-                  className="tool-embed-iframe"
-                />
+                <div className="workspace-body">
+                  <iframe
+                    id="embed-iframe"
+                    title={`${tool.name} embed`}
+                    src={url}
+                    className="workspace-iframe"
+                  />
+                </div>
               </section>
             );
-          })()}
-
-          {/* Herramientas */}
+          })() : (
           <section className="card">
             <div className="section-header">
               <h3>{t('section.tools')}</h3>
@@ -2556,6 +2564,7 @@ export default function App() {
               })}
             </div>
           </section>
+          )}
         </section>
       </main>
 
