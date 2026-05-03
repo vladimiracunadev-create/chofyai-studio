@@ -127,12 +127,12 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         if: steps.check.outputs.skip != 'true'
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         if: steps.check.outputs.skip != 'true'
         with:
           category: "/language:javascript-typescript"
