@@ -8,7 +8,7 @@ description: Workstation musical local-first para Apple Silicon basada en ACE-St
 platforms:
   - mac-arm64
 recommended: true
-default_port: 5056
+default_port: 7857
 studio_home_subdir: tools/aceforge
 install_script: scripts/mac/install-aceforge.sh
 run:

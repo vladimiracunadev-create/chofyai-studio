@@ -67,6 +67,22 @@ fi
 
 mkdir -p "$SOURCE_DIR/training_datasets" "$OUTPUT_DIR" "$INPUT_DIR"
 
+# Parche de puerto: AceForge hardcodea 5056 en music_forge_ui.py, que en macOS
+# colisiona con el servicio "intecom-ps1" que Chrome polea agresivamente y
+# satura los hilos de waitress. Sustituimos por 7857 (rango efímero libre,
+# coherente con aceforge.yaml default_port).
+if [ -f "$SOURCE_DIR/music_forge_ui.py" ]; then
+  # Sustituir todas las referencias a 5056: port=, sock.connect_ex(...,5056),
+  # webbrowser.open("http://127.0.0.1:5056/"), y mensajes de log.
+  sed -i.bak \
+    -e 's/port=5056/port=7857/g' \
+    -e "s/'127.0.0.1', 5056/'127.0.0.1', 7857/g" \
+    -e 's|127\.0\.0\.1:5056|127.0.0.1:7857|g' \
+    "$SOURCE_DIR/music_forge_ui.py"
+  rm -f "$SOURCE_DIR/music_forge_ui.py.bak"
+  echo "[port-patch] AceForge port set to 7857 (avoiding intecom-ps1 conflict)"
+fi
+
 echo
 echo "ACEFORGE_INSTALL_OK"
 echo "Studio Home: $STUDIO_HOME"

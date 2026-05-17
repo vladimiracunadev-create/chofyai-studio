@@ -1,5 +1,6 @@
 {
   "studio_home": "/Volumes/ChofyAIStudio",
   "tool_overrides": {},
-  "fallback_home": null
+  "fallback_home": null,
+  "sparsebundle_path": "/Volumes/ORICO/ChofyIA/ChofyAIStudio.sparsebundle"
 }

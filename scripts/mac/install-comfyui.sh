@@ -14,9 +14,14 @@ SOURCE_DIR="$INSTALL_DIR/source"
 VENV_DIR="$INSTALL_DIR/venv"
 LOG_DIR="$STUDIO_HOME/logs"
 
+# ComfyUI usa nombres SINGULARES (input, output) en su código fuente — los
+# plurales eran un bug histórico: las carpetas externas nunca se enlazaban
+# a las internas, así que los modelos descargados no aparecían en la UI.
 mkdir -p "$INSTALL_DIR" "$LOG_DIR" \
-  "$INSTALL_DIR/inputs" "$INSTALL_DIR/outputs" \
-  "$INSTALL_DIR/models" "$INSTALL_DIR/custom_nodes"
+  "$INSTALL_DIR/input" "$INSTALL_DIR/output" \
+  "$INSTALL_DIR/models" "$INSTALL_DIR/custom_nodes" \
+  "$INSTALL_DIR/models/checkpoints" "$INSTALL_DIR/models/loras" \
+  "$INSTALL_DIR/models/vae" "$INSTALL_DIR/models/controlnet"
 
 for bin in git python3; do
   if ! command -v "$bin" >/dev/null 2>&1; then
@@ -57,12 +62,34 @@ if [ -f "$SOURCE_DIR/requirements.txt" ]; then
   py_install_requirements "$VENV_DIR" "$SOURCE_DIR/requirements.txt"
 fi
 
-# Enlaces simbólicos a las carpetas externas para que ComfyUI las vea
-for sub in models inputs outputs custom_nodes; do
-  if [ ! -e "$SOURCE_DIR/$sub" ] || [ -L "$SOURCE_DIR/$sub" ]; then
-    rm -f "$SOURCE_DIR/$sub"
-    ln -s "$INSTALL_DIR/$sub" "$SOURCE_DIR/$sub"
+# Enlaces simbólicos a las carpetas externas para que ComfyUI las vea.
+# CRÍTICO: ComfyUI crea estos directorios al clonar con placeholders dentro
+# (`put_checkpoints_here`, etc.). Si los dejamos, los modelos descargados
+# al directorio externo no aparecen en la UI. Forzamos symlink siempre,
+# preservando cualquier custom_node que el usuario haya añadido.
+for sub in models input output custom_nodes; do
+  src="$SOURCE_DIR/$sub"
+  dst="$INSTALL_DIR/$sub"
+  # Si es symlink: validar destino correcto, si no rehacerlo
+  if [ -L "$src" ]; then
+    [ "$(readlink "$src")" = "$dst" ] && continue
+    rm -f "$src"
+  elif [ -d "$src" ]; then
+    # Mover contenido relevante al directorio externo antes de reemplazar
+    if [ "$sub" = "custom_nodes" ]; then
+      # Preservar nodos del usuario, descartar placeholders
+      for entry in "$src"/*; do
+        [ -e "$entry" ] || continue
+        base=$(basename "$entry")
+        case "$base" in
+          example_node.py.example|websocket_image_save.py|__pycache__|.gitkeep) ;;
+          *) [ -e "$dst/$base" ] || mv "$entry" "$dst/$base" ;;
+        esac
+      done
+    fi
+    rm -rf "$src"
   fi
+  ln -s "$dst" "$src"
 done
 
 echo

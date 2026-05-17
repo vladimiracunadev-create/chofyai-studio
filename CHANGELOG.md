@@ -9,6 +9,76 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ---
 
+## 🛠 [0.5.1] — 2026-05-17 · Hardening de operatividad
+
+> **Maintenance release**: cierra 10 incidentes detectados al validar
+> funcionalidad end-to-end. Marca el paso a **producto comercializable** con
+> las 5 tools probadas con inferencia real (no solo HTTP boot). Ver
+> [`docs/POSTMORTEM-2026-05-17.md`](docs/POSTMORTEM-2026-05-17.md) para el reporte completo.
+
+### 🐞 Bugs corregidos
+
+| # | Componente | Resumen | Severidad |
+|:---:|---|---|:---:|
+| I1 | Rust runtime | `studio_home` apuntaba a volumen no montado → auto-monta `sparsebundle_path` | 🔴 |
+| I2 | Bash install | `resolve_studio_home` divergía de Rust (no validaba escritura) | 🟠 |
+| I3 | Rust runtime | `start_tool` spawneaba sin chequear `installed_if` | 🟠 |
+| I4 | Rust install | `run_install_script` reportaba OK aunque faltasen artefactos | 🟡 |
+| I5 | Filesystem | ExFAT incompatible con venv/uv → enforcar sparsebundle APFS | 🟠 |
+| I6 | FaceFusion install | `install.py` exigía conda → añadido `--skip-conda` | 🟠 |
+| I7 | ComfyUI install | Symlinks plurales (`inputs/outputs`) no enganchaban | 🟠 |
+| I8 | UX | Cabecera del workspace exponía URL localhost al usuario final | 🟡 |
+| I9 | AceForge | Puerto 5056 colisiona con `intecom-ps1` (Chrome) → migrado a 7857 | 🔴 |
+| I10 | Rust runtime | `start_tool` fallaba con puerto huérfano → pre-flight kill | 🟡 |
+
+### ✨ Mejoras
+
+- **`AppSettings.sparsebundle_path`** (nuevo campo) — ruta a la imagen APFS
+  a montar automáticamente al arranque.
+- **Auto-mount al arranque** — `resolve_effective_home` invoca
+  `hdiutil attach -nobrowse -noverify` si el volumen no está disponible.
+- **Pre-flight de puertos** — `start_tool` mata procesos huérfanos en el
+  puerto destino antes del spawn.
+- **Validación cruzada `installed_if`** pre y post instalación / arranque.
+- **Patch post-clone de AceForge** — `sed` legítimo aplicado al source para
+  sustituir el puerto hardcoded 5056 → 7857.
+
+### 🎨 UX
+
+- Cabecera del workspace embebido ya **no muestra `http://127.0.0.1:PORT/`** al
+  usuario final.
+- Tooltip de `👁 Ver UI` reescrito sin URL técnica.
+
+### 🧪 Verificación end-to-end (inferencia real, no solo HTTP)
+
+| Tool | Inferencia probada | Modelo |
+|---|---|---:|
+| whisper.cpp | Transcripción JFK → texto correcto | 141 MB |
+| ComfyUI | Imagen 256×256 generada con SD1.5 | 4.0 GB |
+| Qwen3-TTS | WAV 221 KB español sintetizado | 7.6 GB |
+| FaceFusion | Gradio + 12 ONNX + API `face_swapper` | ~3 GB |
+| AceForge | `/healthz`=`ok`, modelo `ACE-Step-v1-3.5B` reconocido | 7.7 GB |
+
+### 📦 Modelos descargados en el sparsebundle (~22 GB total)
+
+```text
+whispercpp   141 MB   ggml-base.en
+comfyui      4.0 GB   v1-5-pruned-emaonly.safetensors (SD 1.5)
+qwen3-tts    7.6 GB   3 × MLX (Base 8bit, CustomVoice 8bit, VoiceDesign 8bit)
+facefusion   ~3 GB    24 × onnx (face_swapper, 2dfan4, arcface, etc.)
+aceforge     7.7 GB   ACE-Step-v1-3.5B
+```
+
+### 📚 Documentación
+
+- Nuevo: [`docs/POSTMORTEM-2026-05-17.md`](docs/POSTMORTEM-2026-05-17.md) — 10
+  incidentes con causa raíz y verificación por incidente.
+- Actualizado: `docs/STATUS.md` con la nueva arquitectura de runtime.
+- Actualizado: `docs/TROUBLESHOOTING.md` con entradas para colisión de puertos,
+  sparsebundle desmontado y validación de instalación.
+
+---
+
 ## 🎉 [0.5.0] — 2026-05-03
 
 > **Release Fase 5**: 9 sprints aplicados (UX profesional, sparsebundle APFS, vista embebida,

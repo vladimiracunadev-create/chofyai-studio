@@ -712,14 +712,34 @@ fn is_writable_dir(path: &Path) -> bool {
 }
 
 /// Resuelve el `studio_home` efectivo: si el path solicitado es válido, lo usa;
-/// si no (volumen desmontado, no escribible), cae al fallback (~/ChofyAIStudio).
-/// Crea el directorio si no existe.
+/// si no (volumen desmontado, no escribible), intenta montar un sparsebundle
+/// adyacente (`<studio_home>.sparsebundle`) antes de caer al fallback.
 fn resolve_effective_home(settings: &AppSettings) -> String {
     let requested = PathBuf::from(&settings.studio_home);
     if path_is_usable(&requested) {
         let _ = fs::create_dir_all(&requested);
         return settings.studio_home.clone();
     }
+
+    // Intento de auto-mount: probar (a) ruta explícita en settings, y (b) convención
+    // `<studio_home>.sparsebundle` por si la imagen vive junto al mountpoint.
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Some(p) = settings.sparsebundle_path.as_ref().filter(|s| !s.is_empty()) {
+        candidates.push(PathBuf::from(p));
+    }
+    candidates.push(PathBuf::from(format!("{}.sparsebundle", settings.studio_home)));
+
+    for sparsebundle in candidates.iter().filter(|p| p.exists()) {
+        let _ = Command::new("hdiutil")
+            .args(["attach", "-nobrowse", "-noverify"])
+            .arg(sparsebundle)
+            .output();
+        if path_is_usable(&requested) {
+            let _ = fs::create_dir_all(&requested);
+            return settings.studio_home.clone();
+        }
+    }
+
     let fallback = fallback_home_for(settings);
     let fb_path = PathBuf::from(&fallback);
     let _ = fs::create_dir_all(&fb_path);
@@ -737,6 +757,7 @@ fn load_settings(app: &AppHandle) -> Result<AppSettings, String> {
         studio_home: default_studio_home(),
         tool_overrides: HashMap::new(),
         fallback_home: None,
+        sparsebundle_path: None,
     })
 }
 
@@ -902,6 +923,35 @@ fn run_install_script(
     });
 
     if status.success() {
+        // Post-validación: aunque el script reporte éxito, verificar installed_if.
+        // Si falta algún artefacto, la instalación quedó corrupta (típico: pip falla
+        // a mitad y el venv parcial existe pero no es funcional).
+        let settings = load_settings(app).unwrap_or(AppSettings {
+            studio_home: studio_home.to_string(),
+            tool_overrides: HashMap::new(),
+            fallback_home: None,
+        sparsebundle_path: None,
+        });
+        let install_dir = manifest_install_dir(
+            manifest,
+            &PathBuf::from(studio_home),
+            &settings.tool_overrides,
+        );
+        let installed_if = manifest.installed_if.clone().unwrap_or_default();
+        let missing: Vec<String> = installed_if
+            .iter()
+            .filter(|c| !install_dir.join(c).exists())
+            .cloned()
+            .collect();
+        if !missing.is_empty() {
+            return Err(format!(
+                "Instalación de {} terminó pero faltan artefactos: {}. Revisa {}",
+                manifest.name,
+                missing.join(", "),
+                log_path.display()
+            ));
+        }
+
         Ok(ActionResult {
             ok: true,
             message: format!("Instalacion completada para {}", manifest.name),
@@ -1225,6 +1275,51 @@ pub fn start_tool(
             "No existe la ruta de instalacion: {}",
             install_dir.display()
         ));
+    }
+
+    // Validar installed_if antes de spawn: si falta cualquier artefacto,
+    // la instalación está corrupta o incompleta. Mejor reportar al usuario
+    // que arrancar un proceso que va a morir silenciosamente en bash.
+    let installed_if = manifest.installed_if.clone().unwrap_or_default();
+    let missing: Vec<String> = installed_if
+        .iter()
+        .filter(|c| !install_dir.join(c).exists())
+        .cloned()
+        .collect();
+    if !missing.is_empty() {
+        return Err(format!(
+            "{} no está instalado correctamente. Faltan: {}. Reinstala desde la UI.",
+            manifest.name,
+            missing.join(", ")
+        ));
+    }
+
+    // Pre-flight: si el puerto está ocupado por OTRO proceso (no nuestro registry),
+    // matamos al ocupante en lugar de fallar silenciosamente. Esto evita que el
+    // usuario haga clic en "Iniciar" y vea que "no abre" porque algo dejó residuos.
+    if let Some(port) = manifest.default_port {
+        let our_pids: std::collections::HashSet<u32> = registry
+            .0
+            .lock()
+            .map_err(|e| e.to_string())?
+            .values()
+            .copied()
+            .collect();
+        if let Ok(out) = Command::new("lsof")
+            .args(["-ti", &format!(":{}", port), "-sTCP:LISTEN"])
+            .output()
+        {
+            let s = String::from_utf8_lossy(&out.stdout);
+            for line in s.lines() {
+                if let Ok(pid) = line.trim().parse::<u32>() {
+                    if !our_pids.contains(&pid) {
+                        let _ = Command::new("kill")
+                            .args(["-9", &pid.to_string()])
+                            .output();
+                    }
+                }
+            }
+        }
     }
 
     let logs = log_dir(&effective);

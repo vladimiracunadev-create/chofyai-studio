@@ -1,6 +1,6 @@
 [package]
 name = "chofyai_studio"
-version = "0.5.0"
+version = "0.5.1"
 description = "Launcher local para voz, video, imagen y música en Apple Silicon"
 authors = ["Vladimir Acuña"]
 edition = "2021"

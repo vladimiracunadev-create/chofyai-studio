@@ -47,6 +47,11 @@ pub struct AppSettings {
     /// Path alternativo cuando el principal no está disponible. Si vacío → ~/ChofyAIStudio.
     #[serde(default)]
     pub fallback_home: Option<String>,
+    /// Ruta absoluta a una `.sparsebundle` (APFS) que debe montarse cuando
+    /// `studio_home` no esté disponible. Cuando el filesystem nativo es
+    /// ExFAT/FAT y no soporta venvs/symlinks, la imagen APFS es la única vía.
+    #[serde(default)]
+    pub sparsebundle_path: Option<String>,
 }
 
 /// Resultado de un health check sobre una herramienta.

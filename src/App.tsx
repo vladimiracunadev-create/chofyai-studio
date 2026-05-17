@@ -2405,7 +2405,6 @@ export default function App() {
                   <span className="workspace-sep">/</span>
                   <span className="workspace-icon">{tool.icon || CATEGORY_EMOJI[tool.category] || '🧩'}</span>
                   <h3 className="workspace-title">{tool.name}</h3>
-                  <span className="workspace-url">{url}</span>
                   <div className="workspace-actions">
                     <button className="secondary" onClick={() => handleRestart(tool)} title="Reiniciar el servicio">🔄 {t('btn.restart')}</button>
                     <button className="secondary" onClick={() => {
@@ -2517,7 +2516,7 @@ export default function App() {
                         <button
                           className="primary-soft"
                           onClick={() => setViewingTool(viewingTool === tool.id ? null : tool.id)}
-                          title={`Abrir UI en panel embebido (http://127.0.0.1:${tool.default_port})`}
+                          title="Abrir la interfaz de la herramienta dentro de Chofy"
                         >
                           {viewingTool === tool.id ? '✕ Cerrar UI' : '👁 Ver UI'}
                         </button>

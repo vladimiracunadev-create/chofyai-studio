@@ -49,6 +49,25 @@ PYCODE
   fi
 }
 
+# Comprueba si un path existe y es directorio escribible, o si su padre
+# montado lo es (para poder crearlo). Espejo de path_is_usable() en Rust.
+_path_is_usable() {
+  local p="$1"
+  [ -z "$p" ] && return 1
+  if [ -d "$p" ] && [ -w "$p" ]; then
+    return 0
+  fi
+  # Subir hasta encontrar un ancestro montado y escribible
+  while [ -n "$p" ] && [ "$p" != "/" ]; do
+    p="$(dirname "$p")"
+    if [ -d "$p" ]; then
+      [ -w "$p" ] && return 0
+      return 1
+    fi
+  done
+  return 1
+}
+
 resolve_studio_home() {
   local default_home="${1:-$HOME/ChofyAIStudio}"
   local settings_file="${2:-}"
@@ -59,6 +78,13 @@ resolve_studio_home() {
   fi
 
   if [ -z "$studio_home" ] || [ "$studio_home" = "null" ]; then
+    studio_home="$default_home"
+  fi
+
+  # Si el path no es usable (volumen desmontado / sin permisos), caer al
+  # fallback antes de que el script intente escribir y muera. Mismo
+  # comportamiento que resolve_effective_home() en Rust.
+  if ! _path_is_usable "$studio_home"; then
     studio_home="$default_home"
   fi
 

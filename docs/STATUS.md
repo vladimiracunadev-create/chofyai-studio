@@ -2,19 +2,26 @@
 
 > **Snapshot técnico — qué funciona hoy, qué está pendiente y con qué versiones se ha verificado.**
 
-[![Versión](https://img.shields.io/badge/versión-0.5.0-7c5cff)](../CHANGELOG.md)
-[![Estado](https://img.shields.io/badge/Estado-release-2d7a66)](../ROADMAP.md)
-[![Última actualización](https://img.shields.io/badge/Actualizado-2026--05--03-informational)](../CHANGELOG.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.1-7c5cff)](../CHANGELOG.md)
+[![Estado](https://img.shields.io/badge/Estado-operativo-2d7a66)](../ROADMAP.md)
+[![Última actualización](https://img.shields.io/badge/Actualizado-2026--05--17-informational)](../CHANGELOG.md)
 [![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](../CHANGELOG.md)
+[![Inferencia](https://img.shields.io/badge/Inferencia%20real-5%2F5-brightgreen)](POSTMORTEM-2026-05-17.md)
 [![Tests](https://img.shields.io/badge/Tests-20%2F20-brightgreen)](../CHANGELOG.md)
 
-> Última actualización: **2026-05-03** · Ver [CHANGELOG](../CHANGELOG.md) para historial · Ver [ROADMAP](../ROADMAP.md) para fases futuras.
+> Última actualización: **2026-05-17** · Ver [CHANGELOG](../CHANGELOG.md) para historial · Ver [POSTMORTEM-2026-05-17.md](POSTMORTEM-2026-05-17.md) para detalles del hardening v0.5.1.
 
 ---
 
 ## 🏷️ Versión del repositorio
 
-**`v0.5.0`** — release de **Fase 5** con **9 sprints aplicados**: cola pro, vista embebida, sparsebundle APFS, onboarding wizard, paleta `⌘K`, atajos visibles, tema light/dark/system, security workflow portable, detección de huérfanos, crash log persistente, Marketplace MVP, Workflows + Builder visual con drag&drop, i18n ES/EN, iconos custom y UI overhaul completo. 5/5 tools verificadas en runtime · 20 tests automáticos · 0 errores de lint en 31 docs.
+**`v0.5.1`** — maintenance release con hardening de operatividad: auto-mount
+del sparsebundle al arranque, validación cruzada de `installed_if`, pre-flight
+de puertos huérfanos, patch del puerto AceForge para evitar colisión con
+Chrome `intecom-ps1`, fix de symlinks ComfyUI, UI oculta detalles de transporte
+al usuario final. **5/5 tools probadas con inferencia real (no solo boot HTTP)**.
+
+> 🧭 ¿Solo quieres entender qué fallaba y por qué? → [PORQUE-NO-FUNCIONABA.md](PORQUE-NO-FUNCIONABA.md) (explicación en lenguaje claro, sin jerga).
 
 ---
 
@@ -101,28 +108,35 @@ Fallback:    ~/ChofyAIStudio (APFS interno) si el sparsebundle no está montado
 
 ### 🛠️ Herramientas con integración operativa
 
-Verificado **2026-05-03** — los 5 servicios responden HTTP y son visibles desde el panel embebido en la ventana principal.
+Verificado **2026-05-17** — los 5 servicios responden HTTP **y pasan una
+prueba de inferencia real**, no solo arranque.
 
-| Herramienta | Categoría | Puerto | Estado runtime | Manager Python |
-|:---|:---|:---:|:---:|:---:|
-| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | ✅ HTTP 307 (redirect a /static) | uv ⚡ (python 3.10) |
-| 🎙️ **whisper.cpp** | ASR | `8178` | ✅ HTTP 200 (Metal/MPS) | — (binario nativo) |
-| 🎬 **FaceFusion** | Video / Cara | `7862` | ✅ HTTP 200 (Gradio) | conda (python 3.11) |
-| 🎵 **AceForge** | Música | `5056` | ✅ HTTP 200 (Gradio) | uv ⚡ (python 3.11) |
-| 🖼️ **ComfyUI** | Imagen | `8188` | ✅ HTTP 200 (PyTorch MPS) | uv ⚡ (python 3.11) |
+| Herramienta | Categoría | Puerto | HTTP | Inferencia real | Modelo |
+|:---|:---|:---:|:---:|---|---:|
+| 🎙️ **whisper.cpp** | ASR | `8178` | 200 | Transcribe JFK → texto correcto | 141 MB |
+| 🖼️ **ComfyUI** | Imagen | `8188` | 200 | Genera PNG 256×256 (SD 1.5) | 4.0 GB |
+| 🎤 **Qwen3-TTS** | Voz / TTS | `7860` | 307 | WAV 221 KB español sintetizado | 7.6 GB |
+| 🎬 **FaceFusion** | Video / Cara | `7862` | 200 | Gradio + 12 ONNX + API `face_swapper` | ~3 GB |
+| 🎵 **AceForge** | Música | `7857` | 200 | `/healthz`=`ok` + ACE-Step-v1-3.5B cargado | 7.7 GB |
 
 > [!NOTE]
-> **FaceFusion requiere `conda`** — su `install.py` aborta sin `CONDA_PREFIX`. Ver [`TROUBLESHOOTING.md` § 11](TROUBLESHOOTING.md#-11-facefusion-conda-is-not-activated).
-> **Qwen3-TTS y FaceFusion** comparten familia de puertos Gradio — FaceFusion declara `default_port: 7862` para evitar colisión.
+> **AceForge cambió de puerto** `5056` → `7857` en v0.5.1. El puerto `5056`
+> (`intecom-ps1`) colisiona con un servicio interno de Google Chrome que satura
+> los worker threads de `waitress`. Ver [POSTMORTEM § I9](POSTMORTEM-2026-05-17.md#i9--puerto-5056-aceforge-colisiona-con-intecom-ps1-saturado-por-chrome).
+>
+> **FaceFusion install** ahora añade `--skip-conda` automáticamente — ya no
+> requiere conda. Ver [POSTMORTEM § I6](POSTMORTEM-2026-05-17.md#i6--facefusion-installpy-exigía-conda).
 
 ---
 
 ## ⚠️ Limitaciones actuales
 
-- 🚫 No hay cleanup automático de procesos huérfanos entre reinicios de la app (el `ProcessRegistry` vive solo en memoria).
-- 🔌 No se verifica si el puerto declarado está ocupado antes de iniciar.
 - ⚙️ Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) declarados en manifests pero sin controles UI.
 - 🔐 Firma y notarización Apple no incluidas — el `.app` se ejecuta ad-hoc en este equipo (click derecho → Abrir la primera vez).
+- 📦 La descarga de modelos pesados (SD 1.5, ACE-Step, Qwen-TTS) se hace fuera de la UI; aún no hay flujo guiado.
+
+> Cerradas en v0.5.1: ✅ cleanup automático de huérfanos en `start_tool` ·
+> ✅ verificación de puerto antes de iniciar · ✅ auto-mount del sparsebundle.
 
 ---
 

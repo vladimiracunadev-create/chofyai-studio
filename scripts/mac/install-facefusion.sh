@@ -57,7 +57,9 @@ pip_upgrade_base "$ENV_DIR"
 # shellcheck disable=SC1091
 source "$ENV_DIR/bin/activate"
 cd "$SOURCE_DIR"
-python install.py --onnxruntime default
+# --skip-conda: usamos venv/uv, no conda. Sin esto, install.py muere
+# con "conda is not activated" y deja la instalación a medias.
+python install.py --onnxruntime default --skip-conda
 
 echo
 echo "FACEFUSION_INSTALL_OK"

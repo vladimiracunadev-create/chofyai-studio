@@ -334,6 +334,110 @@ La interfaz mostró la pantalla **"💥 La interfaz se rompió"** con un stack t
 
 ---
 
+## 🧳 16. La app dice que ninguna tool está instalada (pero antes funcionaban)
+
+### 🚨 Síntoma
+
+Al abrir Chofy, todas las herramientas aparecen como "no instaladas". El día
+anterior abrían sin problema.
+
+### 🔍 Causa raíz
+
+El `sparsebundle` que contiene las instalaciones (en `/Volumes/ORICO/ChofyIA/`)
+está desmontado. La app mira `/Volumes/ChofyAIStudio` (el mountpoint) y no
+encuentra nada porque el volumen no está disponible.
+
+### ✅ Mitigación
+
+Desde v0.5.1 la app **monta el sparsebundle automáticamente** al arrancar,
+siempre que `settings.json` incluya `sparsebundle_path`. Verifica:
+
+```bash
+cat storage/state/settings.json
+# Debe contener:
+#   "sparsebundle_path": "/Volumes/ORICO/ChofyIA/ChofyAIStudio.sparsebundle"
+```
+
+Si falta el campo, edita el JSON y reinicia la app. Comando manual:
+
+```bash
+hdiutil attach /Volumes/ORICO/ChofyIA/ChofyAIStudio.sparsebundle -nobrowse -noverify
+```
+
+> Ver [PORQUE-NO-FUNCIONABA.md](PORQUE-NO-FUNCIONABA.md) para la explicación narrativa.
+
+---
+
+## 🚪 17. AceForge no responde tras pulsar "Iniciar"
+
+### 🚨 Síntoma
+
+AceForge aparece como running (PID asignado, `▣ Detener` visible) pero la
+interfaz embebida queda cargando indefinidamente. `curl http://127.0.0.1:5056/`
+timeout.
+
+### 🔍 Causa raíz
+
+El puerto **5056** está registrado en `/etc/services` como `intecom-ps1`.
+Google Chrome (`Google Chrome Helper --type=utility …network.mojom.NetworkService`)
+polea este puerto para algo interno suyo y abre múltiples conexiones que
+saturan los 4 worker threads de `waitress` (el servidor que usa AceForge).
+
+### ✅ Mitigación
+
+Desde v0.5.1 AceForge usa el puerto **7857** (libre, sin servicios conocidos).
+El install script aplica el patch automáticamente. Si tu instalación es
+anterior:
+
+```bash
+# 1) Reinstalar AceForge desde la UI (botón "Actualizar" o "Reinstalar")
+# 2) O aplicar el patch manualmente al source existente:
+F=/Volumes/ChofyAIStudio/tools/aceforge/source/music_forge_ui.py
+sed -i.bak -e 's/port=5056/port=7857/g' \
+           -e "s/'127.0.0.1', 5056/'127.0.0.1', 7857/g" \
+           -e 's|127\.0\.0\.1:5056|127.0.0.1:7857|g' "$F"
+```
+
+> Ver [POSTMORTEM § I9](POSTMORTEM-2026-05-17.md#i9--puerto-5056-aceforge-colisiona-con-intecom-ps1-saturado-por-chrome) para detalles.
+
+---
+
+## 🧠 18. ComfyUI no encuentra los modelos descargados
+
+### 🚨 Síntoma
+
+Has descargado un checkpoint Stable Diffusion (ej.
+`v1-5-pruned-emaonly.safetensors`) a `tools/comfyui/models/checkpoints/` pero
+en la UI de ComfyUI no aparece en el dropdown. La API responde:
+
+```
+Value not in list: ckpt_name: 'v1-5-pruned-emaonly.safetensors' not in []
+```
+
+### 🔍 Causa raíz
+
+Versión antigua de `install-comfyui.sh` (pre-v0.5.1) usaba symlinks plurales
+(`inputs/outputs`) que no enganchaban con los singulares (`input/output`) que
+ComfyUI espera. Los modelos descargados al directorio externo nunca aparecían
+en el directorio interno donde ComfyUI los busca.
+
+### ✅ Mitigación
+
+Reinstala ComfyUI con el script v0.5.1 (que crea los symlinks correctos)
+o crea los symlinks manualmente:
+
+```bash
+CY=/Volumes/ChofyAIStudio/tools/comfyui
+mkdir -p "$CY"/{models,input,output,custom_nodes}
+mkdir -p "$CY/models"/{checkpoints,loras,vae,controlnet}
+for sub in models input output custom_nodes; do
+  rm -rf "$CY/source/$sub"
+  ln -s "$CY/$sub" "$CY/source/$sub"
+done
+```
+
+---
+
 ## 🆘 No encuentro mi error aquí
 
 - 🩺 Ejecuta `bash scripts/mac/doctor.sh "$STUDIO_HOME"` y mira el output completo.
