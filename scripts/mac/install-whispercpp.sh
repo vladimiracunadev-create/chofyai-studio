@@ -30,6 +30,18 @@ else
 fi
 
 cd "$SOURCE_DIR"
+
+# Detectar y limpiar build cache si fue generado en otra ruta (ej. instalación
+# previa en ExFAT y luego migrada al sparsebundle APFS). CMakeCache.txt
+# almacena paths absolutos y se rompe al cambiar la ubicación del source.
+if [ -f build/CMakeCache.txt ]; then
+  CACHED_SRC=$(awk -F= '/CMAKE_HOME_DIRECTORY:INTERNAL/{print $2}' build/CMakeCache.txt | head -1)
+  if [ -n "$CACHED_SRC" ] && [ "$CACHED_SRC" != "$SOURCE_DIR" ]; then
+    echo "[clean] CMakeCache apunta a $CACHED_SRC, esperado $SOURCE_DIR — limpiando build/"
+    rm -rf build
+  fi
+fi
+
 cmake -B build -DWHISPER_METAL=ON
 cmake --build build --config Release -j 4
 
