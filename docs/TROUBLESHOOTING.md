@@ -410,7 +410,7 @@ Has descargado un checkpoint Stable Diffusion (ej.
 `v1-5-pruned-emaonly.safetensors`) a `tools/comfyui/models/checkpoints/` pero
 en la UI de ComfyUI no aparece en el dropdown. La API responde:
 
-```
+```text
 Value not in list: ckpt_name: 'v1-5-pruned-emaonly.safetensors' not in []
 ```
 

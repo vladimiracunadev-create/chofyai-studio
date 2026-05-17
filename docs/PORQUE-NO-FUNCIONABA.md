@@ -27,7 +27,7 @@ que Python necesita para crear sus entornos (`venv`).
 Para superarlo, el proyecto guarda todo en un **"archivo-disco APFS"**
 (`ChofyAIStudio.sparsebundle`) que vive dentro del disco exFAT. Imagina:
 
-```
+```text
 📦 /Volumes/ORICO  (caja de cartón — exFAT, simple pero limitada)
    └─ 🧳 ChofyAIStudio.sparsebundle  ← una maleta APFS dentro
 ```
@@ -102,7 +102,7 @@ elegido el puerto 5056 habría tenido el mismo problema.
 
 Cuando hacías click en `👁 Ver UI` de una herramienta, la cabecera mostraba:
 
-```
+```text
 ← Herramientas / 🎭 FaceFusion   http://127.0.0.1:7862/   ↻ ↗ ✕
 ```
 
@@ -115,7 +115,7 @@ sirve al usuario final — confunde más que ayuda. Tú mismo nos dijiste:
 
 Eliminada la URL del encabezado. Ahora se ve:
 
-```
+```text
 ← Herramientas / 🎭 FaceFusion   ↻ ↗ ✕
 ```
 

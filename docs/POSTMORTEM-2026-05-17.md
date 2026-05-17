@@ -222,7 +222,7 @@ original del usuario, no obvia al inicio.
 Lanzando `install-aceforge.sh` contra `/Volumes/ORICO/ChofyIA/ChofyAIStudio`
 (no sparsebundle) durante la diagnosis inicial:
 
-```
+```text
 error: Failed to install: sympy-1.14.0-py3-none-any.whl
   Caused by: failed to copy file from ...sympy-1.14.0.data/data/share/man/man1/._isympy.1
     to .../share/man/man1/._isympy.1: No such file or directory (os error 2)
@@ -230,7 +230,7 @@ error: Failed to install: sympy-1.14.0-py3-none-any.whl
 
 Y para qwen3-tts:
 
-```
+```text
 error: non-monotonic index .../launcher/.git/objects/pack/._pack-8b78...idx
 ```
 
@@ -266,7 +266,7 @@ quedan como evidencia histórica; pueden borrarse manualmente con
 
 ### Síntoma observado
 
-```
+```text
 $ python install.py --onnxruntime default
 conda is not activated
 ```
@@ -309,7 +309,7 @@ Diffusion 1.5) a `tools/comfyui/models/checkpoints/`, el endpoint
 
 Y al enviar un workflow:
 
-```
+```text
 Value not in list: ckpt_name: 'v1-5-pruned-emaonly.safetensors' not in []
 ```
 
@@ -375,7 +375,7 @@ funcionalidad.
 Al hacer click en `👁 Ver UI` sobre una tool, la cabecera del workspace
 mostraba al usuario final:
 
-```
+```text
 ← Herramientas / 🎭 FaceFusion   http://127.0.0.1:7862/   [acciones]
 ```
 
@@ -407,7 +407,7 @@ AceForge arrancaba correctamente en `:5056` (LISTEN visible en `lsof`), pero
 cada request HTTP timed-out tras 30+ segundos sin recibir bytes. Cinco curls
 en paralelo también colgaban.
 
-```
+```text
 $ curl --max-time 8 http://127.0.0.1:5056/
 curl: (28) Operation timed out after 8006 milliseconds with 0 bytes received
 ```
@@ -501,7 +501,7 @@ Total modelos en sparsebundle APFS: **~22 GB**.
 
 ## 🧪 Estado de tests y compilación
 
-```
+```text
 cargo check         ✅ Finished `dev` profile in 1.09s (limpio)
 npm test            ✅ Test Files 2 passed (2) · Tests 20 passed (20)
 bash -n scripts/    ✅ todos los scripts pasan sintaxis
@@ -509,7 +509,7 @@ bash -n scripts/    ✅ todos los scripts pasan sintaxis
 
 ## 🛡 Modelo operativo resultante
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │ /Volumes/ORICO/ChofyIA  (ExFAT, externo)                     │
 │   └── ChofyAIStudio.sparsebundle  ← imagen APFS              │

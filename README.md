@@ -9,9 +9,10 @@
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![uv](https://img.shields.io/badge/uv-supported-DE5FE9?logo=python&logoColor=white)](https://docs.astral.sh/uv/)
-[![Versión](https://img.shields.io/badge/versión-0.5.0-7c5cff)](CHANGELOG.md)
-[![Status](https://img.shields.io/badge/Estado-release-2d7a66)](docs/STATUS.md)
+[![Versión](https://img.shields.io/badge/versión-0.5.1-7c5cff)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/Estado-operativo-2d7a66)](docs/STATUS.md)
 [![Tools live](https://img.shields.io/badge/Tools%20live-5%2F5-brightgreen)](docs/STATUS.md)
+[![Inferencia](https://img.shields.io/badge/Inferencia%20real-5%2F5-brightgreen)](docs/POSTMORTEM-2026-05-17.md)
 
 > [!NOTE]
 > ChofyAI Studio **no es** un launcher genérico al estilo Pinokio. Es un orquestador con un set acotado de herramientas creativas, instalación reproducible, control real de procesos y soporte dual de disco (externo + principal con fallback automático).
@@ -69,6 +70,26 @@ graph TD
 ---
 
 ## ✨ Características clave
+
+### 🛠 v0.5.1 (hardening de operatividad — 2026-05-17)
+
+> Cierra 10 incidentes detectados al validar funcionalidad end-to-end. Marca
+> el paso de release a **producto comercializable**: las 5 herramientas
+> probadas con **inferencia real** (transcripción, generación de imagen,
+> síntesis de voz, modelos ONNX cargados), no solo arranque HTTP.
+> Ver [PORQUE-NO-FUNCIONABA](docs/PORQUE-NO-FUNCIONABA.md) (lenguaje claro)
+> o [POSTMORTEM](docs/POSTMORTEM-2026-05-17.md) (detalle técnico).
+
+| # | Mejora | Beneficio |
+|:-:|:---|:---|
+| 1 | 🧳 **Auto-mount del sparsebundle** | La app monta `ChofyAIStudio.sparsebundle` al arranque; nunca más "0/5 tools" por volumen desmontado |
+| 2 | ✅ **Validación cruzada `installed_if`** | Pre-spawn y post-install: detecta instalaciones corruptas con mensaje claro |
+| 3 | 🚪 **Pre-flight de puertos** | `start_tool` mata huérfanos antes del spawn — no más "el botón no hace nada tras un crash" |
+| 4 | 🔧 **AceForge port 5056 → 7857** | Evita colisión con servicio `intecom-ps1` saturado por Chrome |
+| 5 | 🧠 **ComfyUI symlinks correctos** | Los modelos descargados se ven en la UI a la primera (`input`/`output` singulares) |
+| 6 | 🎬 **FaceFusion sin conda** | Install añade `--skip-conda` — funciona con venv/uv puro |
+| 7 | 🧹 **CMakeCache cleanup** | whisper.cpp reinstala limpio aunque venga de una ruta vieja |
+| 8 | 🪪 **UX sin localhost** | La cabecera del workspace ya no expone `http://127.0.0.1:PORT` al usuario final |
 
 ### 🎉 v0.5.0 (release)
 
@@ -187,13 +208,16 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 | Perfil | Ruta recomendada | Qué encontrarás |
 |:---|:---|:---|
 | 🚀 **Quick start** | [`QUICKSTART.md`](QUICKSTART.md) | Arranque en 3 comandos |
+| 🧭 **¿Qué falló y por qué?** | [`docs/PORQUE-NO-FUNCIONABA.md`](docs/PORQUE-NO-FUNCIONABA.md) | **Explicación en lenguaje claro** del hardening v0.5.1 (sin jerga) |
+| 📑 **Postmortem técnico** | [`docs/POSTMORTEM-2026-05-17.md`](docs/POSTMORTEM-2026-05-17.md) | Los 10 incidentes con causa raíz y verificación |
 | 🍎 **Instalación detallada** | [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md) | Dependencias + workarounds disco externo |
 | 🛠️ **Herramientas integradas** | [`docs/TOOLS.md`](docs/TOOLS.md) | Qué hace cada una y sus requisitos |
 | 📋 **Estado real** | [`docs/STATUS.md`](docs/STATUS.md) | Qué funciona hoy y qué no |
 | 🏗️ **Arquitectura** | [`docs/architecture.md`](docs/architecture.md) | Capas, IPC y decisiones |
 | 📜 **Scripts** | [`docs/SCRIPTS_REFERENCE.md`](docs/SCRIPTS_REFERENCE.md) | Cada script paso a paso |
 | 📐 **Manifest YAML** | [`docs/MANIFEST_SPEC.md`](docs/MANIFEST_SPEC.md) | Cómo declarar nuevas herramientas |
-| 🩺 **Problemas comunes** | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Errores y soluciones |
+| 🩺 **Problemas comunes** | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Errores y soluciones (18 entradas) |
+| 📜 **Changelog** | [`CHANGELOG.md`](CHANGELOG.md) | Historial completo de versiones |
 | 📦 **Empaquetado** | [`docs/packaging.md`](docs/packaging.md) | `.app` y `.dmg` |
 | 🗺️ **Roadmap** | [`ROADMAP.md`](ROADMAP.md) | Qué viene en Fase 5+ |
 | ☁️ **Migración a AWS** | [`docs/cloud/README.md`](docs/cloud/README.md) | Plan completo: arquitectura, servicios, costos y despliegue |
