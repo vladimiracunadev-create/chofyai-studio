@@ -57,7 +57,8 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         with:
           node-version: "20"
-          cache: "pnpm"
+        # sin cache:pnpm porque este job no corre `pnpm install`
+        # (audit no popula el store y el post-step de cache fallaría)
       - name: Audit
         if: steps.check.outputs.skip != 'true'
         run: |
