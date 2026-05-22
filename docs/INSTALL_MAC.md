@@ -124,8 +124,9 @@ cd chofyai-studio
 ### 2️⃣ Instalar dependencias del frontend
 
 ```bash
-# El .npmrc del proyecto fija el registry a npmjs.org automáticamente
-npm install
+# El .npmrc del proyecto fija el registry a npmjs.org y endurece pnpm
+corepack enable && corepack prepare pnpm@10 --activate
+pnpm install --frozen-lockfile
 ```
 
 ### 3️⃣ Definir Studio Home
@@ -158,7 +159,7 @@ mkdir -p /Volumes/ORICO/ChofyIA/ChofyAIStudio/{tools,logs,models,cache}
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"
-npm run dev:web
+pnpm dev:web
 # Abre: http://localhost:1420
 ```
 
@@ -168,7 +169,7 @@ npm run dev:web
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"
-npm run tauri:dev
+pnpm tauri:dev
 ```
 
 Este modo activa el backend Rust y permite usar los botones de instalación e inicio de herramientas.
@@ -209,8 +210,8 @@ bash scripts/mac/install-comfyui.sh
 ## 📦 Empaquetado macOS (.app / .dmg)
 
 ```bash
-npm ci
-npm run package:mac
+pnpm install --frozen-lockfile
+pnpm package:mac
 ```
 
 Salidas esperadas (target redirigido a `/tmp` por `.cargo/config.toml`):
@@ -239,7 +240,7 @@ Si la build sigue fallando, ejecuta el script de limpieza y reintenta. Lo ideal 
 
 ### 🆓 Build sin Apple Developer ID (uso personal)
 
-`npm run tauri:build:app` genera un `.app` ad-hoc que funciona en este equipo:
+`pnpm tauri:build:app` genera un `.app` ad-hoc que funciona en este equipo:
 
 ```bash
 cp -R "/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app" /Applications/

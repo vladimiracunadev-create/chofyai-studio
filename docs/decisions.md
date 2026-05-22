@@ -25,7 +25,7 @@ Usar **Tauri 2 con Rust** como core y **React + TypeScript** como capa de UI.
 
 - **Positivas**: binario ligero (~5 MB vs ~150 MB de Electron), control fino sobre los comandos del sistema, FFI directo con el OS.
 - **Negativas**: la compilación requiere Rust + Xcode en el entorno de desarrollo; no hay hot-reload del backend Rust.
-- **Neutras**: el frontend React puede desarrollarse en cualquier OS con `npm run dev:web`.
+- **Neutras**: el frontend React puede desarrollarse en cualquier OS con `pnpm dev:web`.
 
 ---
 
@@ -240,3 +240,35 @@ Catálogo curado en `marketplace/registry.yaml` empaquetado dentro del `.app`. 1
 - **Negativas**: añadir tool al catálogo requiere PR a este repo y nuevo release del `.app`; no hay versionado por entrada todavía.
 
 > Migración a catálogo remoto (S3 + repo `community-tools` separado) documentada en `docs/cloud/AWS_MIGRATION.md §3.5`.
+
+---
+
+## 🔒 ADR-011: pnpm reemplaza a npm como único gestor de paquetes
+
+**Estado**: ✅ Aceptada (2026-05-22)
+
+### 🧭 Contexto
+
+`npm` ejecuta por defecto los `postinstall` de **todas** las dependencias transitivas. Es el vector de los ataques tipo `event-stream`, `node-ipc`, `coa/rc` (cuentas de mantenedor comprometidas): el atacante no tiene que aparecer en tu `package.json` directo. `npm install --ignore-scripts` mitiga pero es opt-in manual y depende de que cada dev y cada CI lo recuerden. Además `npm` permite "phantom dependencies" (importar paquetes no declarados que aparecen en `node_modules` por planado del árbol), que ocultan vectores de exposición.
+
+### 💡 Decisión
+
+Migrar a **pnpm 10** con:
+
+- `pnpm.onlyBuiltDependencies: ["esbuild"]` en `package.json` — allowlist explícita de qué paquetes pueden ejecutar scripts (capability-based, no opt-out).
+- `"packageManager": "pnpm@10.29.3"` resuelto vía Corepack — pin de versión exacta, evita drift entre devs.
+- `pnpm-lock.yaml` con SHA-512 obligatorio por paquete.
+- CI siempre con `pnpm install --frozen-lockfile` — falla si el árbol resuelto no coincide con el lockfile.
+- `.npmrc` endurecido (`audit-level=high`, `resolution-mode=highest`).
+- Job `pnpm audit` en `.github/workflows/security.yml` que falla PRs con `high+critical`.
+
+Justificación detallada con tabla de vectores en [`PACKAGE_MANAGER.md`](PACKAGE_MANAGER.md).
+
+### 📊 Consecuencias
+
+- **Positivas**: bloqueo por defecto de `postinstall` arbitrario de transitivas (mitiga supply-chain), `node_modules` sin phantom deps (importar lo no declarado falla en tiempo de bundling), reproducibilidad determinista del árbol, footprint menor (store content-addressable compartido entre proyectos).
+- **Negativas**: developers necesitan activar Corepack (`corepack enable`) la primera vez; guías de internet asumen npm y hay que traducir mentalmente comandos.
+- **Neutras**: registry sigue siendo `registry.npmjs.org`; Dependabot autodetecta `pnpm-lock.yaml` con el ecosystem `npm`.
+
+> Rechazadas: yarn 4 (PnP rompe Vite/Tauri), bun (sin paridad de auditoría supply-chain), npm + `--ignore-scripts` (depende de disciplina manual de cada dev/CI). Detalle en `PACKAGE_MANAGER.md §8`.
+

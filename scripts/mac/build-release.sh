@@ -6,14 +6,14 @@ cd "$ROOT_DIR"
 
 bash scripts/mac/preflight-build.sh
 
-echo "==> Instalando dependencias NPM"
-npm ci
+echo "==> Instalando dependencias (pnpm)"
+pnpm install --frozen-lockfile
 
 echo "==> Compilando frontend"
-npm run build:web
+pnpm build:web
 
 echo "==> Empaquetando .app y .dmg"
-npm run tauri:build:mac
+pnpm tauri:build:mac
 
 echo
 

@@ -5,8 +5,8 @@
   "version": "0.5.0",
   "identifier": "cl.vladimiracuna.chofyai.studio",
   "build": {
-    "beforeDevCommand": "npm run dev:web",
-    "beforeBuildCommand": "npm run build:web",
+    "beforeDevCommand": "pnpm dev:web",
+    "beforeBuildCommand": "pnpm build:web",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },

@@ -287,9 +287,9 @@ Documentado en [`INSTALL_MAC.md` § Disco externo no-APFS](INSTALL_MAC.md#-disco
 | Workflow | Función |
 |:---|:---|
 | `.github/workflows/ci.yml` | Lint MD, typecheck TS, vitest, cargo test, validación YAML manifests |
-| `.github/workflows/security.yml` | TruffleHog + npm audit + cargo audit + CodeQL + Pin actions check, **invocable por otros repos vía `workflow_call`** |
+| `.github/workflows/security.yml` | TruffleHog + pnpm audit + cargo audit + CodeQL + Pin actions check, **invocable por otros repos vía `workflow_call`** |
 | `.github/workflows/release.yml` | Tag + GitHub Release con notas de CHANGELOG |
-| `.github/dependabot.yml` | PRs semanales agrupados (npm, cargo, github-actions) |
+| `.github/dependabot.yml` | PRs semanales agrupados (pnpm autodetectado por ecosystem npm, cargo, github-actions) |
 
 Ver [`SECURITY_WORKFLOW.md`](SECURITY_WORKFLOW.md) para portar a otros repos.
 

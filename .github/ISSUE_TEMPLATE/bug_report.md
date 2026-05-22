@@ -12,7 +12,7 @@ assignees: ''
 
 ## Pasos para reproducir
 
-1. Abre la app desde `npm run tauri:dev` o desde el `.app` empaquetado
+1. Abre la app desde `pnpm tauri:dev` o desde el `.app` empaquetado
 2. Configura `studio_home` en: ...
 3. Haz clic en: ...
 4. Observas: ...
@@ -41,6 +41,7 @@ $STUDIO_HOME/logs/<tool_id>.log
 | Chip | ej. Apple M4 |
 | Versión de ChofyAI Studio | ej. v0.2.0 |
 | Node.js | `node --version` |
+| pnpm | `pnpm --version` |
 | Rust | `rustc --version` |
 | Tauri CLI | `cargo tauri --version` |
 | Modo de ejecución | `tauri:dev` / `.app` empaquetado |

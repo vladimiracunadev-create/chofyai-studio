@@ -14,7 +14,7 @@
 flowchart LR
     PR["📥 push / PR / cron"] --> Sec
     Sec["🛡 security.yml"] --> Secrets["🔐 TruffleHog<br/>(verified only)"]
-    Sec --> NPM["📦 npm audit<br/>(high+critical fail)"]
+    Sec --> NPM["📦 pnpm audit<br/>(high+critical fail)"]
     Sec --> Cargo["🦀 cargo-audit<br/>(todos los Cargo.lock)"]
     Sec --> CQL["🔬 CodeQL<br/>(security-extended)"]
     Sec --> Pin["📌 Pin actions check"]
@@ -31,13 +31,13 @@ flowchart LR
 | Job | Frecuencia | Falla el PR si… |
 |:---|:---:|:---|
 | 🔐 **TruffleHog** secret scan | push + PR + cron lunes | encuentra credenciales **verificadas** |
-| 📦 **npm audit** | push + PR (si hay `package-lock.json`) | hay vulnerabilidades `high` o `critical` |
+| 📦 **pnpm audit** | push + PR (si hay `pnpm-lock.yaml`) | hay vulnerabilidades `high` o `critical` |
 | 🦀 **cargo audit** | push + PR (si hay `Cargo.lock`) | hay advisories activos en RustSec |
 | 🔬 **CodeQL** JS/TS | push + PR (si hay `package.json`) | finding crítico en el código |
 | 📌 **Pin actions check** | push + PR | (warning) si hay action no pinneada |
 
 > [!IMPORTANT]
-> El workflow **detecta automáticamente** qué corre vía `hashFiles(...)`. En un repo Python puro **no** ejecutará `npm audit` ni `cargo audit` — solo TruffleHog + CodeQL si aplica.
+> El workflow **detecta automáticamente** qué corre vía `hashFiles(...)`. En un repo Python puro **no** ejecutará `pnpm audit` ni `cargo audit` — solo TruffleHog + CodeQL si aplica.
 
 ---
 

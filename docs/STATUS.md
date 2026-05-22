@@ -31,7 +31,7 @@ al usuario final. **5/5 tools probadas con inferencia real (no solo boot HTTP)**
 |---|---|---|
 | Homebrew | 5.0.14 | ✅ |
 | Node.js | 22.21.1 | ✅ |
-| npm | 10.9.4 | ✅ |
+| pnpm | 10.29.3 | ✅ |
 | Rust / cargo | 1.94.1 | ✅ |
 | cmake | 4.3.1 | ✅ |
 | ffmpeg | 8.1 | ✅ |
@@ -144,8 +144,8 @@ prueba de inferencia real**, no solo arranque.
 
 | Modo | Comando | Botones de herramientas |
 |:---|:---|:---:|
-| 🌐 Web (solo frontend) | `npm run dev:web` | ❌ Sin backend (degrada limpio) |
-| 🖥️ Escritorio completo | `npm run tauri:dev` | ✅ Todo funciona |
+| 🌐 Web (solo frontend) | `pnpm dev:web` | ❌ Sin backend (degrada limpio) |
+| 🖥️ Escritorio completo | `pnpm tauri:dev` | ✅ Todo funciona |
 | 📦 `.app` instalada | doble clic en `/Applications` | ✅ Todo funciona |
 
 ---
@@ -154,9 +154,9 @@ prueba de inferencia real**, no solo arranque.
 
 | Comando | Salida |
 |:---|:---|
-| `npm run tauri:build:app` | `/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app` |
-| `npm run tauri:build:dmg` | `/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg` |
-| `npm run package:mac` | Pipeline completo `bash scripts/mac/build-release.sh` |
+| `pnpm tauri:build:app` | `/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app` |
+| `pnpm tauri:build:dmg` | `/tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg` |
+| `pnpm package:mac` | Pipeline completo `bash scripts/mac/build-release.sh` |
 
 > [!IMPORTANT]
 > `target-dir` está redirigido a `/tmp/chofyai-target` por `.cargo/config.toml` para evitar archivos AppleDouble (`._*`) en volúmenes externos no-APFS. Si reaparecen, ejecuta `bash scripts/mac/clean-appledouble.sh`.

@@ -17,11 +17,13 @@
 | 🛠️ Xcode CLT | reciente | `xcode-select --install` |
 | 🦀 Rust + cargo | `1.76+` | Instalado vía `rustup` |
 | 📦 Node.js | `22 LTS` | Recomendado: `nvm` |
-| 📥 npm | `10+` | Incluido con Node.js |
+| 📥 pnpm | `10+` | `corepack enable && corepack prepare pnpm@10 --activate` |
 | ⚡ Tauri CLI | `v2` | `cargo install tauri-cli` |
 
 > [!NOTE]
-> Los builds de `.app` / `.dmg` **requieren un Mac real**. El desarrollo del frontend puede hacerse en cualquier sistema con `npm run dev:web`.
+> Los builds de `.app` / `.dmg` **requieren un Mac real**. El desarrollo del frontend puede hacerse en cualquier sistema con `pnpm dev:web`.
+>
+> Este proyecto usa **pnpm** (no npm) como gestor de paquetes — ver [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md) para la justificación de seguridad.
 
 ---
 
@@ -36,13 +38,13 @@ cd chofyai-studio
 bash scripts/mac/bootstrap.sh
 
 # 3️⃣ Instalar dependencias del frontend
-npm install
+pnpm install --frozen-lockfile
 
 # 4️⃣ Modo web (sin Rust, solo para UI)
-npm run dev:web
+pnpm dev:web
 
 # 5️⃣ App de escritorio completa (requiere macOS + Rust)
-npm run tauri:dev
+pnpm tauri:dev
 ```
 
 ---
@@ -104,7 +106,7 @@ Define en el manifest al menos una condición de instalación real (ruta de arch
 ### 4️⃣ Probar localmente
 
 ```bash
-npm run tauri:dev
+pnpm tauri:dev
 # Verificar que la tool aparece, el check de instalación funciona
 # y los botones de instalar/iniciar responden correctamente
 ```
@@ -112,13 +114,13 @@ npm run tauri:dev
 ### 5️⃣ Correr la suite de tests
 
 ```bash
-npm test                # Vitest — unit tests del frontend (parsers, formatters)
-npm run test:rust       # cargo test — tests del backend (PIDs, paths, traversal)
-npx tsc --noEmit        # typecheck TypeScript estricto
-npx markdownlint-cli2 "**/*.md"   # lint de docs
+pnpm test                       # Vitest — unit tests del frontend (parsers, formatters)
+pnpm test:rust                  # cargo test — tests del backend (PIDs, paths, traversal)
+pnpm exec tsc --noEmit          # typecheck TypeScript estricto
+pnpm dlx markdownlint-cli2 "**/*.md"   # lint de docs
 ```
 
-CI corre automáticamente todo lo anterior + auditoría de seguridad (TruffleHog, npm/cargo audit, CodeQL) en cada PR. Ver [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md).
+CI corre automáticamente todo lo anterior + auditoría de seguridad (TruffleHog, pnpm/cargo audit, CodeQL) en cada PR. Ver [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md).
 
 ### 6️⃣ Documentar
 
@@ -134,7 +136,7 @@ Añade la herramienta a [`docs/TOOLS.md`](docs/TOOLS.md) con su rol, script, che
 feat: añadir integración de Bark TTS
 fix: corregir detección de puerto ocupado en whisper.cpp
 docs: actualizar MANIFEST_SPEC con campo optional_port
-chore: actualizar dependencias npm
+chore: actualizar dependencias pnpm
 ```
 
 ### ⚛️ TypeScript
