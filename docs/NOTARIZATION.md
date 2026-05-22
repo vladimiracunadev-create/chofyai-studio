@@ -8,11 +8,11 @@ Hoy el `.dmg` generado por `release.yml` es **ad-hoc**: funciona localmente y se
 
 ## 📋 Pre-requisitos en la cuenta Apple
 
-1. **Apple Developer Program** activo ($99 USD/año) — https://developer.apple.com/programs/
+1. **Apple Developer Program** activo ($99 USD/año) — <https://developer.apple.com/programs/>
 2. **Developer ID Application certificate** generado desde Xcode o Apple Developer portal.
    - Exportarlo desde Keychain como `.p12` (incluye clave privada).
-3. **App-specific password** para `notarytool` desde https://appleid.apple.com/ → Security → App-Specific Passwords.
-4. **Team ID** visible en https://developer.apple.com/account → Membership.
+3. **App-specific password** para `notarytool` desde <https://appleid.apple.com/> → Security → App-Specific Passwords.
+4. **Team ID** visible en <https://developer.apple.com/account> → Membership.
 
 ---
 
@@ -117,6 +117,7 @@ xcrun stapler validate "ChofyAI Studio.app"
 ```
 
 Lo esperado:
+
 - `codesign`: `satisfies its Designated Requirement`
 - `spctl`: `accepted source=Notarized Developer ID`
 - `stapler`: `The validate action worked!`

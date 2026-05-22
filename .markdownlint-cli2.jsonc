@@ -2,9 +2,7 @@
   // Configuración de markdownlint-cli2
   // Excluye archivos de recursos macOS (._*) generados en volúmenes exFAT
   "ignores": [
-    "._*",
-    "docs/._*",
-    ".github/**\/._*",
+    "**/._*",
     "node_modules/**",
     "src-tauri/target/**"
   ]
