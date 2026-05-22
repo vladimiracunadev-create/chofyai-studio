@@ -9,6 +9,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ---
 
+## 🔒 [Unreleased] — Hardening supply-chain
+
+### Cambiado
+
+- **Gestor de paquetes: npm → pnpm** (2026-05-22). Migración impulsada por seguridad, no por rendimiento.
+  - `package-lock.json` reemplazado por `pnpm-lock.yaml` (hashes SHA-512 obligatorios por paquete).
+  - `package.json` declara `"packageManager": "pnpm@10.29.3"` (resolución vía Corepack — pin de versión exacta).
+  - `package.json` declara `pnpm.onlyBuiltDependencies: ["esbuild"]` — **bloquea por defecto** todo `postinstall` de dependencias transitivas (mitigación tipo `event-stream`).
+  - `.npmrc` endurecido (`audit-level=high`, `resolution-mode=highest`).
+  - Workflows `ci.yml`, `release.yml`, `security.yml` migrados a `pnpm/action-setup@v4` + `pnpm install --frozen-lockfile`.
+  - Job `npm-audit` renombrado a `pnpm-audit`.
+  - Documentación de la decisión y vectores de ataque mitigados en [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md).
+- README, QUICKSTART, CONTRIBUTING, SECURITY, STATUS, bug_report: comandos `npm *` → `pnpm *`.
+
+### Fijado
+
+- `vitest` y `@vitest/ui` bajadas a `^3.2.4` (eran `^4.1.5`). Vitest 4 requiere `vite ^6`, incompatible con el `vite ^5.4` que usan los plugins de Tauri/React en uso. La resolución estricta de pnpm expuso este desalineamiento que con npm pasaba inadvertido por hoisting. `jsdom` bajada a `^25.0.1` (la 29 sube ESM-only en formas que requieren vitest 4). **20/20 tests pasan**.
+
+---
+
 ## 🛠 [0.5.1] — 2026-05-17 · Hardening de operatividad
 
 > **Maintenance release**: cierra 10 incidentes detectados al validar

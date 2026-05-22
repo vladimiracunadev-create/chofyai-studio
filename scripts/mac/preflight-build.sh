@@ -4,7 +4,7 @@ set -euo pipefail
 echo "==> Preflight ChofyAI Studio"
 
 missing=0
-for cmd in node npm; do
+for cmd in node pnpm; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Falta: $cmd"
     missing=1
@@ -27,7 +27,7 @@ if [ "$missing" -ne 0 ]; then
 fi
 
 echo "node:  $(node -v)"
-echo "npm:   $(npm -v)"
+echo "pnpm:  $(pnpm -v)"
 echo "cargo: $(cargo --version)"
 echo "xcode: $(xcode-select -p)"
 

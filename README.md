@@ -139,14 +139,16 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```bash
 git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
 cd chofyai-studio
-npm install
+pnpm install
 ```
+
+> 🛡️ Este proyecto usa **pnpm** (no npm) — instala con `corepack enable && corepack prepare pnpm@10 --activate`. Razones de seguridad en [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md).
 
 ### 2️⃣ Arrancar
 
 ```bash
-npm run tauri:dev    # ✅ App escritorio completa (Rust activo, botones funcionales)
-npm run dev:web      # 🌐 Solo UI en localhost:1420 (sin backend)
+pnpm tauri:dev    # ✅ App escritorio completa (Rust activo, botones funcionales)
+pnpm dev:web      # 🌐 Solo UI en localhost:1420 (sin backend)
 ```
 
 > Ver [`QUICKSTART.md`](QUICKSTART.md) para el flujo completo.
@@ -275,10 +277,10 @@ bash scripts/mac/clean-appledouble.sh                   # 🧼 Borrar ._* (volú
 ## 📦 Empaquetado macOS
 
 ```bash
-npm ci
-npm run tauri:build:app   # Genera el .app
-npm run tauri:build:dmg   # Genera el .dmg
-npm run package:mac       # Pipeline completo
+pnpm install --frozen-lockfile
+pnpm tauri:build:app   # Genera el .app
+pnpm tauri:build:dmg   # Genera el .dmg
+pnpm package:mac       # Pipeline completo
 ```
 
 > [!IMPORTANT]
@@ -324,11 +326,12 @@ npm run package:mac       # Pipeline completo
 ## 🛡️ Seguridad
 
 - **Política de reporte**: [`SECURITY.md`](SECURITY.md) — disclosure responsable + alcance + tiempos de respuesta.
-- **Workflow de seguridad CI**: [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) — TruffleHog + npm/cargo audit + CodeQL + Dependabot. Portable a otros repos vía `workflow_call`.
+- **Workflow de seguridad CI**: [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) — TruffleHog + pnpm/cargo audit + CodeQL + Dependabot. Portable a otros repos vía `workflow_call`.
+- **Gestor de paquetes**: [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md) — por qué pnpm y no npm (mitigación supply-chain).
 - **Auditoría local**:
 
   ```bash
-  npm audit --omit=dev --audit-level=high
+  pnpm audit --prod --audit-level high
   cd src-tauri && cargo audit
   ```
 

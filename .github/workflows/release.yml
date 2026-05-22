@@ -81,8 +81,8 @@ jobs:
             git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
             cd chofyai-studio
             git checkout ${{ github.event.inputs.version }}
-            npm ci
-            npm run package:mac
+            pnpm install --frozen-lockfile
+            pnpm package:mac
             ```
 
             ### Plataforma

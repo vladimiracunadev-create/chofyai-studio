@@ -20,9 +20,16 @@ command -v cargo >/dev/null 2>&1 \
   && echo "  ✅ cargo ($(cargo --version | awk '{print $2}'))" \
   || echo "  ⚠️  cargo no instalado"
 
-command -v npm >/dev/null 2>&1 \
-  && echo "  ✅ npm ($(npm --version))" \
-  || echo "  ⚠️  npm no instalado (brew install node)"
+command -v node >/dev/null 2>&1 \
+  && echo "  ✅ node ($(node --version))" \
+  || echo "  ⚠️  node no instalado (brew install node)"
+
+if command -v pnpm >/dev/null 2>&1; then
+  echo "  ✅ pnpm ($(pnpm --version))"
+else
+  echo "  ⚠️  pnpm no instalado — actívalo con: corepack enable && corepack prepare pnpm@10 --activate"
+  echo "      (este proyecto NO usa npm — ver docs/PACKAGE_MANAGER.md)"
+fi
 
 # uv: opcional pero altamente recomendado para Python tools
 if command -v uv >/dev/null 2>&1; then

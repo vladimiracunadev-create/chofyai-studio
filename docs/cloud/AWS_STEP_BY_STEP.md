@@ -443,8 +443,8 @@ docker run -d --gpus all --restart=always \
 ```bash
 # Build de la UI
 cd ../  # raíz del repo
-npm ci
-npm run build
+pnpm install --frozen-lockfile
+pnpm build:web
 
 # Subir a S3
 aws s3 sync dist/ "s3://chofy-ui-dev-${ACCOUNT}/" --delete \

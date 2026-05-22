@@ -24,14 +24,14 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust
 
 ```bash
 cd chofyai-studio
-npm install
-npm run tauri:dev
+pnpm install
+pnpm tauri:dev
 ```
 
 Esto arranca **Vite** en `http://localhost:1420` + ventana **Tauri** con backend Rust.
 
 > [!WARNING]
-> `npm run dev:web` abre solo la UI sin backend Tauri. Los botones de instalar/iniciar/detener **no funcionan** en ese modo.
+> `pnpm dev:web` abre solo la UI sin backend Tauri. Los botones de instalar/iniciar/detener **no funcionan** en ese modo.
 
 ---
 
@@ -106,7 +106,7 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite mov
 ## 📦 Generar el `.app` (ad-hoc, sin firma Apple)
 
 ```bash
-npm run tauri:build:app
+pnpm tauri:build:app
 ```
 
 Resultado:

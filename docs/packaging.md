@@ -47,7 +47,7 @@ Instala y verifica:
 ```bash
 xcode-select --install
 node -v        # 22.x o superior
-npm -v         # 10.x+
+pnpm -v        # 10.x+ (activar con: corepack enable && corepack prepare pnpm@10 --activate)
 cargo --version  # 1.76+
 ```
 
@@ -56,7 +56,7 @@ cargo --version  # 1.76+
 ## ✈️ Preflight
 
 ```bash
-npm run preflight:mac
+pnpm preflight:mac
 ```
 
 ---
@@ -64,8 +64,8 @@ npm run preflight:mac
 ## 🚀 Build completo
 
 ```bash
-npm ci
-npm run package:mac
+pnpm install --frozen-lockfile
+pnpm package:mac
 ```
 
 ---
@@ -74,10 +74,10 @@ npm run package:mac
 
 | Comando | Salida |
 |:---|:---|
-| `npm run tauri:build:app` | Solo `.app` |
-| `npm run tauri:build:dmg` | Solo `.dmg` |
-| `npm run tauri:build:mac` | `.app` + `.dmg` con config `tauri.macos.conf.json` |
-| `npm run package:mac` | Pipeline completo `build-release.sh` |
+| `pnpm tauri:build:app` | Solo `.app` |
+| `pnpm tauri:build:dmg` | Solo `.dmg` |
+| `pnpm tauri:build:mac` | `.app` + `.dmg` con config `tauri.macos.conf.json` |
+| `pnpm package:mac` | Pipeline completo `build-release.sh` |
 
 ---
 
@@ -118,8 +118,11 @@ Para automatizar esto sin costo: **registrar tu Mac Mini física como Self-Hoste
    runs-on: self-hosted
    steps:
      - uses: actions/checkout@v4
-     - run: npm ci
-     - run: npm run package:mac
+     - uses: pnpm/action-setup@v4
+       with:
+         version: 10
+     - run: pnpm install --frozen-lockfile
+     - run: pnpm package:mac
      - uses: actions/upload-artifact@v4
        with:
          name: chofyai-studio-mac
@@ -136,7 +139,7 @@ Con esto, cada Release dispara el build en tu Mac Mini, compila en 1–2 min (co
 
 | Acción | Comando |
 |:---|:---|
-| 🆓 Build ad-hoc (sin firma) | `npm run tauri:build:app` |
+| 🆓 Build ad-hoc (sin firma) | `pnpm tauri:build:app` |
 | 📂 Copiar a Aplicaciones | `cp -R "/tmp/chofyai-target/release/bundle/macos/ChofyAI Studio.app" /Applications/` |
 | 🔓 Permitir Gatekeeper | Click derecho → **Abrir** la primera vez |
 

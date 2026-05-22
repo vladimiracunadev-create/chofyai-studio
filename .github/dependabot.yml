@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # El ecosystem "npm" autodetecta pnpm-lock.yaml desde 2023.
+  # Se mantiene el nombre por convención de la API de Dependabot.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

@@ -35,7 +35,7 @@ Todos los scripts hacen `source "$SCRIPT_DIR/common.sh"` para reutilizar funcion
 
 **Propósito**: Verifica que el entorno de desarrollo tiene los prerequisitos instalados.
 
-**Cuándo usarlo**: Antes de hacer `npm install` por primera vez, o al configurar un nuevo Mac.
+**Cuándo usarlo**: Antes de hacer `pnpm install` por primera vez, o al configurar un nuevo Mac.
 
 **Uso**:
 
@@ -43,7 +43,7 @@ Todos los scripts hacen `source "$SCRIPT_DIR/common.sh"` para reutilizar funcion
 bash scripts/mac/bootstrap.sh
 ```
 
-**Verifica**: Rust/cargo, Node.js/npm, Xcode Command Line Tools, git.
+**Verifica**: Rust/cargo, Node.js/pnpm, Xcode Command Line Tools, git.
 
 **No modifica** el sistema; solo informa de qué falta.
 
@@ -53,7 +53,7 @@ bash scripts/mac/bootstrap.sh
 
 **Propósito**: Verifica prerequisitos específicos para generar el build de producción (`.app` / `.dmg`).
 
-**Cuándo usarlo**: Antes de ejecutar `npm run package:mac`.
+**Cuándo usarlo**: Antes de ejecutar `pnpm package:mac`.
 
 **Uso**:
 

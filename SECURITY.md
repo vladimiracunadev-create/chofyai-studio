@@ -21,11 +21,11 @@
 | Job | Cobertura | Cuándo |
 |:---|:---|:---:|
 | 🔐 **TruffleHog** | Secret scan (verified only) | push + PR + cron lunes |
-| 📦 **npm audit** | Falla PR si hay `high+critical` | si existe `package-lock.json` |
+| 📦 **pnpm audit** | Falla PR si hay `high+critical` | si existe `pnpm-lock.yaml` |
 | 🦀 **cargo audit** | Cruza `Cargo.lock` con RustSec | si existe `Cargo.lock` |
 | 🔬 **CodeQL** | SAST `security-extended` JS/TS | si existe `package.json` |
 | 📌 **Pin actions** | Avisa si alguna acción no está pinneada | siempre |
-| 🤖 **Dependabot** | PRs semanales (npm + cargo + actions) | configurado en `.github/dependabot.yml` |
+| 🤖 **Dependabot** | PRs semanales (pnpm + cargo + actions) | configurado en `.github/dependabot.yml` |
 
 > El workflow `security.yml` es **portable a otros repos** del ecosistema vía `workflow_call` o copia directa. Ver guía completa en [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md).
 
@@ -90,14 +90,18 @@ Los scripts de instalación en `scripts/mac/` ejecutan comandos con privilegios 
 
 ### 📦 Integridad de dependencias
 
-Las dependencias npm están fijadas en `package-lock.json` y las de Rust en `Cargo.lock`. **Auditar localmente**:
+Las dependencias del frontend están fijadas en `pnpm-lock.yaml` (hashes SHA-512 por paquete) y las de Rust en `Cargo.lock`. **Auditar localmente**:
 
 ```bash
-npm audit --omit=dev --audit-level=high
+pnpm audit --prod --audit-level high
 cd src-tauri && cargo install --locked cargo-audit && cargo audit
 ```
 
 CI las audita automáticamente en cada push/PR (ver `.github/workflows/security.yml`). Dependabot abre PRs semanales con upgrades agrupados (`@tauri-apps/*`, React, Vitest, etc.).
+
+#### 🔒 ¿Por qué pnpm y no npm?
+
+Decisión documentada en [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md). Resumen: **bloqueo por defecto de scripts `postinstall` de dependencias transitivas** (vector de ataque supply-chain) vía `pnpm.onlyBuiltDependencies` en `package.json`, content-addressable store con verificación de hash, y resolución estricta de árbol sin "phantom dependencies".
 
 ### 🦀 Memory safety
 
