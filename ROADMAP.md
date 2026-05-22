@@ -60,7 +60,7 @@
 - [x] 💾 Soporte oficial de **APFS sparsebundle** para discos externos no-APFS
 - [x] 📢 **Canal de releases automatizado** (release.yml en macos-latest hosted runner, .dmg adjunto al GitHub Release)
 - [ ] 🤖 ~~Mac Mini Self-Hosted Runner~~ — innecesario ahora que el .dmg se construye en macos-latest hosted
-- [ ] 🎨 Branding e iconografía final
+- [x] 🎨 Branding placeholder técnico (monograma "C" + waveform, paleta neon-purple). Reemplazable editando `src-tauri/icons/_brand-source.svg` y corriendo `pnpm tauri icon` con el nuevo source.
 - [ ] 🔐 Firma Apple Developer ID — guía completa en `docs/NOTARIZATION.md` (necesita 6 secrets)
 - [ ] 🛂 Notarización — incluida en la guía de NOTARIZATION.md
 

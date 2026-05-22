@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    ChofyAI Studio brand placeholder.
+    Tipografía: monograma "C" + ondas tipo signal/wave para sugerir IA generativa
+    multimodal (voz/audio/imagen). Paleta del proyecto: #7c5cff (neon purple).
+    Reemplazable por un logo definitivo — basta sobrescribir este archivo y
+    correr `pnpm tauri icon src-tauri/icons/_brand-source.svg`.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9b7dff"/>
+      <stop offset="100%" stop-color="#5b3dd6"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Fondo redondeado (estilo macOS app icon) -->
+  <rect x="64" y="64" width="896" height="896" rx="220" ry="220" fill="url(#bg)"/>
+
+  <!-- Glow interno -->
+  <rect x="96" y="96" width="832" height="832" rx="196" ry="196"
+        fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+
+  <!-- Monograma "C" — trazo grueso, arco abierto -->
+  <g transform="translate(512 512)">
+    <circle r="248" fill="none" stroke="url(#glow)" stroke-width="80"
+            stroke-linecap="round"
+            stroke-dasharray="900 1558"
+            transform="rotate(35)"/>
+    <!-- Punto interior tipo "AI eye" -->
+    <circle cx="0" cy="0" r="38" fill="#ffffff" opacity="0.95"/>
+    <circle cx="0" cy="0" r="14" fill="#5b3dd6"/>
+  </g>
+
+  <!-- Ondas inferiores tipo waveform -->
+  <g transform="translate(0 760)" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="14" opacity="0.85">
+    <path d="M260 50 L320 50" />
+    <path d="M360 30 L420 30 M360 70 L420 70" opacity="0.7"/>
+    <path d="M460 10 L520 10 M460 90 L520 90" opacity="0.55"/>
+    <path d="M560 30 L620 30 M560 70 L620 70" opacity="0.7"/>
+    <path d="M660 50 L720 50" />
+  </g>
+</svg>
