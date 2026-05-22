@@ -25,6 +25,8 @@ al usuario final. **5/5 tools probadas con inferencia real (no solo boot HTTP)**
 
 ---
 
+> 📐 Requisitos mínimos / recomendados / óptimos consolidados en [`REQUIREMENTS.md`](REQUIREMENTS.md). Lo que sigue es el snapshot del entorno donde se validó.
+
 ## ✅ Entorno verificado
 
 | Dependencia | Versión instalada | Estado |
