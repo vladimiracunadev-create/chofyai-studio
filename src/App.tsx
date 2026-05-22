@@ -8,7 +8,10 @@ import type {
   HealthResult,
   InstallEvent,
   MarketplaceEntry,
+  DeclaredModel,
   ModelEntry,
+  ModelDownloadDone,
+  ModelDownloadProgress,
   QueueItem,
   SystemStats,
   SystemSummary,
@@ -1069,21 +1072,57 @@ function CommandPalette({
 // ─── Models panel ────────────────────────────────────────────────────────────
 function ModelsPanel({ tool, onClose }: { tool: ToolManifest; onClose: () => void }) {
   const [models, setModels] = useState<ModelEntry[]>([]);
+  const [declared, setDeclared] = useState<DeclaredModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloads, setDownloads] = useState<Record<string, { lines: string[]; ok?: boolean }>>({});
+
   const reload = async () => {
     setLoading(true);
-    const r = await tauriInvoke<ModelEntry[]>('list_tool_models', { toolId: tool.id });
-    setModels(r ?? []);
+    const [files, decl] = await Promise.all([
+      tauriInvoke<ModelEntry[]>('list_tool_models', { toolId: tool.id }),
+      tauriInvoke<DeclaredModel[]>('list_declared_models', { toolId: tool.id }),
+    ]);
+    setModels(files ?? []);
+    setDeclared(decl ?? []);
     setLoading(false);
   };
   useEffect(() => { void reload(); }, [tool.id]);
 
+  useEffect(() => {
+    const offs: Array<() => void> = [];
+    void listen<ModelDownloadProgress>('model-download-progress', (ev) => {
+      if (ev.payload.tool_id !== tool.id) return;
+      setDownloads((d) => {
+        const cur = d[ev.payload.repo_id] ?? { lines: [] };
+        return { ...d, [ev.payload.repo_id]: { ...cur, lines: [...cur.lines.slice(-12), ev.payload.line] } };
+      });
+    }).then((off) => offs.push(off));
+    void listen<ModelDownloadDone>('model-download-done', (ev) => {
+      if (ev.payload.tool_id !== tool.id) return;
+      setDownloads((d) => {
+        const cur = d[ev.payload.repo_id] ?? { lines: [] };
+        return { ...d, [ev.payload.repo_id]: { ...cur, ok: ev.payload.ok } };
+      });
+      void reload();
+    }).then((off) => offs.push(off));
+    return () => { for (const o of offs) o(); };
+  }, [tool.id]);
+
   const totalBytes = models.reduce((acc, m) => acc + m.size_bytes, 0);
+  const missing = declared.filter((m) => !m.present);
 
   const onDelete = async (m: ModelEntry) => {
     if (!confirm(`¿Borrar "${m.relative_path}" (${fmtBytes(m.size_bytes)})?`)) return;
     const r = await tauriInvoke<ActionResult>('delete_tool_model', { toolId: tool.id, relativePath: m.relative_path });
     if (r?.ok) { notify('success', 'Modelo borrado', m.name); void reload(); }
+  };
+
+  const onDownload = async (m: DeclaredModel) => {
+    setDownloads((d) => ({ ...d, [m.repo_id]: { lines: ['[hf] iniciando…'] } }));
+    notify('info', 'Descarga iniciada', m.repo_id);
+    const r = await tauriInvoke<ActionResult>('download_tool_model', { toolId: tool.id, repoId: m.repo_id });
+    if (r?.ok) notify('success', 'Modelo descargado', m.repo_id);
+    else notify('error', 'Falló la descarga', r?.message ?? m.repo_id);
   };
 
   return (
@@ -1095,23 +1134,67 @@ function ModelsPanel({ tool, onClose }: { tool: ToolManifest; onClose: () => voi
           <button className="secondary" onClick={onClose}>✕</button>
         </div>
       </div>
+
+      {missing.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <h4 style={{ margin: '6px 0' }}>📥 Modelos declarados sin descargar ({missing.length})</h4>
+          <div className="models-list">
+            {missing.map((m) => {
+              const dl = downloads[m.repo_id];
+              const running = dl && dl.ok === undefined;
+              return (
+                <div key={m.repo_id} className="model-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="model-info" style={{ flex: 1 }}>
+                      <strong>{m.local_name}</strong>
+                      <span className="muted" style={{fontSize:'0.74rem',fontFamily:'ui-monospace'}}>{m.repo_id}</span>
+                    </div>
+                    <button
+                      onClick={() => void onDownload(m)}
+                      disabled={!!running}
+                      title={`Hugging Face → ${m.local_path}`}
+                    >
+                      {running ? '⏳ Descargando…' : '📥 Descargar'}
+                    </button>
+                  </div>
+                  {dl && dl.lines.length > 0 && (
+                    <pre style={{
+                      fontSize: '0.7rem',
+                      maxHeight: '8em',
+                      overflow: 'auto',
+                      background: '#00000033',
+                      padding: 6,
+                      borderRadius: 6,
+                      margin: 0,
+                    }}>{dl.lines.join('\n')}</pre>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {loading && <p className="muted">Escaneando…</p>}
-      {!loading && models.length === 0 && (
+      {!loading && models.length === 0 && missing.length === 0 && (
         <p className="muted">No hay modelos en <code>{tool.install_dir}/models</code> aún.</p>
       )}
       {!loading && models.length > 0 && (
-        <div className="models-list">
-          {models.map((m) => (
-            <div key={m.absolute_path} className="model-row">
-              <div className="model-info">
-                <strong>{m.name}</strong>
-                <span className="muted" style={{fontSize:'0.74rem',fontFamily:'ui-monospace'}}>{m.relative_path}</span>
+        <>
+          <h4 style={{ margin: '6px 0' }}>📂 En disco</h4>
+          <div className="models-list">
+            {models.map((m) => (
+              <div key={m.absolute_path} className="model-row">
+                <div className="model-info">
+                  <strong>{m.name}</strong>
+                  <span className="muted" style={{fontSize:'0.74rem',fontFamily:'ui-monospace'}}>{m.relative_path}</span>
+                </div>
+                <span className="model-size">{fmtBytes(m.size_bytes)}</span>
+                <button className="secondary danger-soft" onClick={() => void onDelete(m)} title="Borrar archivo">🗑</button>
               </div>
-              <span className="model-size">{fmtBytes(m.size_bytes)}</span>
-              <button className="secondary danger-soft" onClick={() => void onDelete(m)} title="Borrar archivo">🗑</button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

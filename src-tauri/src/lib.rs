@@ -39,6 +39,8 @@ pub fn run() {
             system::notify_macos,
             system::list_tool_models,
             system::delete_tool_model,
+            system::list_declared_models,
+            system::download_tool_model,
             system::list_orphan_ports,
             system::adopt_orphan,
             system::kill_orphan,

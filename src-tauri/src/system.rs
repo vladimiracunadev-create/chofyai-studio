@@ -169,6 +169,163 @@ pub fn delete_tool_model(
 }
 
 #[derive(Debug, serde::Serialize, Clone)]
+pub struct DeclaredModel {
+    pub repo_id: String,
+    /// Nombre seguro derivado del basename del repo (después del último `/`).
+    pub local_name: String,
+    /// Ruta absoluta donde se descargaría (o ya está) el modelo.
+    pub local_path: String,
+    pub present: bool,
+    pub size_bytes: u64,
+}
+
+fn safe_model_name(repo_id: &str) -> String {
+    repo_id
+        .rsplit('/')
+        .next()
+        .unwrap_or(repo_id)
+        .to_string()
+}
+
+fn dir_size(path: &Path) -> u64 {
+    let mut total: u64 = 0;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() {
+                if let Ok(m) = entry.metadata() {
+                    total += m.len();
+                }
+            } else if p.is_dir() {
+                total += dir_size(&p);
+            }
+        }
+    }
+    total
+}
+
+#[tauri::command]
+pub fn list_declared_models(
+    app: AppHandle,
+    tool_id: String,
+) -> Result<Vec<DeclaredModel>, String> {
+    let (_, manifest) = find_manifest(&app, &tool_id)?;
+    let declared = manifest.models.clone().unwrap_or_default();
+    let models_dir = resolve_models_dir(&app, &tool_id)?;
+    fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
+    let mut out = Vec::with_capacity(declared.len());
+    for repo in declared {
+        let local_name = safe_model_name(&repo);
+        let local_path = models_dir.join(&local_name);
+        let present = local_path.is_dir() && fs::read_dir(&local_path).map(|mut it| it.next().is_some()).unwrap_or(false);
+        let size_bytes = if present { dir_size(&local_path) } else { 0 };
+        out.push(DeclaredModel {
+            repo_id: repo,
+            local_name,
+            local_path: local_path.display().to_string(),
+            present,
+            size_bytes,
+        });
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn download_tool_model(
+    app: AppHandle,
+    tool_id: String,
+    repo_id: String,
+) -> Result<ActionResult, String> {
+    let (_, manifest) = find_manifest(&app, &tool_id)?;
+    let declared = manifest.models.clone().unwrap_or_default();
+    if !declared.iter().any(|r| r == &repo_id) {
+        return Err(format!("'{}' no está declarado en el manifest de {}", repo_id, tool_id));
+    }
+
+    let models_dir = resolve_models_dir(&app, &tool_id)?;
+    fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
+    let target = models_dir.join(safe_model_name(&repo_id));
+
+    let script = script_path(&app, "scripts/mac/download-hf-model.sh")?;
+    if !script.exists() {
+        return Err(format!("No existe el helper: {}", script.display()));
+    }
+    let script_dir = script
+        .parent()
+        .ok_or_else(|| "No pude resolver la carpeta del helper".to_string())?;
+
+    let settings = load_settings(&app)?;
+    let effective = resolve_effective_home(&settings);
+    let mut cmd = Command::new("bash");
+    cmd.arg(script.as_os_str())
+        .arg(&repo_id)
+        .arg(target.as_os_str())
+        .current_dir(script_dir)
+        .env("CHOFYAI_STUDIO_HOME", &effective)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    apply_path_env(&mut cmd, &settings, &effective);
+    let mut child = cmd.spawn().map_err(|e| e.to_string())?;
+
+    let stdout = child.stdout.take().expect("stdout piped");
+    let app_handle = app.clone();
+    let tid = tool_id.clone();
+    let rid = repo_id.clone();
+    let stdout_thread = std::thread::spawn(move || {
+        let mut buf = String::new();
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            let _ = app_handle.emit(
+                "model-download-progress",
+                serde_json::json!({
+                    "tool_id": tid,
+                    "repo_id": rid,
+                    "line": line,
+                }),
+            );
+            buf.push_str(&line);
+            buf.push('\n');
+        }
+        buf
+    });
+
+    let stderr_output = child
+        .stderr
+        .take()
+        .map(|s| BufReader::new(s).lines().map_while(Result::ok).collect::<Vec<_>>().join("\n"))
+        .unwrap_or_default();
+    let status = child.wait().map_err(|e| e.to_string())?;
+    let stdout_output = stdout_thread.join().unwrap_or_default();
+    let combined = format!("{}\n{}", stdout_output, stderr_output);
+
+    let logs = log_dir(&effective);
+    fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
+    let log_path = logs.join(format!("{}-model-download.log", tool_id));
+    fs::write(&log_path, combined.as_bytes()).map_err(|e| e.to_string())?;
+
+    let ok = status.success();
+    let _ = app.emit(
+        "model-download-done",
+        serde_json::json!({
+            "tool_id": tool_id,
+            "repo_id": repo_id,
+            "ok": ok,
+        }),
+    );
+
+    Ok(ActionResult {
+        ok,
+        message: if ok {
+            format!("Descarga completa: {}", repo_id)
+        } else {
+            format!("Falló la descarga de {} (ver log)", repo_id)
+        },
+        log_path: Some(log_path.display().to_string()),
+        opened_url: None,
+    })
+}
+
+#[derive(Debug, serde::Serialize, Clone)]
 pub struct OrphanPort {
     pub tool_id: String,
     pub tool_name: String,
@@ -592,6 +749,10 @@ struct RawManifest {
     install_script: Option<String>,
     installed_if: Option<Vec<String>>,
     run: Option<RawRun>,
+    /// Lista de repos Hugging Face declarados en el manifest. La UI los muestra
+    /// con un botón "📥 Descargar" si no están aún en disco.
+    #[serde(default)]
+    models: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

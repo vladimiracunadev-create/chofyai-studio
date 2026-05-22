@@ -149,6 +149,26 @@ export type ModelEntry = {
   modified_secs: number;
 };
 
+export type DeclaredModel = {
+  repo_id: string;
+  local_name: string;
+  local_path: string;
+  present: boolean;
+  size_bytes: number;
+};
+
+export type ModelDownloadProgress = {
+  tool_id: string;
+  repo_id: string;
+  line: string;
+};
+
+export type ModelDownloadDone = {
+  tool_id: string;
+  repo_id: string;
+  ok: boolean;
+};
+
 export type ToastKind = 'info' | 'success' | 'warn' | 'error';
 
 export type Toast = {

@@ -131,9 +131,8 @@ prueba de inferencia real**, no solo arranque.
 
 ## ⚠️ Limitaciones actuales
 
-- ⚙️ Settings avanzados (`models_dir`, `outputs_dir`, `cache_dir`) declarados en manifests pero sin controles UI.
-- 🔐 Firma y notarización Apple no incluidas — el `.app` se ejecuta ad-hoc en este equipo (click derecho → Abrir la primera vez).
-- 📦 La descarga de modelos pesados (SD 1.5, ACE-Step, Qwen-TTS) se hace fuera de la UI; aún no hay flujo guiado.
+- 🔐 Firma Apple Developer ID + notarización no incluidas — el `.app` se ejecuta ad-hoc (click derecho → Abrir la primera vez). Guía completa en [`NOTARIZATION.md`](NOTARIZATION.md) con los 6 secrets exactos a configurar.
+- 🎨 Branding/iconografía finales pendientes — ver ROADMAP fase 4.
 
 > Cerradas en v0.5.1: ✅ cleanup automático de huérfanos en `start_tool` ·
 > ✅ verificación de puerto antes de iniciar · ✅ auto-mount del sparsebundle.

@@ -58,11 +58,11 @@
 - [x] ✅ Build verificado en macOS real (Apple Silicon)
 - [x] 🆓 Build ad-hoc sin Apple Developer ID (uso personal)
 - [x] 💾 Soporte oficial de **APFS sparsebundle** para discos externos no-APFS
-- [ ] 🤖 **Configurar Mac Mini como Self-Hosted Runner para GitHub Actions**
+- [x] 📢 **Canal de releases automatizado** (release.yml en macos-latest hosted runner, .dmg adjunto al GitHub Release)
+- [ ] 🤖 ~~Mac Mini Self-Hosted Runner~~ — innecesario ahora que el .dmg se construye en macos-latest hosted
 - [ ] 🎨 Branding e iconografía final
-- [ ] 🔐 Firma Apple Developer ID
-- [ ] 🛂 Notarización
-- [ ] 📢 Canal de releases automatizado
+- [ ] 🔐 Firma Apple Developer ID — guía completa en `docs/NOTARIZATION.md` (necesita 6 secrets)
+- [ ] 🛂 Notarización — incluida en la guía de NOTARIZATION.md
 
 ---
 
