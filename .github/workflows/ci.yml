@@ -62,8 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # version se lee de package.json → "packageManager" (pin de seguridad)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -85,8 +84,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: "20"

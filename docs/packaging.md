@@ -118,9 +118,7 @@ Para automatizar esto sin costo: **registrar tu Mac Mini física como Self-Hoste
    runs-on: self-hosted
    steps:
      - uses: actions/checkout@v4
-     - uses: pnpm/action-setup@v4
-       with:
-         version: 10
+     - uses: pnpm/action-setup@v4   # version desde package.json packageManager
      - run: pnpm install --frozen-lockfile
      - run: pnpm package:mac
      - uses: actions/upload-artifact@v4
