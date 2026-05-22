@@ -758,7 +758,48 @@ fn load_settings(app: &AppHandle) -> Result<AppSettings, String> {
         tool_overrides: HashMap::new(),
         fallback_home: None,
         sparsebundle_path: None,
+        models_dir: None,
+        outputs_dir: None,
+        cache_dir: None,
     })
+}
+
+/// Path efectivo para modelos: override de settings o `<studio_home>/models`.
+fn effective_models_dir(settings: &AppSettings, studio_home: &str) -> PathBuf {
+    settings
+        .models_dir
+        .as_ref()
+        .filter(|s| !s.trim().is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(studio_home).join("models"))
+}
+
+/// Path efectivo para salidas: override de settings o `<studio_home>/outputs`.
+fn effective_outputs_dir(settings: &AppSettings, studio_home: &str) -> PathBuf {
+    settings
+        .outputs_dir
+        .as_ref()
+        .filter(|s| !s.trim().is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(studio_home).join("outputs"))
+}
+
+/// Path efectivo para caché: override de settings o `<studio_home>/cache`.
+fn effective_cache_dir(settings: &AppSettings, studio_home: &str) -> PathBuf {
+    settings
+        .cache_dir
+        .as_ref()
+        .filter(|s| !s.trim().is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(studio_home).join("cache"))
+}
+
+/// Inyecta los path overrides como variables de entorno para los scripts.
+/// Los scripts deben leer estas vars en lugar de hardcodear `<studio_home>/{models,outputs,cache}`.
+fn apply_path_env(cmd: &mut Command, settings: &AppSettings, studio_home: &str) {
+    cmd.env("CHOFYAI_MODELS_DIR", effective_models_dir(settings, studio_home));
+    cmd.env("CHOFYAI_OUTPUTS_DIR", effective_outputs_dir(settings, studio_home));
+    cmd.env("CHOFYAI_CACHE_DIR", effective_cache_dir(settings, studio_home));
 }
 
 fn save_settings_to_disk(app: &AppHandle, settings: &AppSettings) -> Result<(), String> {
@@ -872,14 +913,23 @@ fn run_install_script(
         .parent()
         .ok_or_else(|| format!("No pude resolver la carpeta del script: {}", script.display()))?;
 
-    let mut child = Command::new("bash")
-        .arg(script.as_os_str())
+    let settings = load_settings(app).unwrap_or(AppSettings {
+        studio_home: studio_home.to_string(),
+        tool_overrides: HashMap::new(),
+        fallback_home: None,
+        sparsebundle_path: None,
+        models_dir: None,
+        outputs_dir: None,
+        cache_dir: None,
+    });
+    let mut cmd = Command::new("bash");
+    cmd.arg(script.as_os_str())
         .current_dir(script_dir)
         .env("CHOFYAI_STUDIO_HOME", studio_home)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .stderr(Stdio::piped());
+    apply_path_env(&mut cmd, &settings, studio_home);
+    let mut child = cmd.spawn().map_err(|e| e.to_string())?;
 
     let stdout = child.stdout.take().expect("stdout piped");
     let app_handle = app.clone();
@@ -930,7 +980,10 @@ fn run_install_script(
             studio_home: studio_home.to_string(),
             tool_overrides: HashMap::new(),
             fallback_home: None,
-        sparsebundle_path: None,
+            sparsebundle_path: None,
+            models_dir: None,
+            outputs_dir: None,
+            cache_dir: None,
         });
         let install_dir = manifest_install_dir(
             manifest,
@@ -1128,6 +1181,50 @@ pub fn save_studio_home(app: AppHandle, studio_home: String) -> Result<AppSettin
     settings.studio_home = normalized;
     save_settings_to_disk(&app, &settings)?;
     Ok(settings)
+}
+
+/// Guarda overrides de directorios de modelos / outputs / cache.
+/// Strings vacíos limpian el override (vuelve al default `<studio_home>/{models,outputs,cache}`).
+#[tauri::command]
+pub fn save_path_settings(
+    app: AppHandle,
+    models_dir: Option<String>,
+    outputs_dir: Option<String>,
+    cache_dir: Option<String>,
+) -> Result<AppSettings, String> {
+    fn normalize(v: Option<String>) -> Option<String> {
+        v.and_then(|s| {
+            let t = s.trim();
+            if t.is_empty() { None } else { Some(t.to_string()) }
+        })
+    }
+    let mut settings = load_settings(&app)?;
+    settings.models_dir = normalize(models_dir);
+    settings.outputs_dir = normalize(outputs_dir);
+    settings.cache_dir = normalize(cache_dir);
+    save_settings_to_disk(&app, &settings)?;
+    Ok(settings)
+}
+
+/// Devuelve los paths efectivos (después de aplicar overrides) para la UI.
+#[tauri::command]
+pub fn get_effective_paths(app: AppHandle) -> Result<EffectivePaths, String> {
+    let settings = load_settings(&app)?;
+    let home = resolve_effective_home(&settings);
+    Ok(EffectivePaths {
+        studio_home: home.clone(),
+        models_dir: effective_models_dir(&settings, &home).display().to_string(),
+        outputs_dir: effective_outputs_dir(&settings, &home).display().to_string(),
+        cache_dir: effective_cache_dir(&settings, &home).display().to_string(),
+    })
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EffectivePaths {
+    pub studio_home: String,
+    pub models_dir: String,
+    pub outputs_dir: String,
+    pub cache_dir: String,
 }
 
 #[tauri::command]
@@ -1328,15 +1425,15 @@ pub fn start_tool(
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
     let log_file_err = log_file.try_clone().map_err(|e| e.to_string())?;
 
-    let child = Command::new("bash")
-        .arg("-lc")
+    let mut cmd = Command::new("bash");
+    cmd.arg("-lc")
         .arg(&run_command)
         .current_dir(&install_dir)
         .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
-        .stderr(Stdio::from(log_file_err))
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .stderr(Stdio::from(log_file_err));
+    apply_path_env(&mut cmd, &settings, &effective);
+    let child = cmd.spawn().map_err(|e| e.to_string())?;
 
     let pid = child.id();
     {
@@ -1417,15 +1514,15 @@ pub fn restart_tool(
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
     let log_file_err = log_file.try_clone().map_err(|e| e.to_string())?;
 
-    let child = Command::new("bash")
-        .arg("-lc")
+    let mut cmd = Command::new("bash");
+    cmd.arg("-lc")
         .arg(&run_command)
         .current_dir(&install_dir)
         .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
-        .stderr(Stdio::from(log_file_err))
-        .spawn()
-        .map_err(|e| e.to_string())?;
+        .stderr(Stdio::from(log_file_err));
+    apply_path_env(&mut cmd, &settings, &effective);
+    let child = cmd.spawn().map_err(|e| e.to_string())?;
 
     let pid = child.id();
     {

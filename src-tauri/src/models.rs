@@ -52,6 +52,18 @@ pub struct AppSettings {
     /// ExFAT/FAT y no soporta venvs/symlinks, la imagen APFS es la única vía.
     #[serde(default)]
     pub sparsebundle_path: Option<String>,
+    /// Override del directorio de modelos. Si está vacío → `<studio_home>/models`.
+    /// Se propaga a los scripts vía CHOFYAI_MODELS_DIR.
+    #[serde(default)]
+    pub models_dir: Option<String>,
+    /// Override del directorio de salidas. Si está vacío → `<studio_home>/outputs`.
+    /// Se propaga a los scripts vía CHOFYAI_OUTPUTS_DIR.
+    #[serde(default)]
+    pub outputs_dir: Option<String>,
+    /// Override del directorio de caché. Si está vacío → `<studio_home>/cache`.
+    /// Se propaga a los scripts vía CHOFYAI_CACHE_DIR.
+    #[serde(default)]
+    pub cache_dir: Option<String>,
 }
 
 /// Resultado de un health check sobre una herramienta.

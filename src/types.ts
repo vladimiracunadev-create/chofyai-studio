@@ -32,6 +32,17 @@ export type AppSettings = {
   studio_home: string;
   tool_overrides?: Record<string, string>;
   fallback_home?: string | null;
+  sparsebundle_path?: string | null;
+  models_dir?: string | null;
+  outputs_dir?: string | null;
+  cache_dir?: string | null;
+};
+
+export type EffectivePaths = {
+  studio_home: string;
+  models_dir: string;
+  outputs_dir: string;
+  cache_dir: string;
 };
 
 export type ActionResult = {

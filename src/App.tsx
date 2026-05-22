@@ -1126,19 +1126,25 @@ function SettingsModal({
 }) {
   const [draft, setDraft] = useState<string>('');
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [modelsDir, setModelsDir] = useState<string>('');
+  const [outputsDir, setOutputsDir] = useState<string>('');
+  const [cacheDir, setCacheDir] = useState<string>('');
+  const [effectivePaths, setEffectivePaths] = useState<{ models_dir: string; outputs_dir: string; cache_dir: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setDraft(summary?.studio_home ?? '');
     void (async () => {
-      // Cargar overrides actuales
       try {
-        const settingsResp = await tauriInvoke<Record<string, unknown>>('get_system_summary');
-        if (settingsResp) {
-          const t = tools.filter((x) => x.relocated);
-          const m: Record<string, string> = {};
-          for (const x of t) m[x.id] = x.install_dir;
-          setOverrides(m);
+        const t = tools.filter((x) => x.relocated);
+        const m: Record<string, string> = {};
+        for (const x of t) m[x.id] = x.install_dir;
+        setOverrides(m);
+      } catch { /* noop */ }
+      try {
+        const eff = await tauriInvoke<{ studio_home: string; models_dir: string; outputs_dir: string; cache_dir: string }>('get_effective_paths');
+        if (eff) {
+          setEffectivePaths({ models_dir: eff.models_dir, outputs_dir: eff.outputs_dir, cache_dir: eff.cache_dir });
         }
       } catch { /* noop */ }
     })();
@@ -1151,6 +1157,23 @@ function SettingsModal({
     const r = await tauriInvoke<unknown>('save_studio_home', { studioHome: draft });
     if (r) {
       notify('success', 'Studio home guardado', draft);
+      onSaved();
+    }
+  };
+
+  const onSavePaths = async () => {
+    const r = await tauriInvoke<unknown>('save_path_settings', {
+      modelsDir: modelsDir.trim() || null,
+      outputsDir: outputsDir.trim() || null,
+      cacheDir: cacheDir.trim() || null,
+    });
+    if (r) {
+      notify('success', 'Rutas avanzadas guardadas', 'Reinicia las tools para que tomen efecto');
+      setModelsDir(''); setOutputsDir(''); setCacheDir('');
+      try {
+        const eff = await tauriInvoke<{ models_dir: string; outputs_dir: string; cache_dir: string }>('get_effective_paths');
+        if (eff) setEffectivePaths({ models_dir: eff.models_dir, outputs_dir: eff.outputs_dir, cache_dir: eff.cache_dir });
+      } catch { /* noop */ }
       onSaved();
     }
   };
@@ -1197,6 +1220,63 @@ function SettingsModal({
                 <span>{v.free_bytes ? fmtBytes(v.free_bytes) + ' libres' : '—'}</span>
               </button>
             ))}
+          </div>
+        </section>
+
+        <section style={{ marginTop: 18 }}>
+          <h4>📂 Rutas avanzadas</h4>
+          <p className="muted" style={{ fontSize: '0.82rem' }}>
+            Overrides opcionales para modelos, salidas y caché. Si quedan vacíos se usa <code>studio_home/&lt;subdir&gt;</code>.
+            Los scripts reciben <code>CHOFYAI_MODELS_DIR</code>, <code>CHOFYAI_OUTPUTS_DIR</code> y <code>CHOFYAI_CACHE_DIR</code> como env vars.
+          </p>
+          <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+            <label style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: '0.78rem' }}>🧠 Modelos</span>
+              <input
+                className="onb-input"
+                value={modelsDir}
+                onChange={(e) => setModelsDir(e.target.value)}
+                placeholder={effectivePaths?.models_dir ?? 'studio_home/models'}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: '0.78rem' }}>🎬 Salidas</span>
+              <input
+                className="onb-input"
+                value={outputsDir}
+                onChange={(e) => setOutputsDir(e.target.value)}
+                placeholder={effectivePaths?.outputs_dir ?? 'studio_home/outputs'}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: '0.78rem' }}>💾 Caché</span>
+              <input
+                className="onb-input"
+                value={cacheDir}
+                onChange={(e) => setCacheDir(e.target.value)}
+                placeholder={effectivePaths?.cache_dir ?? 'studio_home/cache'}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="secondary"
+                onClick={() => { setModelsDir(''); setOutputsDir(''); setCacheDir(''); void onSavePaths(); }}
+                title="Limpia los tres overrides y vuelve a usar studio_home/{models,outputs,cache}"
+              >
+                ↺ Resetear todo
+              </button>
+              <button
+                onClick={() => void onSavePaths()}
+                disabled={!modelsDir.trim() && !outputsDir.trim() && !cacheDir.trim()}
+              >
+                Guardar rutas
+              </button>
+            </div>
+            {effectivePaths && (
+              <div className="muted" style={{ fontSize: '0.72rem', borderTop: '1px solid #ffffff14', paddingTop: 6, marginTop: 4 }}>
+                Efectivo: <code>{effectivePaths.models_dir}</code> · <code>{effectivePaths.outputs_dir}</code> · <code>{effectivePaths.cache_dir}</code>
+              </div>
+            )}
           </div>
         </section>
 

@@ -91,6 +91,41 @@ resolve_studio_home() {
   printf '%s\n' "$studio_home"
 }
 
+# ─── Subdir resolution ───────────────────────────────────────────────────────
+# Devuelven el directorio efectivo de modelos / salidas / caché. Honran las
+# env vars que inyecta Tauri (CHOFYAI_MODELS_DIR, CHOFYAI_OUTPUTS_DIR,
+# CHOFYAI_CACHE_DIR) y caen al subdir clásico bajo studio_home si no están.
+# Uso típico en un install script:
+#   STUDIO_HOME="$(resolve_studio_home "$DEFAULT_HOME" "$SETTINGS_FILE")"
+#   MODELS_DIR="$(resolve_models_dir "$STUDIO_HOME")"
+#   CACHE_DIR="$(resolve_cache_dir "$STUDIO_HOME")"
+resolve_models_dir() {
+  local studio_home="${1:-}"
+  if [ -n "${CHOFYAI_MODELS_DIR:-}" ]; then
+    printf '%s\n' "$CHOFYAI_MODELS_DIR"
+  else
+    printf '%s\n' "${studio_home%/}/models"
+  fi
+}
+
+resolve_outputs_dir() {
+  local studio_home="${1:-}"
+  if [ -n "${CHOFYAI_OUTPUTS_DIR:-}" ]; then
+    printf '%s\n' "$CHOFYAI_OUTPUTS_DIR"
+  else
+    printf '%s\n' "${studio_home%/}/outputs"
+  fi
+}
+
+resolve_cache_dir() {
+  local studio_home="${1:-}"
+  if [ -n "${CHOFYAI_CACHE_DIR:-}" ]; then
+    printf '%s\n' "$CHOFYAI_CACHE_DIR"
+  else
+    printf '%s\n' "${studio_home%/}/cache"
+  fi
+}
+
 # ─── Python toolchain ────────────────────────────────────────────────────────
 
 # detect_python [preferred1 preferred2 ...]

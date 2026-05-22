@@ -19,6 +19,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             system::get_system_summary,
             system::save_studio_home,
+            system::save_path_settings,
+            system::get_effective_paths,
             system::list_tools,
             system::install_tool,
             system::update_tool,
