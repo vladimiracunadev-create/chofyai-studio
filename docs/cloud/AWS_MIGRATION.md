@@ -181,6 +181,20 @@ flowchart LR
 
 ### 3.6 Workflows (chains entre tools, nuevo en v0.5.0)
 
+#### Cambios relevantes desde la última revisión
+
+Estos features quedaron implementados después de redactar este doc — la migración debe contemplarlos:
+
+| Feature | Local | Cloud |
+|---|---|---|
+| 📥 **Descarga guiada de modelos** (`download_tool_model`) | spawnea `scripts/mac/download-hf-model.sh` con `huggingface-cli` | **Lambda** o **ECS task** que descarga a EFS compartido. Cache de modelos en S3 con presigned URLs para reusar entre tenants |
+| ⚙️ **Settings de rutas avanzadas** (`models_dir`, `outputs_dir`, `cache_dir`) | env vars `CHOFYAI_MODELS_DIR/OUTPUTS_DIR/CACHE_DIR` inyectadas al spawn | Por-usuario en **DynamoDB**, mapeadas a prefijos S3 o subdirs EFS. Permite tiers (modelos compartidos vs privados) |
+| 📢 **Release `.dmg` automatizado** | `macos-latest` hosted runner construye y adjunta al Release | No aplica directamente — el cliente cloud es web (no `.dmg`). Pero la lógica del workflow sirve si se mantiene una distribución desktop paralela |
+| 🛂 **Notarización Apple** (pendiente) | Configurable con 6 secrets en GH Actions | No aplica al backend cloud |
+| 📦 **Gestor de paquetes pnpm** | `pnpm-lock.yaml` con SHA-512 + `onlyBuiltDependencies` allowlist | Heredar en Lambdas/CDK: pnpm en lugar de npm. CodeBuild + ECR builds usan `pnpm install --frozen-lockfile` |
+
+
+
 Los workflows YAML locales necesitan un orquestador en cloud. **AWS Step Functions** es la opción natural:
 
 | Aspecto | Cloud |

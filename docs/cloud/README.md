@@ -32,6 +32,15 @@ Transformar el launcher local (Tauri + Rust + React, 5 herramientas IA Python) e
 | 5 | 💰 [`AWS_COSTS.md`](AWS_COSTS.md) | 10 min | Modelos de costos, escenarios, optimizaciones |
 | 6 | 🔒 [`AWS_SECURITY.md`](AWS_SECURITY.md) | 10 min | IAM, redes, secretos, hardening |
 
+### Documentos relacionados fuera de `cloud/`
+
+| Doc | Por qué importa para la migración |
+|---|---|
+| [`../REQUIREMENTS.md`](../REQUIREMENTS.md) | Matriz de soporte actual (mac-arm64). Útil para entender qué se gana con cloud (multiplataforma desde el navegador). |
+| [`../PORTING_GUIDE.md`](../PORTING_GUIDE.md) | Por qué la app desktop es mac-only y cómo el cloud lo resuelve sin reescribir tools (servir inferencia desde GPU EC2, cliente queda cross-platform). |
+| [`../PACKAGE_MANAGER.md`](../PACKAGE_MANAGER.md) | Migración npm → pnpm con `onlyBuiltDependencies`. Heredar en Lambdas/CDK del lado cloud. |
+| [`../NOTARIZATION.md`](../NOTARIZATION.md) | Solo aplica si se mantiene distribución desktop paralela al SaaS. |
+
 ---
 
 ## 🧭 Flujo recomendado de lectura

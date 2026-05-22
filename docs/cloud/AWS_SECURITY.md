@@ -126,7 +126,7 @@ flowchart LR
 | **Non-root user** | `USER 65532` en Dockerfile |
 | **Scan en ECR** | Activar enhanced scanning (Inspector) |
 | **SBOM** | Generado por build, almacenado en S3 versionado |
-| **Dependency pinning** | `Cargo.lock` y `package-lock.json` commiteados |
+| **Dependency pinning** | `Cargo.lock` (Rust) y `pnpm-lock.yaml` con SHA-512 (JS) commiteados. `pnpm.onlyBuiltDependencies` allowlist bloquea postinstall arbitrarios (ver [`docs/PACKAGE_MANAGER.md`](../PACKAGE_MANAGER.md)) |
 | **Cabeceras** | CSP estricta, `X-Content-Type-Options: nosniff`, HSTS preload |
 
 ---
@@ -200,7 +200,7 @@ Cobertura automática:
 | Job | Aplicable a infra cloud |
 |:---|:---|
 | 🔐 **TruffleHog** | ✅ Detecta secrets (AWS keys, JWT) |
-| 📦 **npm audit** | ✅ Si hay `package-lock.json` (CDK TS, Lambdas Node) |
+| 📦 **pnpm audit** | ✅ Si hay `pnpm-lock.yaml` (CDK TS, Lambdas Node). Para repos que aún usen npm el job se salta vía `hashFiles()` |
 | 🦀 **cargo audit** | ⚠️ Solo si la infra usa Rust (skip silencioso si no) |
 | 🔬 **CodeQL** | ✅ Para Lambdas TS/JS |
 | 📌 **Pin actions** | ✅ Universal |

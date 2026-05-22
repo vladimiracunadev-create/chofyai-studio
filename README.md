@@ -211,6 +211,7 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 |:---|:---|:---|
 | 🚀 **Quick start** | [`QUICKSTART.md`](QUICKSTART.md) | Arranque en 3 comandos |
 | 📐 **Requisitos HW/SW** | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | Mínimo / recomendado / óptimo + matriz de plataformas |
+| 🔀 **Port a otros SO** | [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) | Análisis técnico Windows/Linux/Intel Mac (ingeniería, no instalación) |
 | 🧭 **¿Qué falló y por qué?** | [`docs/PORQUE-NO-FUNCIONABA.md`](docs/PORQUE-NO-FUNCIONABA.md) | **Explicación en lenguaje claro** del hardening v0.5.1 (sin jerga) |
 | 📑 **Postmortem técnico** | [`docs/POSTMORTEM-2026-05-17.md`](docs/POSTMORTEM-2026-05-17.md) | Los 10 incidentes con causa raíz y verificación |
 | 🍎 **Instalación detallada** | [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md) | Dependencias + workarounds disco externo |
