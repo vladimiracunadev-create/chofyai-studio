@@ -1,12 +1,9 @@
 name: Release
 
 # ─────────────────────────────────────────────────────────
-# Disparo manual desde GitHub UI o API.
-# El build real (.app / .dmg) DEBE ejecutarse en un Mac real
-# con Xcode, Rust, Tauri CLI y Node.js instalados.
-# Este workflow prepara la release y documenta los pasos.
-#
-# Patrón inspirado en: proyectos-aws/despliegue.yml
+# Build .app/.dmg en macos-latest hosted runner (Apple Silicon ARM64).
+# Ad-hoc signed por defecto — para distribución pública configurar
+# los secrets de notarización (ver docs/NOTARIZATION.md).
 # ─────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
@@ -21,12 +18,23 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: write
+
 jobs:
-  prepare-release:
+  # ───────────────────────────────────────────────────────
+  # 1. Validar versión + crear tag + extraer changelog
+  # ───────────────────────────────────────────────────────
+  prepare:
     name: "Preparar release ${{ github.event.inputs.version }}"
     runs-on: ubuntu-latest
+    outputs:
+      notes: ${{ steps.changelog.outputs.notes }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Verificar formato de versión
         run: |
@@ -35,57 +43,152 @@ jobs:
             echo "ERROR: versión '$VERSION' no tiene formato semántico (ej: v0.2.1)"
             exit 1
           fi
-          echo "VERSION_OK=$VERSION"
 
       - name: Extraer notas de release desde CHANGELOG.md
         id: changelog
         run: |
           VERSION_RAW="${{ github.event.inputs.version }}"
           VERSION="${VERSION_RAW#v}"
-          # Extrae el bloque entre el header de la versión y el siguiente header o EOF
-          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          NOTES=$(awk "/^## .*\[$VERSION\]/{found=1; next} found && /^## .*\[/{exit} found{print}" CHANGELOG.md)
           if [ -z "$NOTES" ]; then
             NOTES="Ver [CHANGELOG.md](./CHANGELOG.md) para detalles."
           fi
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Crear tag de release
+      - name: Crear tag
+        id: tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG="${{ github.event.inputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
-          git push origin "${{ github.event.inputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG ya existe — se reutiliza"
+          else
+            git tag "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Crear GitHub Release (sin binarios)
+  # ───────────────────────────────────────────────────────
+  # 2. Build .app + .dmg en macOS Apple Silicon (hosted)
+  # ───────────────────────────────────────────────────────
+  build-macos:
+    name: "Build .app/.dmg (macOS ARM64)"
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # version desde package.json → packageManager
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Instalar dependencias frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm build:web
+
+      - name: Build .app + .dmg
+        env:
+          # En hosted runners el target-dir local funciona — no hay AppleDouble
+          CARGO_TARGET_DIR: ${{ github.workspace }}/src-tauri/target
+        run: pnpm tauri:build:mac
+
+      - name: Localizar bundles
+        id: bundles
+        run: |
+          APP_DIR="src-tauri/target/release/bundle/macos"
+          DMG_DIR="src-tauri/target/release/bundle/dmg"
+          APP=$(find "$APP_DIR" -maxdepth 2 -name "*.app" | head -1)
+          DMG=$(find "$DMG_DIR" -maxdepth 2 -name "*.dmg" | head -1)
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
+          ls -lh "$APP_DIR" "$DMG_DIR" || true
+
+      - name: Subir .dmg como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: chofyai-studio-${{ needs.prepare.outputs.tag }}-macos-arm64-dmg
+          path: ${{ steps.bundles.outputs.dmg }}
+          if-no-files-found: error
+          retention-days: 14
+
+  # ───────────────────────────────────────────────────────
+  # 3. Crear GitHub Release con el .dmg adjunto
+  # ───────────────────────────────────────────────────────
+  publish:
+    name: "Publicar GitHub Release"
+    needs: [prepare, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: chofyai-studio-${{ needs.prepare.outputs.tag }}-macos-arm64-dmg
+          path: ./release-assets
+
+      - name: Listar artefactos descargados
+        run: ls -lh ./release-assets
+
+      - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: "ChofyAI Studio ${{ github.event.inputs.version }}"
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: "ChofyAI Studio ${{ needs.prepare.outputs.tag }}"
           body: |
-            ## ChofyAI Studio ${{ github.event.inputs.version }}
+            ## ChofyAI Studio ${{ needs.prepare.outputs.tag }}
 
-            ${{ steps.changelog.outputs.notes }}
+            ${{ needs.prepare.outputs.notes }}
 
             ---
 
-            ### Instalación
+            ### 📥 Descarga
 
-            > Los binarios `.app` y `.dmg` para macOS Apple Silicon deben generarse en un Mac real.
-            > Consulta [`docs/packaging.md`](docs/packaging.md) y [`docs/INSTALL_MAC.md`](docs/INSTALL_MAC.md).
+            El `.dmg` adjunto es para **macOS Apple Silicon (M1/M2/M3/M4)**.
+            Build **ad-hoc** (sin firma Developer ID): primer arranque requiere
+            click derecho → Abrir.
+
+            Para una distribución firmada y notarizada, ver
+            [`docs/NOTARIZATION.md`](docs/NOTARIZATION.md).
+
+            ### 📋 Plataforma
+
+            - macOS 13+ Apple Silicon
+            - Construido en `macos-latest` hosted runner
+
+            ### 🛠️ Build desde fuentes
 
             ```bash
             git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
             cd chofyai-studio
-            git checkout ${{ github.event.inputs.version }}
+            git checkout ${{ needs.prepare.outputs.tag }}
             pnpm install --frozen-lockfile
             pnpm package:mac
             ```
-
-            ### Plataforma
-            - macOS 13+ Apple Silicon (M1/M2/M3/M4)
+          files: ./release-assets/*.dmg
           prerelease: ${{ github.event.inputs.prerelease }}
           draft: false
