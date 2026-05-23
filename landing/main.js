@@ -1,5 +1,6 @@
 // ChofyAI Studio · Landing page — interactividad mínima.
 // Sin frameworks, sin build step. Solo lo que añade valor real.
+// Deploy trigger: 2026-05-22.
 
 (() => {
     'use strict';
