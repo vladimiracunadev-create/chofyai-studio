@@ -3,17 +3,27 @@ name: AceForge
 icon: "🎹"
 category: music
 runtime: python
-python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
-description: Workstation musical local-first para Apple Silicon basada en ACE-Step.
+python_manager: auto
+description: Workstation musical basada en ACE-Step. MPS en Mac, CUDA en Win/Linux.
 platforms:
   - mac-arm64
+  - win-x64
+  - linux-x64
 recommended: true
 default_port: 7857
 studio_home_subdir: tools/aceforge
+
 install_script: scripts/mac/install-aceforge.sh
+install_scripts:
+  mac-arm64: scripts/mac/install-aceforge.sh
+  win-x64: scripts/win/install-aceforge.ps1
+  linux-x64: scripts/linux/install-aceforge.sh   # TODO: pendiente
+
 run:
   command: source env/bin/activate && cd source && python music_forge_ui.py
+  commands:
+    mac-arm64: source env/bin/activate && cd source && python music_forge_ui.py
+    win-x64: env\Scripts\python.exe source\app.py --port 7857
+    linux-x64: source env/bin/activate && cd source && python music_forge_ui.py
 installed_if:
   - source/.git
-  - env
-  - source/music_forge_ui.py

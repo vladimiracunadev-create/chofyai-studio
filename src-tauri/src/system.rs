@@ -256,7 +256,7 @@ pub fn download_tool_model(
 
     let settings = load_settings(&app)?;
     let effective = resolve_effective_home(&settings);
-    let mut cmd = Command::new("bash");
+    let mut cmd = Command::new(script_shell());
     cmd.arg(script.as_os_str())
         .arg(&repo_id)
         .arg(target.as_os_str())
@@ -746,9 +746,19 @@ struct RawManifest {
     recommended: Option<bool>,
     default_port: Option<u16>,
     studio_home_subdir: Option<String>,
+    /// Script único (legacy / mono-plataforma). Si el manifest también tiene
+    /// `install_scripts:` por plataforma, este queda como fallback.
     install_script: Option<String>,
+    /// Scripts por plataforma. Claves esperadas: "mac-arm64", "win-x64",
+    /// "linux-x64". El backend elige el de la plataforma actual.
+    #[serde(default)]
+    install_scripts: Option<HashMap<String, String>>,
     installed_if: Option<Vec<String>>,
     run: Option<RawRun>,
+    /// Plataformas soportadas. Si presente, la tool se oculta en plataformas
+    /// no listadas. Ausente = mac-arm64 only (compat con manifests viejos).
+    #[serde(default)]
+    platforms: Option<Vec<String>>,
     /// Lista de repos Hugging Face declarados en el manifest. La UI los muestra
     /// con un botón "📥 Descargar" si no están aún en disco.
     #[serde(default)]
@@ -757,7 +767,71 @@ struct RawManifest {
 
 #[derive(Debug, Deserialize, Clone)]
 struct RawRun {
+    /// Comando único (legacy / mono-plataforma).
     command: Option<String>,
+    /// Comandos por plataforma. Mismas claves que `install_scripts`.
+    #[serde(default)]
+    commands: Option<HashMap<String, String>>,
+}
+
+/// Devuelve la clave de plataforma actual usada en los manifests.
+pub fn current_platform_key() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "win-x64"
+    } else if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "aarch64") { "mac-arm64" } else { "mac-x64" }
+    } else if cfg!(target_os = "linux") {
+        "linux-x64"
+    } else {
+        "unknown"
+    }
+}
+
+/// Resuelve el install script efectivo según plataforma. Prefiere el dict
+/// `install_scripts:` y cae a `install_script:` para manifests viejos.
+fn resolve_install_script(manifest: &RawManifest) -> Option<String> {
+    if let Some(map) = manifest.install_scripts.as_ref() {
+        let key = current_platform_key();
+        if let Some(s) = map.get(key) {
+            return Some(s.clone());
+        }
+    }
+    manifest.install_script.clone()
+}
+
+/// Resuelve el comando de run efectivo según plataforma.
+fn resolve_run_command(run: &RawRun) -> Option<String> {
+    if let Some(map) = run.commands.as_ref() {
+        let key = current_platform_key();
+        if let Some(s) = map.get(key) {
+            return Some(s.clone());
+        }
+    }
+    run.command.clone()
+}
+
+/// True si la plataforma actual está en `manifest.platforms` (o el campo está
+/// ausente, lo que asume mac-arm64 por retrocompat).
+fn platform_supported(manifest: &RawManifest) -> bool {
+    match manifest.platforms.as_ref() {
+        None => current_platform_key() == "mac-arm64",
+        Some(list) => list.iter().any(|p| p == current_platform_key()),
+    }
+}
+
+/// Shell a usar para spawn de scripts según plataforma.
+fn script_shell() -> &'static str {
+    if cfg!(target_os = "windows") { "pwsh" } else { "bash" }
+}
+
+/// Construye una invocación de shell que ejecuta un comando inline.
+/// En mac/linux: `bash -lc <cmd>`. En Windows: `pwsh -NoProfile -Command <cmd>`.
+fn shell_inline_command(cmd: &mut Command, command_str: &str) {
+    if cfg!(target_os = "windows") {
+        cmd.arg("-NoProfile").arg("-Command").arg(command_str);
+    } else {
+        cmd.arg("-lc").arg(command_str);
+    }
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -1061,10 +1135,16 @@ fn run_install_script(
     manifest: &RawManifest,
     studio_home: &str,
 ) -> Result<ActionResult, String> {
-    let script_rel = manifest
-        .install_script
-        .clone()
-        .ok_or_else(|| format!("{} no tiene install_script", tool_id))?;
+    if !platform_supported(manifest) {
+        return Err(format!(
+            "{} no soporta la plataforma actual ({}). Plataformas soportadas: {:?}",
+            tool_id,
+            current_platform_key(),
+            manifest.platforms.clone().unwrap_or_else(|| vec!["mac-arm64".to_string()])
+        ));
+    }
+    let script_rel = resolve_install_script(manifest)
+        .ok_or_else(|| format!("{} no declara install_script para {}", tool_id, current_platform_key()))?;
 
     let script = script_path(app, &script_rel)?;
     if !script.exists() {
@@ -1083,7 +1163,7 @@ fn run_install_script(
         outputs_dir: None,
         cache_dir: None,
     });
-    let mut cmd = Command::new("bash");
+    let mut cmd = Command::new(script_shell());
     cmd.arg(script.as_os_str())
         .current_dir(script_dir)
         .env("CHOFYAI_STUDIO_HOME", studio_home)
@@ -1453,6 +1533,8 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
 
         let relocated = settings.tool_overrides.contains_key(&parsed.id);
 
+        let install_script_resolved = resolve_install_script(&parsed);
+        let run_command_resolved = parsed.run.as_ref().and_then(resolve_run_command);
         tools.push(ToolSummary {
             file_name,
             id: parsed.id,
@@ -1464,8 +1546,8 @@ pub fn list_tools(app: AppHandle) -> Result<Vec<ToolSummary>, String> {
             recommended: parsed.recommended.unwrap_or(false),
             default_port: parsed.default_port,
             install_dir: install_dir_str,
-            install_script: parsed.install_script,
-            run_command: parsed.run.and_then(|r| r.command),
+            install_script: install_script_resolved,
+            run_command: run_command_resolved,
             installed: missing_checks.is_empty() && !installed_checks.is_empty(),
             installed_checks,
             missing_checks,
@@ -1524,9 +1606,9 @@ pub fn start_tool(
     let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
     let run_command = manifest
         .run
-        .clone()
-        .and_then(|r| r.command)
-        .ok_or_else(|| format!("{} no tiene run.command", tool_id))?;
+        .as_ref()
+        .and_then(resolve_run_command)
+        .ok_or_else(|| format!("{} no tiene run.command para {}", tool_id, current_platform_key()))?;
 
     if !install_dir.exists() {
         return Err(format!(
@@ -1586,10 +1668,9 @@ pub fn start_tool(
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
     let log_file_err = log_file.try_clone().map_err(|e| e.to_string())?;
 
-    let mut cmd = Command::new("bash");
-    cmd.arg("-lc")
-        .arg(&run_command)
-        .current_dir(&install_dir)
+    let mut cmd = Command::new(script_shell());
+    shell_inline_command(&mut cmd, &run_command);
+    cmd.current_dir(&install_dir)
         .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(log_file_err));
@@ -1665,9 +1746,9 @@ pub fn restart_tool(
     let install_dir = manifest_install_dir(&manifest, &studio_home, &settings.tool_overrides);
     let run_command = manifest
         .run
-        .clone()
-        .and_then(|r| r.command)
-        .ok_or_else(|| format!("{} no tiene run.command", tool_id))?;
+        .as_ref()
+        .and_then(resolve_run_command)
+        .ok_or_else(|| format!("{} no tiene run.command para {}", tool_id, current_platform_key()))?;
 
     let logs = log_dir(&effective);
     fs::create_dir_all(&logs).map_err(|e| e.to_string())?;
@@ -1675,10 +1756,9 @@ pub fn restart_tool(
     let log_file = fs::File::create(&log_path).map_err(|e| e.to_string())?;
     let log_file_err = log_file.try_clone().map_err(|e| e.to_string())?;
 
-    let mut cmd = Command::new("bash");
-    cmd.arg("-lc")
-        .arg(&run_command)
-        .current_dir(&install_dir)
+    let mut cmd = Command::new(script_shell());
+    shell_inline_command(&mut cmd, &run_command);
+    cmd.current_dir(&install_dir)
         .env("CHOFYAI_STUDIO_HOME", &effective)
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(log_file_err));

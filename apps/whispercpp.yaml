@@ -3,16 +3,29 @@ name: whisper.cpp
 icon: "🎙"
 category: asr
 runtime: binary
-description: ASR local y transcripción con foco en Apple Silicon.
+description: ASR local y transcripción. Metal en Apple Silicon, CUDA/CPU en Windows/Linux.
 platforms:
   - mac-arm64
+  - win-x64
+  - linux-x64
 recommended: true
 default_port: 8178
 studio_home_subdir: tools/whispercpp
+
+# install_script (legacy mono-plataforma) queda como fallback para versiones
+# antiguas del backend; el dict install_scripts tiene precedencia.
 install_script: scripts/mac/install-whispercpp.sh
+install_scripts:
+  mac-arm64: scripts/mac/install-whispercpp.sh
+  win-x64: scripts/win/install-whispercpp.ps1
+  linux-x64: scripts/linux/install-whispercpp.sh   # TODO: pendiente
+
 run:
   command: source/build/bin/whisper-server --host 127.0.0.1 --port 8178 -m models/ggml-base.en.bin
+  commands:
+    mac-arm64: source/build/bin/whisper-server --host 127.0.0.1 --port 8178 -m models/ggml-base.en.bin
+    win-x64: source\build\bin\Release\whisper-server.exe --host 127.0.0.1 --port 8178 -m models\ggml-base.en.bin
+    linux-x64: source/build/bin/whisper-server --host 127.0.0.1 --port 8178 -m models/ggml-base.en.bin
 installed_if:
   - source/.git
-  - source/build/bin/whisper-cli
   - models/ggml-base.en.bin

@@ -8,14 +8,26 @@ Este documento consolida lo que estaba disperso entre `INSTALL_MAC.md`, `STATUS.
 
 ## 🖥️ Matriz de soporte por plataforma
 
-| Plataforma | Estado | Razón |
-|---|:---:|---|
-| 🟢 **macOS 13+ Apple Silicon (M1/M2/M3/M4)** | ✅ Único soportado | Stack diseñado para MLX/Metal/MPS |
-| 🔴 macOS Intel | ❌ No soportado | MLX no compila en x86_64; tampoco aprovecha Neural Engine |
-| 🔴 Windows 10/11 | ❌ No soportado | Scripts en `bash`, dependencias en Homebrew, MLX inexistente. La UI Tauri compilaría pero ningún botón "Instalar" funcionaría |
-| 🔴 Linux | ❌ No soportado | Mismo motivo que Windows — el catálogo de tools está cableado contra el ecosistema Apple |
+| Plataforma | Estado | 4 tools cross-platform | Qwen3-TTS |
+|---|:---:|:---:|:---:|
+| 🟢 **macOS 13+ Apple Silicon (M1/M2/M3/M4)** | ✅ Validado | ✅ Metal/MPS | ✅ MLX |
+| 🟡 **Windows 10/11 + GPU NVIDIA** | 🧪 Esqueleto funcional | ✅ CUDA (scripts `.ps1`) | ❌ MLX no existe en Windows |
+| 🟡 **Linux + GPU NVIDIA** | ⚪ Scripts pendientes | ✅ teóricamente posible | ❌ |
+| 🔴 macOS Intel | ❌ No soportado | ❌ MLX requiere ARM | ❌ |
 
-> 🧭 **¿Y si necesito Windows?** No es un "todavía no", es un "por diseño". Los 5 modelos integrados dependen de MLX (Qwen3-TTS) o de PyTorch con backend Metal/MPS (ComfyUI, FaceFusion, AceForge). Migrar a CUDA + PowerShell sería una bifurcación de producto, no un parche. Si te interesa explorarla, abre un issue antes de invertir tiempo — la decisión de scope es del mantenedor.
+### Por tool
+
+| Tool | macOS (ARM) | Windows + NVIDIA | Linux + NVIDIA |
+|---|:---:|:---:|:---:|
+| 🎙️ whisper.cpp | ✅ Metal | ✅ CUDA (o CPU) | ✅ CUDA (o CPU) |
+| 🖼️ ComfyUI | ✅ MPS | ✅ CUDA | ✅ CUDA |
+| 🎬 FaceFusion | ✅ CoreML EP | ✅ CUDA EP | ✅ CUDA EP |
+| 🎵 AceForge | ✅ MPS | ✅ CUDA | ✅ CUDA |
+| 🎤 Qwen3-TTS | ✅ MLX | ❌ **bloqueador real** | ❌ |
+
+> 🧭 **¿Quiero TTS en Windows?** Reemplaza Qwen3-TTS con Coqui XTTS-v2, Piper TTS, F5-TTS u OpenVoice v2 (todas cross-platform PyTorch). Pasos en [`PORTING_GUIDE.md`](PORTING_GUIDE.md#-bloqueador-duro-mlx-qwen3-tts).
+>
+> El soporte Windows está como **🧪 esqueleto funcional**: los scripts `scripts/win/*.ps1` existen y el backend Rust detecta la plataforma, pero todavía no se ha validado end-to-end en una Windows real. Espera ajustes finos en los primeros usos. Linux scripts (`scripts/linux/`) están como TODO en los manifests.
 
 ---
 
@@ -51,6 +63,37 @@ Este documento consolida lo que estaba disperso entre `INSTALL_MAC.md`, `STATUS.
 | 🧠 Memoria unificada | **24–64 GB** |
 | 💾 Disco libre | **200+ GB** APFS interno (los sparsebundle externos limitan throughput de I/O) |
 | 🌐 Red | Mejor todavía — los repos HF pueden bajar a 50–80 MB/s con paralelismo |
+
+### Windows (con scripts `scripts/win/`)
+
+> Soporte 🧪 experimental. Cubre 4 de 5 tools — Qwen3-TTS queda bloqueada por MLX.
+
+| Recurso | Mínimo | Recomendado | Óptimo |
+|---|---|---|---|
+| 🪟 OS | Windows 10 22H2 | Windows 11 23H2 | Windows 11 24H2 |
+| 🖥️ CPU | Intel i5 / Ryzen 5 | i7-12700 / Ryzen 7 5800X | i9 / Ryzen 9 |
+| 🧠 RAM | 16 GB | 32 GB | 64 GB |
+| 🎮 GPU | **GTX 1660 6GB** (mínimo viable CUDA) | **RTX 3060 12GB** | **RTX 4090 24GB** |
+| 💾 Disco libre | 50 GB SSD | 100 GB SSD NVMe | 250 GB SSD NVMe |
+| 🛠️ Build tools | Visual Studio Build Tools 2022 (C++) | + CUDA Toolkit 12.x | + cuDNN |
+| 🐍 Python | 3.10 o 3.11 | 3.11 | 3.11 |
+
+Comando único de instalación con `winget`:
+
+```powershell
+winget install -e --id Python.Python.3.11
+winget install -e --id Git.Git
+winget install -e --id Kitware.CMake
+winget install -e --id Gyan.FFmpeg
+winget install -e --id OpenJS.NodeJS.LTS
+winget install -e --id Microsoft.VisualStudio.2022.BuildTools
+# Para GPU NVIDIA:
+winget install -e --id Nvidia.CUDA
+corepack enable
+corepack prepare pnpm@10 --activate
+```
+
+> Sin GPU NVIDIA en Windows los 4 tools cross-platform funcionan vía CPU/DirectML, pero AceForge será inutilizable y ComfyUI/FaceFusion muy lentos. La GPU NVIDIA con ≥ 8 GB VRAM es prácticamente requerimiento.
 
 ---
 
@@ -178,6 +221,8 @@ bash scripts/mac/bootstrap.sh
 
 ## 📌 TL;DR
 
-- **Mac Apple Silicon con 16 GB y 100 GB libres APFS** = usar todo el producto sin pensar.
+- **Mac Apple Silicon con 16 GB y 100 GB libres APFS** = usar todo el producto sin pensar. Validado.
 - **8 GB / 50 GB / M1 base** = funciona pero solo 3 de 5 tools.
-- **Intel Mac / Windows / Linux** = no soportado y no en el roadmap.
+- **Windows 11 + RTX 3060+ / 32 GB / 100 GB SSD** = 🧪 4 de 5 tools con esqueleto funcional (Qwen3-TTS bloqueado por MLX, reemplazable con Coqui/Piper/F5-TTS).
+- **Linux + GPU NVIDIA** = mismo escenario que Windows pero scripts `scripts/linux/` aún como TODO.
+- **Intel Mac** = no soportado (MLX requiere ARM).

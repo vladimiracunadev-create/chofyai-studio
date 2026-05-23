@@ -3,17 +3,27 @@ name: FaceFusion
 icon: "🎭"
 category: video
 runtime: python
-python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
-description: Face swap y utilidades de video/cara.
+python_manager: auto
+description: Face swap y utilidades de video/cara. ONNX Runtime con CoreML (Mac) o CUDA/DirectML (Win/Linux).
 platforms:
   - mac-arm64
+  - win-x64
+  - linux-x64
 recommended: true
 default_port: 7862
 studio_home_subdir: tools/facefusion
+
 install_script: scripts/mac/install-facefusion.sh
+install_scripts:
+  mac-arm64: scripts/mac/install-facefusion.sh
+  win-x64: scripts/win/install-facefusion.ps1
+  linux-x64: scripts/linux/install-facefusion.sh   # TODO: pendiente
+
 run:
   command: source env/bin/activate && cd source && GRADIO_SERVER_PORT=7862 GRADIO_SERVER_NAME=127.0.0.1 python facefusion.py run
+  commands:
+    mac-arm64: source env/bin/activate && cd source && GRADIO_SERVER_PORT=7862 GRADIO_SERVER_NAME=127.0.0.1 python facefusion.py run
+    win-x64: $env:GRADIO_SERVER_PORT="7862"; $env:GRADIO_SERVER_NAME="127.0.0.1"; env\Scripts\python.exe source\facefusion.py run --execution-providers cuda
+    linux-x64: source env/bin/activate && cd source && GRADIO_SERVER_PORT=7862 GRADIO_SERVER_NAME=127.0.0.1 python facefusion.py run
 installed_if:
-  - source/.git
-  - env
   - source/facefusion.py

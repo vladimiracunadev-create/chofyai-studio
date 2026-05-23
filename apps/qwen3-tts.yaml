@@ -4,7 +4,7 @@ icon: "🎤"
 category: voice
 runtime: python
 python_manager: auto   # qwen3-tts ya provisiona uv dentro del venv
-description: TTS y clonación de voz con backend MLX para Apple Silicon.
+description: TTS y clonación de voz con backend MLX. Apple Silicon ONLY (MLX no existe en Windows/Linux — ver docs/PORTING_GUIDE.md para alternativas).
 platforms:
   - mac-arm64
 recommended: true

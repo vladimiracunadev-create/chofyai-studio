@@ -8,34 +8,39 @@ Antes de leer esto: si solo quieres **usar** la app, ve a [`REQUIREMENTS.md`](RE
 
 ## 🧭 Resumen ejecutivo
 
-Portar ChofyAI Studio a Windows o Linux **no es un "todavía no", es una reescritura parcial del producto**. La UI Tauri es trivialmente cross-platform; el catálogo de 5 tools no lo es. Tienes dos caminos:
+**Update 2026-05-22**: Esqueleto Windows aterrizado. Soporte realista a la fecha:
 
-| Camino | Esfuerzo | Resultado |
+| Camino | Estado | Resultado |
 |---|---|---|
-| **A. Port superficial** (UI + sin tools nativas) | 1–2 semanas | App vacía. Los botones "Instalar" fallan porque no hay scripts. Útil solo como esqueleto. |
-| **B. Port completo con tools** | 4–8 semanas por tool × 5 tools | Producto funcional pero **diferente**: PyTorch+CUDA reemplaza MLX, scripts PowerShell o `sh` reemplazan bash. Bifurcación de hecho. |
+| **A. macOS Apple Silicon** | ✅ Validado E2E | 5/5 tools con inferencia real |
+| **B. Windows 11 + GPU NVIDIA** | 🧪 Esqueleto funcional | 4/5 tools (Qwen3-TTS bloqueado por MLX). Scripts `scripts/win/*.ps1` existen, backend Rust detecta plataforma, manifests soportan `install_scripts:` dict por plataforma. **Falta validación en una Windows real.** |
+| **C. Linux + GPU NVIDIA** | ⚪ TODO | Scripts `scripts/linux/` referenciados en manifests pero no escritos. El backend Rust ya soporta `linux-x64` como key. |
 
-Si tu objetivo es "que mis usuarios Windows generen TTS/STT/imágenes", reconsidera: probablemente conviene **publicar las tools como servicio web** (la migración AWS que ya está documentada) y servir un cliente Tauri Windows-trivial contra ese backend.
+La UI Tauri y el backend Rust son cross-platform por construcción. **El bloqueador duro real es MLX** (Qwen3-TTS) — todos los demás tools usan PyTorch/ONNX/C++ que sí compilan fuera de Apple Silicon, era cuestión de escribir los scripts equivalentes.
+
+Si tu objetivo final es "que muchos usuarios Windows/Linux usen TTS/STT/imágenes sin instalar nada local", el camino más eficiente sigue siendo la **migración AWS** ya documentada (servir las tools desde GPU EC2 + cliente cross-platform desde el navegador).
 
 ---
 
 ## 📊 Matriz de portabilidad por capa
 
-| Capa del stack | mac-arm64 | Windows | Linux | Intel Mac | Esfuerzo |
-|---|:---:|:---:|:---:|:---:|---|
-| Frontend React + Vite | ✅ | ✅ | ✅ | ✅ | **Cero.** Cross-platform por construcción |
-| Tauri runtime | ✅ | ✅ | ✅ | ✅ | **Cero.** Tauri 2 oficial soporta los 4 targets |
-| Backend Rust (`src-tauri/src/`) | ✅ | ⚠️ | ⚠️ | ✅ | **Bajo-medio.** Refactor de paths hardcodeados |
-| Scripts instalación (`scripts/mac/`) | ✅ | ❌ | ❌ | ❌ | **Alto.** Reescritura completa |
-| Tool: whisper.cpp | ✅ Metal | ⚠️ CPU/CUDA | ⚠️ CPU/CUDA | ⚠️ CPU | **Medio.** Recompilar con otro backend |
-| Tool: ComfyUI | ✅ MPS | ✅ CUDA | ✅ CUDA | ⚠️ CPU | **Bajo.** PyTorch CUDA es mainstream |
-| Tool: FaceFusion | ✅ CoreML | ⚠️ DirectML/CUDA | ⚠️ CUDA | ⚠️ CPU | **Medio.** Cambiar provider ONNX |
-| Tool: AceForge | ✅ MPS | ⚠️ CUDA | ⚠️ CUDA | ⚠️ CPU | **Medio.** Verificar pesos cross-platform |
-| Tool: **Qwen3-TTS (MLX)** | ✅ | ❌ | ❌ | ❌ | **Reescritura.** MLX es Apple-only por construcción |
-| Bundle `.dmg` (Tauri) | ✅ | — | — | — | Específico de cada SO |
-| Bundle `.msi`/`.exe` (Windows) | — | ❌ | — | — | Añadir target en `tauri.conf.json` |
-| Bundle `.AppImage`/`.deb` (Linux) | — | — | ❌ | — | Añadir target |
-| Filesystem (APFS sparsebundle) | ✅ | — | — | ✅ | macOS-only feature, no se port-ea |
+| Capa del stack | mac-arm64 | Windows | Linux | Intel Mac |
+|---|:---:|:---:|:---:|:---:|
+| Frontend React + Vite | ✅ | ✅ | ✅ | ✅ |
+| Tauri runtime | ✅ | ✅ | ✅ | ✅ |
+| Backend Rust (detección de plataforma + shell) | ✅ | ✅ desde 2026-05-22 | ✅ | ✅ |
+| Scripts `scripts/mac/*.sh` | ✅ | — | — | ✅ |
+| Scripts `scripts/win/*.ps1` | — | ✅ esqueleto | — | — |
+| Scripts `scripts/linux/*.sh` | — | — | ⚪ TODO | — |
+| Tool: whisper.cpp | ✅ Metal | ✅ CUDA/CPU | ⚪ TODO | ⚠️ CPU only |
+| Tool: ComfyUI | ✅ MPS | ✅ CUDA | ⚪ TODO | ⚠️ CPU only |
+| Tool: FaceFusion | ✅ CoreML EP | ✅ CUDA EP | ⚪ TODO | ⚠️ CPU only |
+| Tool: AceForge | ✅ MPS | ✅ CUDA | ⚪ TODO | ⚠️ CPU only |
+| Tool: **Qwen3-TTS (MLX)** | ✅ | ❌ bloqueador | ❌ | ❌ |
+| Bundle `.dmg` (Tauri) | ✅ macos-latest CI | — | — | — |
+| Bundle `.msi`/`.exe` | — | ⚪ TODO añadir target | — | — |
+| Bundle `.AppImage`/`.deb` | — | — | ⚪ TODO | — |
+| Filesystem (APFS sparsebundle) | ✅ | — | — | ✅ |
 
 Leyenda: ✅ funciona · ⚠️ requiere trabajo · ❌ no existe / bloqueador duro · — no aplica.
 

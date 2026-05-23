@@ -3,17 +3,28 @@ name: ComfyUI
 icon: "🎨"
 category: image
 runtime: python
-python_manager: auto   # auto | uv | pip — uv si está disponible, pip si no
-description: Workflows visuales para imagen (Stable Diffusion, Flux, etc.) con MPS/Apple Silicon.
+python_manager: auto   # auto | uv | pip
+description: Workflows visuales para imagen (SD 1.5, SDXL, Flux). MPS en Mac, CUDA en Win/Linux.
 platforms:
   - mac-arm64
+  - win-x64
+  - linux-x64
 recommended: true
 default_port: 8188
 studio_home_subdir: tools/comfyui
+
 install_script: scripts/mac/install-comfyui.sh
+install_scripts:
+  mac-arm64: scripts/mac/install-comfyui.sh
+  win-x64: scripts/win/install-comfyui.ps1
+  linux-x64: scripts/linux/install-comfyui.sh   # TODO: pendiente
+
 run:
   command: source venv/bin/activate && cd source && python main.py --listen 127.0.0.1 --port 8188
+  commands:
+    mac-arm64: source venv/bin/activate && cd source && python main.py --listen 127.0.0.1 --port 8188
+    # En Windows el venv vive en env\, no venv\; y se invoca sin "source"
+    win-x64: env\Scripts\python.exe ComfyUI\main.py --listen 127.0.0.1 --port 8188
+    linux-x64: source venv/bin/activate && cd source && python main.py --listen 127.0.0.1 --port 8188
 installed_if:
-  - source/.git
-  - source/main.py
-  - venv/bin/python
+  - source/main.py  # mac/linux layout
