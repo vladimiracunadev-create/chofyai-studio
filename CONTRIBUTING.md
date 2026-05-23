@@ -13,7 +13,9 @@
 
 | Herramienta | Versión mínima | Notas |
 |:---|:---:|:---|
-| 🍎 macOS | `13 Ventura` | Apple Silicon requerido para uso real |
+| 🍎 macOS | `13 Ventura` | Apple Silicon recomendado (plataforma validada E2E) |
+| 🪟 Windows | `10 22H2+` | 🧪 Soporte experimental con GPU NVIDIA — ver `docs/REQUIREMENTS.md` |
+| 🐧 Linux | — | ⚪ Backend lo soporta pero scripts `scripts/linux/` están como TODO |
 | 🛠️ Xcode CLT | reciente | `xcode-select --install` |
 | 🦀 Rust + cargo | `1.76+` | Instalado vía `rustup` |
 | 📦 Node.js | `22 LTS` | Recomendado: `nvm` |
@@ -21,7 +23,7 @@
 | ⚡ Tauri CLI | `v2` | `cargo install tauri-cli` |
 
 > [!NOTE]
-> Los builds de `.app` / `.dmg` **requieren un Mac real**. El desarrollo del frontend puede hacerse en cualquier sistema con `pnpm dev:web`.
+> Los builds `.app`/`.dmg` se hacen en **macOS Apple Silicon** (o en `macos-latest` hosted runner del CI). Builds `.exe`/`.msi`/`.AppImage` para otras plataformas todavía no están automatizados — ver `docs/REQUIREMENTS.md`. El desarrollo del frontend en modo web (`pnpm dev:web`) funciona en cualquier OS.
 >
 > Este proyecto usa **pnpm** (no npm) como gestor de paquetes — ver [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md) para la justificación de seguridad.
 
@@ -34,7 +36,7 @@
 git clone https://github.com/vladimiracunadev-create/chofyai-studio.git
 cd chofyai-studio
 
-# 2️⃣ Verificar requisitos (solo macOS)
+# 2️⃣ Verificar requisitos (macOS: bash, Windows: hay equivalente PowerShell)
 bash scripts/mac/bootstrap.sh
 
 # 3️⃣ Instalar dependencias del frontend

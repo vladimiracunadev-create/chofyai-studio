@@ -321,8 +321,38 @@ function OverviewModal({
           <dl className="kv-list">
             <div><dt>Versión</dt><dd>{summary?.app_name ?? 'ChofyAI Studio'} v{summary?.app_version ?? APP_VERSION}</dd></div>
             <div><dt>OS / Arch</dt><dd>{summary?.os ?? '—'} · {summary?.arch ?? ''}</dd></div>
+            <div>
+              <dt>Plataforma</dt>
+              <dd>
+                <code style={{ fontSize: '0.78rem' }}>{summary?.platform_key ?? '—'}</code>
+                {summary?.platform_support === 'validated' && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(45,122,102,0.18)', color: '#9ad9c5', borderColor: 'rgba(45,122,102,0.3)' }}>✅ validado</span>
+                )}
+                {summary?.platform_support === 'experimental' && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(255,165,0,0.18)', color: '#ffcd80', borderColor: 'rgba(255,165,0,0.3)' }}>🧪 experimental</span>
+                )}
+                {summary?.platform_support === 'todo' && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(124,92,255,0.18)', color: '#b3a0ff', borderColor: 'rgba(124,92,255,0.3)' }}>⚪ pendiente</span>
+                )}
+                {summary?.platform_support === 'unsupported' && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(255,80,80,0.18)', color: '#ff9b9b', borderColor: 'rgba(255,80,80,0.3)' }}>❌ no soportado</span>
+                )}
+              </dd>
+            </div>
             <div><dt>Settings</dt><dd style={{ fontFamily: 'ui-monospace', fontSize: '0.78rem' }}>{summary?.settings_file ?? '—'}</dd></div>
           </dl>
+          {summary?.platform_support === 'experimental' && (
+            <p className="muted" style={{ fontSize: '0.74rem', marginTop: 6 }}>
+              Windows está como esqueleto funcional. Qwen3-TTS no estará disponible (requiere MLX, Apple-only).
+              Detalle en <code>docs/REQUIREMENTS.md</code> y <code>docs/PORTING_GUIDE.md</code>.
+            </p>
+          )}
+          {summary?.platform_support === 'todo' && (
+            <p className="muted" style={{ fontSize: '0.74rem', marginTop: 6 }}>
+              Linux: backend Rust soporta esta plataforma pero los scripts <code>scripts/linux/*.sh</code> están pendientes.
+              Detalle en <code>docs/PORTING_GUIDE.md</code>.
+            </p>
+          )}
         </section>
 
         <section style={{ marginTop: 16 }}>
@@ -1983,12 +2013,23 @@ export default function App() {
       setSummary(sys);
       setStudioHomeInput(sys.studio_home);
     } else {
+      // Fallback cuando Tauri no responde (modo web puro). Detecta la plataforma
+      // del navegador para no asumir mac.
+      const nav = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const isWin = nav.includes('windows');
+      const isLin = nav.includes('linux') && !nav.includes('android');
       const fb = {
-        app_name: 'ChofyAI Studio', app_version: APP_VERSION, os: 'macOS / Apple Silicon', arch: 'arm64',
-        studio_home: '/Volumes/ORICO/ChofyIA/ChofyAIStudio',
-        studio_home_effective: '/Volumes/ORICO/ChofyIA/ChofyAIStudio',
+        app_name: 'ChofyAI Studio',
+        app_version: APP_VERSION,
+        os: isWin ? 'Windows' : isLin ? 'Linux' : 'macOS',
+        arch: isWin || isLin ? 'x64' : 'arm64',
+        studio_home: '',
+        studio_home_effective: '',
         using_fallback: false,
         settings_file: 'storage/state/settings.json',
+        platform_key: isWin ? 'win-x64' : isLin ? 'linux-x64' : 'mac-arm64',
+        platform_support: (isWin ? 'experimental' : isLin ? 'todo' : 'validated') as
+          | 'validated' | 'experimental' | 'todo',
       };
       setSummary(fb);
       setStudioHomeInput(fb.studio_home);

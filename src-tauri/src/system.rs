@@ -1399,6 +1399,14 @@ pub fn get_system_summary(app: AppHandle) -> Result<SystemSummary, String> {
     let effective = resolve_effective_home(&settings);
     let using_fallback = effective != settings.studio_home;
     let settings_file = settings_path(&app)?;
+    let platform_key = current_platform_key().to_string();
+    let platform_support = match platform_key.as_str() {
+        "mac-arm64" => "validated",
+        "win-x64" => "experimental",
+        "linux-x64" => "todo",
+        _ => "unsupported",
+    }
+    .to_string();
     Ok(SystemSummary {
         app_name: "ChofyAI Studio".to_string(),
         app_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -1408,6 +1416,8 @@ pub fn get_system_summary(app: AppHandle) -> Result<SystemSummary, String> {
         studio_home_effective: effective,
         using_fallback,
         settings_file: settings_file.display().to_string(),
+        platform_key,
+        platform_support,
     })
 }
 

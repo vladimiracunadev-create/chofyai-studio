@@ -26,6 +26,8 @@ export type SystemSummary = {
   studio_home_effective: string;
   using_fallback: boolean;
   settings_file: string;
+  platform_key?: string;
+  platform_support?: 'validated' | 'experimental' | 'todo' | 'unsupported' | string;
 };
 
 export type AppSettings = {

@@ -1,10 +1,12 @@
 # 🎨 ChofyAI Studio
 
-> **Launcher de escritorio local para macOS Apple Silicon — orquestador controlado de herramientas creativas de IA**
+> **Launcher de escritorio local — orquestador controlado de herramientas creativas de IA. Validado en macOS Apple Silicon; soporte experimental en Windows con GPU NVIDIA.**
 
 [![CI](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/vladimiracunadev-create/chofyai-studio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?logo=opensourceinitiative&logoColor=white)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-black?logo=apple&logoColor=white)](docs/INSTALL_MAC.md)
+[![macOS](https://img.shields.io/badge/macOS%20ARM-validado-2d7a66?logo=apple&logoColor=white)](docs/INSTALL_MAC.md)
+[![Windows](https://img.shields.io/badge/Windows%20%2B%20CUDA-experimental-f57f17?logo=windows&logoColor=white)](docs/REQUIREMENTS.md)
+[![Linux](https://img.shields.io/badge/Linux-pendiente-9e9e9e?logo=linux&logoColor=white)](docs/PORTING_GUIDE.md)
 [![Tauri](https://img.shields.io/badge/Tauri-2.11-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
@@ -21,15 +23,15 @@
 
 ## 🎯 Qué resuelve
 
-| Categoría | Herramienta | Estado | Puerto |
-|:---:|:---|:---:|:---:|
-| 🎤 **Voz / TTS** | [Qwen3-TTS](docs/TOOLS.md) | `✅ OPERATIVA` | `7860` |
-| 🎙️ **ASR** | [whisper.cpp](docs/TOOLS.md) | `✅ OPERATIVA` | `8178` |
-| 🎬 **Video / Cara** | [FaceFusion](docs/TOOLS.md) | `✅ OPERATIVA` | `7862` |
-| 🎵 **Música** | [AceForge](docs/TOOLS.md) | `✅ OPERATIVA` | `5056` |
-| 🖼️ **Imagen** | [ComfyUI](docs/TOOLS.md) | `✅ OPERATIVA` | `8188` |
+| Categoría | Herramienta | macOS ARM | Windows + CUDA | Puerto |
+|:---:|:---|:---:|:---:|:---:|
+| 🎤 **Voz / TTS** | [Qwen3-TTS](docs/TOOLS.md) | ✅ MLX | ❌ MLX Apple-only | `7860` |
+| 🎙️ **ASR** | [whisper.cpp](docs/TOOLS.md) | ✅ Metal | 🧪 CUDA/CPU | `8178` |
+| 🎬 **Video / Cara** | [FaceFusion](docs/TOOLS.md) | ✅ CoreML | 🧪 CUDA EP | `7862` |
+| 🎵 **Música** | [AceForge](docs/TOOLS.md) | ✅ MPS | 🧪 CUDA | `7857` |
+| 🖼️ **Imagen** | [ComfyUI](docs/TOOLS.md) | ✅ MPS | 🧪 CUDA | `8188` |
 
-> 5 herramientas integradas con scripts de instalación reproducibles, control de PID, health checks y reubicación a discos externos.
+> 5 herramientas integradas con scripts de instalación reproducibles, control de PID, health checks y reubicación a discos externos. Soporte Windows en estado 🧪 esqueleto (scripts `scripts/win/*.ps1` listos pero validación E2E pendiente). Detalle en [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) y [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md).
 
 ---
 

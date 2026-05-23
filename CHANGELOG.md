@@ -9,7 +9,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
 
 ---
 
-## 🔒 [Unreleased] — Hardening supply-chain
+## 🚀 [Unreleased] — Multi-plataforma + supply-chain hardening + features fase 4
+
+### Añadido
+
+- 🧪 **Esqueleto Windows funcional** (2026-05-22):
+  - `scripts/win/common.ps1` + 4 install scripts PowerShell (whispercpp, comfyui, facefusion, aceforge) con detección CUDA vía `nvidia-smi`
+  - `RawManifest.install_scripts:` dict por plataforma + `RawRun.commands:` análogo
+  - Backend Rust detecta plataforma actual (`current_platform_key`), elige shell (`pwsh` vs `bash`) y valida `platform_supported()` antes de spawn
+  - `SystemSummary` expone `platform_key` y `platform_support` (`validated` / `experimental` / `todo` / `unsupported`)
+  - About modal en la UI muestra plataforma con badge de validación
+- 📐 **Doc consolidado de requisitos**: `docs/REQUIREMENTS.md` con matriz por tool × plataforma, HW mínimo/recomendado/óptimo para mac y Windows, comando `winget` de install
+- 🔀 **Porting guide**: `docs/PORTING_GUIDE.md` con análisis técnico de port, alternativas para Qwen3-TTS (Coqui/Piper/F5-TTS), matriz de portabilidad por capa
+- 📢 **Release `.dmg` automatizado**: workflow `release.yml` ahora construye `.app` + `.dmg` en `macos-latest` hosted runner y lo adjunta al GitHub Release
+- 🛂 **Guía de notarización**: `docs/NOTARIZATION.md` con los 6 secrets exactos a configurar cuando se tenga Apple Developer ID
+- ⚙️ **Settings UI avanzado**: campos `models_dir` / `outputs_dir` / `cache_dir` editables. Backend inyecta `CHOFYAI_MODELS_DIR` / `CHOFYAI_OUTPUTS_DIR` / `CHOFYAI_CACHE_DIR` a los scripts
+- 📦 **Descarga guiada de modelos**: `ModelsPanel` muestra modelos declarados en `manifest.models:` con botón **📥 Descargar**. Bash helper `scripts/mac/download-hf-model.sh` (huggingface-cli o snapshot_download) con progreso vía eventos
+- 🎨 **Branding placeholder técnico**: monograma "C" + waveform en `_brand-source.svg`, regenerado a 22+ tamaños vía `pnpm tauri icon`
 
 ### Cambiado
 
@@ -22,10 +38,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · Ve
   - Job `npm-audit` renombrado a `pnpm-audit`.
   - Documentación de la decisión y vectores de ataque mitigados en [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md).
 - README, QUICKSTART, CONTRIBUTING, SECURITY, STATUS, bug_report: comandos `npm *` → `pnpm *`.
+- Manifests `whispercpp.yaml` / `comfyui.yaml` / `facefusion.yaml` / `aceforge.yaml`: `platforms:` incluye `win-x64` y `linux-x64`, con `install_scripts:` por plataforma. `qwen3-tts.yaml` queda explícitamente mac-only en `description:` con link a alternativas.
 
 ### Fijado
 
 - `vitest` y `@vitest/ui` bajadas a `^3.2.4` (eran `^4.1.5`). Vitest 4 requiere `vite ^6`, incompatible con el `vite ^5.4` que usan los plugins de Tauri/React en uso. La resolución estricta de pnpm expuso este desalineamiento que con npm pasaba inadvertido por hoisting. `jsdom` bajada a `^25.0.1` (la 29 sube ESM-only en formas que requieren vitest 4). **20/20 tests pasan**.
+
+### Pendiente
+
+- 🪟 Validar Windows E2E en máquina real con GPU NVIDIA
+- 🐧 Escribir scripts `scripts/linux/*.sh` (referenciados ya en manifests)
+- 🎤 Reemplazo de Qwen3-TTS para Win/Linux (Coqui/Piper/F5-TTS)
+- 🛂 Activar firma + notarización Apple (los 6 secrets de `docs/NOTARIZATION.md`)
+- 📦 Targets de bundle `.msi` / `.exe` / `.AppImage` / `.deb` en `tauri.conf.json`
 
 ---
 

@@ -85,6 +85,19 @@
 
 ---
 
+## 🧪 Fase 5.5 — Soporte multi-plataforma *(en curso)*
+
+- [x] 🪟 **Esqueleto Windows** — `scripts/win/*.ps1` (whispercpp + comfyui + facefusion + aceforge con detección CUDA)
+- [x] 🔧 **Backend Rust cross-platform** — `current_platform_key()`, `script_shell()`, `RawManifest.install_scripts:` dict por plataforma
+- [x] 📐 **About modal** — muestra plataforma actual + nivel de validación
+- [x] 📑 **Docs**: REQUIREMENTS.md (matriz por tool × plataforma) y PORTING_GUIDE.md (análisis técnico)
+- [ ] ✅ **Validar Windows E2E** — requiere una máquina Windows real con GPU NVIDIA
+- [ ] 🐧 **Scripts Linux** (`scripts/linux/*.sh`) — análogos a Windows pero bash en lugar de PowerShell
+- [ ] 🎤 **TTS cross-platform** — reemplazo de Qwen3-TTS (MLX Apple-only) por Coqui XTTS-v2 / Piper / F5-TTS para Win/Linux
+- [ ] 📦 **Tauri bundles Windows/Linux** — añadir `msi`/`nsis`/`appimage`/`deb` targets
+
+---
+
 ## 🌱 Fase 6 — Expansión del catálogo
 
 - [ ] 🛠️ Nuevos adapters creativos (Bark, RVC, etc.)
@@ -103,8 +116,9 @@
 | 1 — MVP local | `✅ COMPLETA` | 100% |
 | 2 — Robustez launcher | `✅ COMPLETA` | 7/7 (huérfanos resueltos en Sprint 5) |
 | 3 — Disco dual + módulos | `✅ COMPLETA` | 100% |
-| 4 — Producto instalable | `🚧 EN CURSO` | 4/9 (falta firma + notarización + canal releases) |
+| 4 — Producto instalable | `🚧 EN CURSO` | 5/8 (release `.dmg` autom. + branding placeholder ✅; falta firma + notarización Apple) |
 | 5 — UX profesional | `✅ COMPLETA` | 14/14 (release v0.5.0) |
+| 5.5 — Multi-plataforma | `🧪 EN CURSO` | 4/8 (esqueleto Windows + backend + docs ✅; falta validar E2E, Linux scripts, TTS cross-platform, bundles) |
 | 6 — Expansión catálogo | `🌱 FUTURO` | 0/5 |
 
 > Ver detalle del estado actual en [`docs/STATUS.md`](docs/STATUS.md) y bitácora en [`CHANGELOG.md`](CHANGELOG.md).

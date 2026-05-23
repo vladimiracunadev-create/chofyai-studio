@@ -134,7 +134,9 @@ prueba de inferencia real**, no solo arranque.
 ## ⚠️ Limitaciones actuales
 
 - 🔐 Firma Apple Developer ID + notarización no incluidas — el `.app` se ejecuta ad-hoc (click derecho → Abrir la primera vez). Guía completa en [`NOTARIZATION.md`](NOTARIZATION.md) con los 6 secrets exactos a configurar.
-- 🎨 Branding/iconografía finales pendientes — ver ROADMAP fase 4.
+- 🧪 **Soporte Windows en estado esqueleto** — scripts `scripts/win/*.ps1` existen y el backend Rust detecta plataforma, pero **no validado end-to-end en Windows real**. Qwen3-TTS queda bloqueado por MLX (Apple-only). Detalle en [`REQUIREMENTS.md`](REQUIREMENTS.md) y [`PORTING_GUIDE.md`](PORTING_GUIDE.md).
+- ⚪ **Linux pendiente** — backend Rust soporta `linux-x64` como key pero los scripts `scripts/linux/*.sh` están como TODO.
+- 🎨 Branding/iconografía finales pendientes — placeholder técnico aplicado (ver `src-tauri/icons/_brand-source.svg`).
 
 > Cerradas en v0.5.1: ✅ cleanup automático de huérfanos en `start_tool` ·
 > ✅ verificación de puerto antes de iniciar · ✅ auto-mount del sparsebundle.

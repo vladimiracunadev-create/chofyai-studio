@@ -14,6 +14,14 @@ pub struct SystemSummary {
     /// Si studio_home_effective != studio_home (volumen externo desmontado, etc.).
     pub using_fallback: bool,
     pub settings_file: String,
+    /// Clave de plataforma actual ("mac-arm64", "win-x64", "linux-x64").
+    /// Usada por la UI para mostrar estado de soporte y filtrar tools.
+    #[serde(default)]
+    pub platform_key: String,
+    /// Nivel de validación de la plataforma actual:
+    /// "validated" (mac-arm64) · "experimental" (win-x64) · "todo" (linux-x64) · "unsupported".
+    #[serde(default)]
+    pub platform_support: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
