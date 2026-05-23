@@ -19,6 +19,27 @@
 
 > [!NOTE]
 > ChofyAI Studio **no es** un launcher genérico al estilo Pinokio. Es un orquestador con un set acotado de herramientas creativas, instalación reproducible, control real de procesos y soporte dual de disco (externo + principal con fallback automático).
+>
+> 📖 ¿Llegaste aquí buscando el "qué es esto"? Lee [`ABOUT.md`](ABOUT.md) — los cuatro pilares (local-first, reproducible, honesto, sin Electron), el autor y los enlaces rápidos.
+> 🌐 Sitio web: <https://vladimiracunadev-create.github.io/chofyai-studio/>
+
+---
+
+## ✨ Novedades (mayo 2026)
+
+Lo que aterrizó en los últimos commits, en orden de impacto para el usuario:
+
+| Cambio | Estado | Detalle |
+|---|---|---|
+| 🪟 **Windows + GPU NVIDIA — esqueleto funcional** | 🧪 experimental | `scripts/win/*.ps1` + backend Rust con detección de plataforma + manifests multi-plataforma. Falta validar E2E en una Windows real. Detalle: [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md), [`docs/PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) |
+| 🌐 **Landing page** | ✅ | [vladimiracunadev-create.github.io/chofyai-studio](https://vladimiracunadev-create.github.io/chofyai-studio/) — deploy automático en push a `landing/**` |
+| 📥 **Descarga guiada de modelos** | ✅ | Botón **📥 Descargar** en `ModelsPanel` por cada modelo declarado en `manifest.models:`. Progreso en vivo vía eventos |
+| ⚙️ **Settings UI avanzado** | ✅ | Campos `models_dir` / `outputs_dir` / `cache_dir` propagados a los scripts como env vars |
+| 📢 **Release `.dmg` automatizado** | ✅ | Workflow `release.yml` construye `.app` + `.dmg` en `macos-latest` hosted runner y los adjunta al GitHub Release |
+| 🔒 **Supply-chain hardening (npm → pnpm)** | ✅ | `onlyBuiltDependencies` allowlist + lockfile SHA-512 + `packageManager` pinned vía Corepack. Detalle: [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md) |
+| 📐 **Docs consolidados** | ✅ | [`REQUIREMENTS.md`](docs/REQUIREMENTS.md) (HW/SW + matriz de plataformas) · [`PORTING_GUIDE.md`](docs/PORTING_GUIDE.md) (análisis port) · [`NOTARIZATION.md`](docs/NOTARIZATION.md) (firma Apple) · [`ABOUT.md`](ABOUT.md) (proyecto) |
+
+Detalle bajo "Unreleased" en [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -228,7 +249,11 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 | 📦 **Empaquetado** | [`docs/packaging.md`](docs/packaging.md) | `.app` y `.dmg` |
 | 🗺️ **Roadmap** | [`ROADMAP.md`](ROADMAP.md) | Qué viene en Fase 5+ |
 | ☁️ **Migración a AWS** | [`docs/cloud/README.md`](docs/cloud/README.md) | Plan completo: arquitectura, servicios, costos y despliegue |
-| 🛡️ **Workflow de seguridad** | [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) | TruffleHog + npm/cargo audit + CodeQL + Dependabot, portable a otros repos |
+| 📖 **About** | [`ABOUT.md`](ABOUT.md) | Los 4 pilares, autor, licencia, enlaces rápidos |
+| 🌐 **Sitio web** | [vladimiracunadev-create.github.io/chofyai-studio](https://vladimiracunadev-create.github.io/chofyai-studio/) | Landing en GitHub Pages |
+| 🛡️ **Workflow de seguridad** | [`docs/SECURITY_WORKFLOW.md`](docs/SECURITY_WORKFLOW.md) | TruffleHog + pnpm/cargo audit + CodeQL + Dependabot, portable a otros repos |
+| 🔒 **Supply-chain** | [`docs/PACKAGE_MANAGER.md`](docs/PACKAGE_MANAGER.md) | Por qué pnpm (no npm) — mitigación tipo `event-stream` |
+| 🛂 **Notarización Apple** | [`docs/NOTARIZATION.md`](docs/NOTARIZATION.md) | Pasar de ad-hoc a firmado + notarizado (6 secrets) |
 | ⌨️ **Atajos de teclado** | Sidebar `⌨️ Atajos` o `⌘/` | `⌘K` paleta, `⌘,` settings, `⌘R` refresh, `⌘L` logs, `⌘B` tema |
 
 ---
@@ -239,10 +264,14 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 |:---|:---|:---:|
 | 🖥️ Desktop shell | Tauri | `2.11` |
 | 🦀 Backend | Rust | `1.94+` |
-| ⚛️ UI | React + TypeScript + Vite | `18` / `5` |
-| 📜 Scripts | Bash + Python | `3.10/3.11` |
+| ⚛️ UI | React + TypeScript + Vite | `18` / `5.6` / `5` |
+| 🧪 Tests | Vitest + cargo test | `3.2` / — |
+| 📦 Package manager | **pnpm** (con `onlyBuiltDependencies` allowlist) | `10.29` |
+| 📜 Scripts | Bash (`scripts/mac/`) + PowerShell (`scripts/win/`) | — |
+| 🐍 Python | python@3.10 / python@3.11 | — |
 | ⚡ Python pkg mgr | uv (con fallback a pip) | `0.9+` |
-| 📐 Manifests | YAML | — |
+| 📐 Manifests | YAML con `install_scripts:` y `run.commands:` por plataforma | — |
+| 🌐 Landing | HTML/CSS/JS estático + GitHub Pages | — |
 
 ---
 
@@ -250,21 +279,27 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 
 ```text
 chofyai-studio/
-├─ 📐 apps/                 # manifests YAML por herramienta
-├─ 📚 docs/                 # documentación
-├─ 🌐 public/               # assets estáticos
-├─ 📜 scripts/mac/          # scripts operativos
+├─ 📐 apps/                 # manifests YAML por herramienta (multi-plataforma)
+├─ 📚 docs/                 # documentación (REQUIREMENTS, PORTING_GUIDE, etc.)
+├─ 🌐 landing/              # landing page → GitHub Pages
+├─ 🌐 public/               # assets estáticos del frontend
+├─ 📜 scripts/mac/          # scripts Bash (macOS)
+├─ 🪟 scripts/win/          # scripts PowerShell (Windows) — esqueleto experimental
 ├─ ⚛️ src/                  # frontend React/TS
 ├─ 🦀 src-tauri/            # backend Tauri/Rust
 ├─ 💾 storage/              # estado local + runtime
 ├─ ⚙️ .cargo/               # config target-dir → /tmp (workaround AppleDouble)
-├─ 📋 package.json
-└─ 📖 README.md
+├─ 📦 package.json          # pnpm packageManager pinned a 10.29.3
+├─ 🔒 pnpm-lock.yaml        # SHA-512 obligatorio por paquete
+├─ 📖 README.md             # estás aquí
+└─ 📖 ABOUT.md              # los 4 pilares, autor, licencia
 ```
 
 ---
 
 ## 🛠️ Scripts útiles
+
+### macOS (Bash)
 
 ```bash
 bash scripts/mac/doctor.sh "/ruta/a/tu/studio_home"     # 🩺 Diagnóstico
@@ -275,6 +310,17 @@ bash scripts/mac/install-aceforge.sh                    # 🎵 Instalar AceForge
 bash scripts/mac/install-comfyui.sh                     # 🖼️ Instalar ComfyUI
 bash scripts/mac/cleanup-tool.sh "<studio_home>" "<id>" # 🧹 Limpiar herramienta
 bash scripts/mac/clean-appledouble.sh                   # 🧼 Borrar ._* (volúmenes no-APFS)
+bash scripts/mac/download-hf-model.sh <repo> <target>   # 📥 Descargar modelo HF
+```
+
+### Windows (PowerShell) — 🧪 experimental
+
+```powershell
+# scripts/win/ — cubre 4 de 5 tools (Qwen3-TTS requiere MLX, Apple-only)
+pwsh scripts/win/install-whispercpp.ps1     # 🎙️ con detección CUDA
+pwsh scripts/win/install-comfyui.ps1        # 🖼️ torch+cu121 si nvidia-smi
+pwsh scripts/win/install-facefusion.ps1     # 🎬 ONNX cuda/default
+pwsh scripts/win/install-aceforge.ps1       # 🎵 torch+cu121 + warn si no GPU
 ```
 
 ---
@@ -296,7 +342,9 @@ pnpm package:mac       # Pipeline completo
 /tmp/chofyai-target/release/bundle/dmg/ChofyAI Studio_*.dmg
 ```
 
-> Build ad-hoc (sin Apple Developer ID) funciona para uso personal en este equipo: click derecho → Abrir la primera vez. Para distribución pública ver [`docs/packaging.md`](docs/packaging.md).
+> Build ad-hoc (sin Apple Developer ID) funciona para uso personal: click derecho → Abrir la primera vez.
+>
+> 📢 **Para releases públicas** el workflow [`release.yml`](.github/workflows/release.yml) ya construye el `.dmg` automáticamente en `macos-latest` hosted runner y lo adjunta al GitHub Release. Solo falta firma + notarización con Apple Developer ID — guía en [`docs/NOTARIZATION.md`](docs/NOTARIZATION.md) (6 secrets exactos a configurar).
 
 ---
 
@@ -304,8 +352,10 @@ pnpm package:mac       # Pipeline completo
 
 | Workflow | Trigger | Función |
 |:---|:---|:---|
-| [`ci.yml`](.github/workflows/ci.yml) | push / PR a `main` | 🧹 Lint Markdown · 🔍 TypeScript typecheck · ✅ Validación YAML · 🔒 Secret scanning |
-| [`release.yml`](.github/workflows/release.yml) | `workflow_dispatch` | 🏷️ Tag + GitHub Release con notas desde `CHANGELOG.md` |
+| [`ci.yml`](.github/workflows/ci.yml) | push / PR a `main` | 🧹 Lint Markdown · 🔍 TypeScript typecheck · 🧪 Vitest · 🦀 cargo test · ✅ Validación YAML |
+| [`security.yml`](.github/workflows/security.yml) | push / PR / cron lunes | 🔐 TruffleHog · 📦 pnpm audit · 🦀 cargo audit · 🔬 CodeQL · 📌 Pin actions check |
+| [`release.yml`](.github/workflows/release.yml) | `workflow_dispatch` con versión | 🏷️ Tag + 🏗️ build `.app`/`.dmg` en `macos-latest` + 📦 Release con asset adjunto |
+| [`pages.yml`](.github/workflows/pages.yml) | push a `main` con cambio en `landing/**` | 🌐 Deploy de la landing a GitHub Pages |
 
 ---
 
