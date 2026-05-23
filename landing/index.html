@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ChofyAI Studio — launcher de escritorio que orquesta herramientas creativas de IA locales. Voz, ASR, imagen, video y música en macOS Apple Silicon. Soporte experimental en Windows con GPU NVIDIA.">
+    <meta name="theme-color" content="#7c5cff">
+    <title>ChofyAI Studio — Orquestador local de IA creativa</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="icon" type="image/svg+xml" href="./brand.svg">
+    <link rel="stylesheet" href="./styles.css">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="ChofyAI Studio">
+    <meta property="og:description" content="Launcher de escritorio que orquesta IA creativa local: voz, ASR, imagen, video, música. Apple Silicon + Windows experimental.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="./brand.svg">
+</head>
+<body>
+    <nav class="topnav">
+        <a href="#hero" class="brand">
+            <img src="./brand.svg" alt="ChofyAI Studio logo" width="32" height="32">
+            <strong>ChofyAI Studio</strong>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#tools">Herramientas</a></li>
+            <li><a href="#platforms">Plataformas</a></li>
+            <li><a href="#stack">Stack</a></li>
+            <li><a href="#install">Instalación</a></li>
+            <li><a href="#docs">Docs</a></li>
+            <li><a href="#about">About</a></li>
+        </ul>
+        <a class="cta-mini" href="https://github.com/vladimiracunadev-create/chofyai-studio" target="_blank" rel="noopener">
+            <span>⭐</span> GitHub
+        </a>
+    </nav>
+
+    <!-- ──────────── HERO ──────────── -->
+    <section id="hero" class="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-content">
+            <div class="hero-badges">
+                <span class="badge badge-success">✅ macOS Apple Silicon validado</span>
+                <span class="badge badge-warn">🧪 Windows + CUDA experimental</span>
+                <span class="badge badge-muted">⚪ Linux pendiente</span>
+            </div>
+            <h1>
+                Tu propio <span class="grad">estudio creativo de IA</span><br>
+                corriendo 100% local
+            </h1>
+            <p class="hero-sub">
+                ChofyAI Studio orquesta cinco herramientas de IA creativa —
+                voz, transcripción, video, música, imagen — instaladas como
+                procesos locales que tú controlas. Sin nube, sin cuotas,
+                sin telemetría.
+            </p>
+            <div class="hero-ctas">
+                <a class="btn btn-primary" href="https://github.com/vladimiracunadev-create/chofyai-studio/releases" target="_blank" rel="noopener">
+                    📥 Descargar .dmg
+                </a>
+                <a class="btn btn-secondary" href="https://github.com/vladimiracunadev-create/chofyai-studio" target="_blank" rel="noopener">
+                    🔧 Ver código
+                </a>
+                <a class="btn btn-link" href="#install">o compila desde fuentes →</a>
+            </div>
+            <div class="hero-stats">
+                <div><strong>5/5</strong><span>tools con inferencia real</span></div>
+                <div><strong>20/20</strong><span>tests pasando</span></div>
+                <div><strong>0</strong><span>telemetría</span></div>
+                <div><strong>MIT</strong><span>licencia</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────── TOOLS ──────────── -->
+    <section id="tools" class="section">
+        <header class="section-head">
+            <span class="kicker">5 herramientas integradas</span>
+            <h2>Un catálogo curado, no un launcher genérico</h2>
+            <p>Cada herramienta tiene un manifest YAML, scripts de instalación
+            reproducibles, control de PID, health check por puerto y modelos
+            descargables desde la UI.</p>
+        </header>
+        <div class="tools-grid">
+            <article class="tool-card">
+                <div class="tool-emoji">🎤</div>
+                <h3>Qwen3-TTS</h3>
+                <p class="tool-cat">Voz / TTS</p>
+                <p>Síntesis y clonación de voz con MLX. Voces custom + diseño de voz.</p>
+                <div class="tool-meta">
+                    <span>Puerto <code>7860</code></span>
+                    <span class="dot">·</span>
+                    <span>Apple Silicon only</span>
+                </div>
+            </article>
+            <article class="tool-card">
+                <div class="tool-emoji">🎙️</div>
+                <h3>whisper.cpp</h3>
+                <p class="tool-cat">ASR · Transcripción</p>
+                <p>Transcripción local en C++ nativo. Metal en Mac, CUDA en Windows.</p>
+                <div class="tool-meta">
+                    <span>Puerto <code>8178</code></span>
+                    <span class="dot">·</span>
+                    <span>Cross-platform</span>
+                </div>
+            </article>
+            <article class="tool-card">
+                <div class="tool-emoji">🎬</div>
+                <h3>FaceFusion</h3>
+                <p class="tool-cat">Video / Cara</p>
+                <p>Face swap y utilidades de cara con ONNX. CoreML / CUDA / DirectML.</p>
+                <div class="tool-meta">
+                    <span>Puerto <code>7862</code></span>
+                    <span class="dot">·</span>
+                    <span>Cross-platform</span>
+                </div>
+            </article>
+            <article class="tool-card">
+                <div class="tool-emoji">🎵</div>
+                <h3>AceForge</h3>
+                <p class="tool-cat">Música</p>
+                <p>Workstation musical basada en ACE-Step-v1-3.5B. PyTorch MPS / CUDA.</p>
+                <div class="tool-meta">
+                    <span>Puerto <code>7857</code></span>
+                    <span class="dot">·</span>
+                    <span>Cross-platform</span>
+                </div>
+            </article>
+            <article class="tool-card">
+                <div class="tool-emoji">🖼️</div>
+                <h3>ComfyUI</h3>
+                <p class="tool-cat">Imagen</p>
+                <p>Workflows nodales: SD 1.5, SDXL, Flux. PyTorch MPS / CUDA.</p>
+                <div class="tool-meta">
+                    <span>Puerto <code>8188</code></span>
+                    <span class="dot">·</span>
+                    <span>Cross-platform</span>
+                </div>
+            </article>
+            <article class="tool-card tool-card-extend">
+                <div class="tool-emoji">➕</div>
+                <h3>Marketplace</h3>
+                <p class="tool-cat">10 tools curadas</p>
+                <p>Bark · RVC · MusicGen · Stable Audio · y más. Manifests editables.</p>
+                <div class="tool-meta">
+                    <span>Import desde UI</span>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- ──────────── PLATFORMS ──────────── -->
+    <section id="platforms" class="section section-alt">
+        <header class="section-head">
+            <span class="kicker">Multi-plataforma honesto</span>
+            <h2>Dónde funciona hoy</h2>
+            <p>Sin promesas vacías. Si tu plataforma no está validada lo decimos.</p>
+        </header>
+        <div class="platforms-table-wrap">
+            <table class="platforms-table">
+                <thead>
+                    <tr>
+                        <th>Tool</th>
+                        <th>macOS ARM</th>
+                        <th>Windows + NVIDIA</th>
+                        <th>Linux + NVIDIA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Qwen3-TTS</strong></td>
+                        <td class="cell-ok">✅ MLX</td>
+                        <td class="cell-no" title="MLX es Apple-only">❌ MLX Apple-only</td>
+                        <td class="cell-no">❌</td>
+                    </tr>
+                    <tr>
+                        <td><strong>whisper.cpp</strong></td>
+                        <td class="cell-ok">✅ Metal</td>
+                        <td class="cell-mid">🧪 CUDA/CPU</td>
+                        <td class="cell-todo">⚪ TODO</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ComfyUI</strong></td>
+                        <td class="cell-ok">✅ MPS</td>
+                        <td class="cell-mid">🧪 CUDA</td>
+                        <td class="cell-todo">⚪ TODO</td>
+                    </tr>
+                    <tr>
+                        <td><strong>FaceFusion</strong></td>
+                        <td class="cell-ok">✅ CoreML</td>
+                        <td class="cell-mid">🧪 CUDA EP</td>
+                        <td class="cell-todo">⚪ TODO</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AceForge</strong></td>
+                        <td class="cell-ok">✅ MPS</td>
+                        <td class="cell-mid">🧪 CUDA</td>
+                        <td class="cell-todo">⚪ TODO</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="caption">
+            <strong>Leyenda</strong> · ✅ validado end-to-end · 🧪 esqueleto funcional, validación pendiente · ⚪ scripts pendientes · ❌ bloqueador técnico real (MLX es Apple-only por diseño).
+            Detalle en <a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/REQUIREMENTS.md" target="_blank" rel="noopener">REQUIREMENTS.md</a>
+            y <a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/PORTING_GUIDE.md" target="_blank" rel="noopener">PORTING_GUIDE.md</a>.
+        </p>
+    </section>
+
+    <!-- ──────────── STACK ──────────── -->
+    <section id="stack" class="section">
+        <header class="section-head">
+            <span class="kicker">Por qué este stack</span>
+            <h2>Tauri + Rust + React + uv</h2>
+            <p>Binario nativo de ~5 MB, control fino de procesos, sin Electron.</p>
+        </header>
+        <div class="stack-grid">
+            <div class="stack-card">
+                <div class="stack-icon">🦀</div>
+                <h3>Backend Rust</h3>
+                <p><code>ProcessRegistry</code> con persistencia de PIDs, manifest loader YAML, resolución dual de <code>studio_home</code>, health-check vía <code>kill -0</code> + TCP.</p>
+            </div>
+            <div class="stack-card">
+                <div class="stack-icon">⚛️</div>
+                <h3>Frontend React</h3>
+                <p>React 18 + Vite 5 + TypeScript estricto. Paleta de comandos <code>⌘K</code>, settings UI, gestión de modelos con progreso, i18n ES/EN sin deps externos.</p>
+            </div>
+            <div class="stack-card">
+                <div class="stack-icon">📦</div>
+                <h3>Tauri 2</h3>
+                <p>Bundle nativo <code>.app</code>/<code>.dmg</code> en macOS, IPC tipado, capabilities mínimas. Build automatizado en <code>macos-latest</code> hosted runner.</p>
+            </div>
+            <div class="stack-card">
+                <div class="stack-icon">⚡</div>
+                <h3>uv para Python</h3>
+                <p>Instalación 10-100× más rápida vs pip clásico. Caída a <code>python -m venv</code> + pip si <code>uv</code> no está disponible — sin romperse.</p>
+            </div>
+            <div class="stack-card">
+                <div class="stack-icon">🔒</div>
+                <h3>Supply-chain hardened</h3>
+                <p>pnpm con <code>onlyBuiltDependencies</code> allowlist · lockfile SHA-512 obligatorio · CI con TruffleHog + pnpm audit + cargo audit + CodeQL.</p>
+            </div>
+            <div class="stack-card">
+                <div class="stack-icon">💾</div>
+                <h3>Disco dual</h3>
+                <p>Studio Home en disco externo APFS o sparsebundle sobre exFAT. Fallback automático a <code>~/ChofyAIStudio</code> si el volumen no está montado.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────── INSTALL ──────────── -->
+    <section id="install" class="section section-alt">
+        <header class="section-head">
+            <span class="kicker">Quick start</span>
+            <h2>Instalar en minutos</h2>
+        </header>
+        <div class="install-grid">
+            <div class="install-card">
+                <h3>🍎 macOS Apple Silicon</h3>
+                <p class="muted">Plataforma validada end-to-end.</p>
+                <pre><code>brew install node rust cmake ffmpeg \
+  python@3.10 python@3.11 uv git
+corepack enable
+corepack prepare pnpm@10 --activate
+git clone https://github.com/vladimiracunadev-create/chofyai-studio
+cd chofyai-studio
+pnpm install --frozen-lockfile
+pnpm tauri:dev</code></pre>
+            </div>
+            <div class="install-card">
+                <h3>🪟 Windows 11 + NVIDIA</h3>
+                <p class="muted">🧪 Experimental. Qwen3-TTS no disponible.</p>
+                <pre><code>winget install Python.Python.3.11 Git.Git \
+  Kitware.CMake Gyan.FFmpeg \
+  OpenJS.NodeJS.LTS \
+  Microsoft.VisualStudio.2022.BuildTools \
+  Nvidia.CUDA
+corepack enable
+corepack prepare pnpm@10 --activate
+pnpm install --frozen-lockfile
+pnpm tauri:dev</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────── DOCS ──────────── -->
+    <section id="docs" class="section">
+        <header class="section-head">
+            <span class="kicker">Documentación</span>
+            <h2>Todo lo que necesitas saber</h2>
+        </header>
+        <div class="docs-grid">
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/QUICKSTART.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🚀</span>
+                <h3>Quick Start</h3>
+                <p>Arranque en 3 comandos.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/REQUIREMENTS.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">📐</span>
+                <h3>Requisitos HW/SW</h3>
+                <p>Mínimo, recomendado, óptimo por plataforma.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/INSTALL_MAC.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🍎</span>
+                <h3>Install macOS</h3>
+                <p>Paso a paso + sparsebundle APFS.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/TOOLS.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🛠️</span>
+                <h3>Las 5 herramientas</h3>
+                <p>Qué hace cada una, requisitos, ejemplos.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/architecture.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🏗️</span>
+                <h3>Arquitectura</h3>
+                <p>Capas, IPC, decisiones de diseño.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/PORTING_GUIDE.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🔀</span>
+                <h3>Port a otros SO</h3>
+                <p>Análisis técnico Windows/Linux.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/PACKAGE_MANAGER.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🔒</span>
+                <h3>Supply-chain (pnpm)</h3>
+                <p>Por qué pnpm y no npm.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/cloud/README.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">☁️</span>
+                <h3>Migración a AWS</h3>
+                <p>Plan SaaS multi-tenant con GPU on-demand.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/docs/NOTARIZATION.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🛂</span>
+                <h3>Notarización Apple</h3>
+                <p>Pasar de ad-hoc a firmado + notarizado.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">📜</span>
+                <h3>Changelog</h3>
+                <p>Bitácora completa de versiones.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/ROADMAP.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🗺️</span>
+                <h3>Roadmap</h3>
+                <p>Lo hecho y lo que viene.</p>
+            </a>
+            <a class="doc-card" href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/SECURITY.md" target="_blank" rel="noopener">
+                <span class="doc-emoji">🛡️</span>
+                <h3>Política de seguridad</h3>
+                <p>Cómo reportar vulnerabilidades.</p>
+            </a>
+        </div>
+    </section>
+
+    <!-- ──────────── ABOUT ──────────── -->
+    <section id="about" class="section section-alt">
+        <header class="section-head">
+            <span class="kicker">About</span>
+            <h2>Por qué ChofyAI Studio existe</h2>
+        </header>
+        <div class="about-body">
+            <p>
+                Pinokio, A1111 y otros launchers genéricos resuelven el "abre cualquier
+                cosa que veas en GitHub". Pero "cualquier cosa" es una superficie de
+                fallos enorme: scripts rotos, modelos pesados sin gestión, procesos
+                huérfanos, sin reproducibilidad.
+            </p>
+            <p>
+                ChofyAI Studio toma el camino opuesto: <strong>un set acotado de cinco
+                herramientas curadas</strong>, con manifests YAML, instalación reproducible
+                y control real de procesos. La UI es honesta sobre lo que pasa por debajo
+                — si una herramienta no soporta tu plataforma, lo dice; si un modelo no
+                está descargado, lo descargas con un botón y miras el progreso real.
+            </p>
+            <div class="about-pillars">
+                <div>
+                    <h3>🔒 Local-first</h3>
+                    <p>Sin nube, sin cuotas, sin telemetría. Los modelos viven en tu disco. La app no abre conexiones de salida — solo las hacen las herramientas, cuando descargan modelos.</p>
+                </div>
+                <div>
+                    <h3>🧰 Reproducible</h3>
+                    <p>Cada tool tiene un manifest YAML auditable y un script de instalación que cualquiera puede leer. <code>installed_if</code> declara las rutas que deben existir — si faltan, la UI lo dice.</p>
+                </div>
+                <div>
+                    <h3>⚖️ Honesto</h3>
+                    <p>El soporte multi-plataforma es 🧪 cuando es experimental. MLX es Apple-only y lo decimos. Lo que falla, falla con un mensaje claro y un log persistente.</p>
+                </div>
+                <div>
+                    <h3>🦀 Sin Electron</h3>
+                    <p>Backend Rust + frontend React vía Tauri 2. Binario ~5 MB. Memoria <code>O(MB)</code>, no <code>O(GB)</code>. Lanzamientos de procesos del sistema con FFI directo.</p>
+                </div>
+            </div>
+            <div class="about-author">
+                <p>
+                    Construido por <a href="https://github.com/vladimiracunadev-create" target="_blank" rel="noopener">Vladimir Acuña Valdebenito</a>
+                    como producto personal y proyecto abierto. Licencia
+                    <a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a>.
+                    Issues, PRs y forks bienvenidos.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────── FOOTER ──────────── -->
+    <footer class="footer">
+        <div class="footer-cols">
+            <div>
+                <strong>ChofyAI Studio</strong>
+                <p>Orquestador local de IA creativa.</p>
+            </div>
+            <div>
+                <h4>Producto</h4>
+                <ul>
+                    <li><a href="#tools">Herramientas</a></li>
+                    <li><a href="#platforms">Plataformas</a></li>
+                    <li><a href="#install">Instalación</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Docs</h4>
+                <ul>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a></li>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Comunidad</h4>
+                <ul>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio" target="_blank" rel="noopener">GitHub</a></li>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio/issues" target="_blank" rel="noopener">Issues</a></li>
+                    <li><a href="https://github.com/vladimiracunadev-create/chofyai-studio/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribuir</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 Vladimir Acuña Valdebenito · MIT License</span>
+            <span>Hecho con 🦀 Rust + ⚛️ React + 📦 Tauri</span>
+        </div>
+    </footer>
+
+    <script src="./main.js" defer></script>
+</body>
+</html>

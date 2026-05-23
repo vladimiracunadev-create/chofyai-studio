@@ -87,6 +87,7 @@
 
 ## 🧪 Fase 5.5 — Soporte multi-plataforma *(en curso)*
 
+- [x] 🌐 **Landing page** — `landing/` (HTML/CSS/JS estático) con GitHub Pages auto-deploy (`pages.yml`)
 - [x] 🪟 **Esqueleto Windows** — `scripts/win/*.ps1` (whispercpp + comfyui + facefusion + aceforge con detección CUDA)
 - [x] 🔧 **Backend Rust cross-platform** — `current_platform_key()`, `script_shell()`, `RawManifest.install_scripts:` dict por plataforma
 - [x] 📐 **About modal** — muestra plataforma actual + nivel de validación

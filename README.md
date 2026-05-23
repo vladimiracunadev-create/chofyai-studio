@@ -7,6 +7,7 @@
 [![macOS](https://img.shields.io/badge/macOS%20ARM-validado-2d7a66?logo=apple&logoColor=white)](docs/INSTALL_MAC.md)
 [![Windows](https://img.shields.io/badge/Windows%20%2B%20CUDA-experimental-f57f17?logo=windows&logoColor=white)](docs/REQUIREMENTS.md)
 [![Linux](https://img.shields.io/badge/Linux-pendiente-9e9e9e?logo=linux&logoColor=white)](docs/PORTING_GUIDE.md)
+[![Landing](https://img.shields.io/badge/Landing-page-7c5cff?logo=github&logoColor=white)](https://vladimiracunadev-create.github.io/chofyai-studio/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.11-FFC131?logo=tauri&logoColor=black)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-1.94-CE422B?logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev)
