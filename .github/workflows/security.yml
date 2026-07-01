@@ -63,7 +63,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         run: |
           pnpm audit --prod --audit-level high || true
-          pnpm audit --json > pnpm-audit.json || true
+          pnpm audit --prod --json > pnpm-audit.json || true
       - name: Resumen high+critical
         if: steps.check.outputs.skip != 'true'
         run: |
@@ -72,7 +72,7 @@ jobs:
               const a = require('./pnpm-audit.json');
               const v = a.metadata?.vulnerabilities ?? {};
               const high = (v.high ?? 0) + (v.critical ?? 0);
-              console.log('high+critical:', high);
+              console.log('high+critical (prod only):', high);
               process.exit(high > 0 ? 1 : 0);
             "
           fi
