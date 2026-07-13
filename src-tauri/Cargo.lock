@@ -309,7 +309,7 @@ dependencies = [
  "serde_yaml",
  "tauri",
  "tauri-build",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "walkdir",
 ]
 
