@@ -76,7 +76,7 @@ jobs:
               process.exit(high > 0 ? 1 : 0);
             "
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && steps.check.outputs.skip != 'true'
         with:
           name: pnpm-audit
@@ -154,7 +154,7 @@ jobs:
           unpinned=$(grep -rE "uses:\s+[^@]+@(main|master|v[0-9]+)\s*$" .github/workflows/ \
             | grep -v "actions/checkout@v4" \
             | grep -v "actions/setup-" \
-            | grep -v "actions/upload-artifact@v4" \
+            | grep -v "actions/upload-artifact@v7" \
             | grep -v "actions/cache@v4" \
             | grep -v "github/codeql-action/" \
             | grep -v "dtolnay/rust-toolchain@stable" \
