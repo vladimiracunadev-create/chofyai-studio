@@ -1,3 +1,23 @@
+/**
+ * types.ts — contratos de datos entre el frontend y el backend Rust.
+ *
+ * La mayoría de estos tipos son el espejo TypeScript de una `struct` de
+ * `src-tauri/src/models.rs` o de `src-tauri/src/system.rs`. **No hay generación
+ * automática**: si cambias un campo en Rust tienes que cambiarlo aquí a mano, y
+ * si no lo haces, el compilador no se entera y el campo llega como `undefined`.
+ *
+ * Los tipos que NO tienen contraparte en Rust son los del estado propio de la
+ * interfaz: `QueueItem`, `Toast`, `WorkflowDef` y sus auxiliares.
+ *
+ * Advertencia sobre `ToolManifest`: `category` y `runtime` son uniones cerradas
+ * aquí pero cadenas libres en Rust. Un manifiesto con una categoría inventada
+ * pasa el backend sin problema; sólo lo detiene el validador de manifiestos de
+ * `.github/workflows/ci.yml`.
+ *
+ * Documentación relacionada:
+ * `docs/system-documentation/05-technical-reference.md`, sección 2.
+ */
+
 export type ToolManifest = {
   file_name: string;
   id: string;

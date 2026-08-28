@@ -1,3 +1,32 @@
+/**
+ * App.tsx — interfaz completa de ChofyAI Studio.
+ *
+ * Este archivo contiene el componente raíz `App` y todos sus paneles y modales.
+ * Es deliberadamente grande y está registrado como deuda técnica (R-05 en
+ * `docs/system-documentation/15-risks-and-technical-debt.md`): la ventaja de
+ * tenerlo todo junto es poder seguir un flujo completo sin saltar de archivo;
+ * la desventaja es que no hay forma práctica de probarlo.
+ *
+ * Cosas que conviene saber antes de tocarlo:
+ *
+ * - **Todo el estado vive en `App`** y baja por props. No hay Redux, ni Context,
+ *   ni store global.
+ * - **`tauriInvoke` es la única puerta al backend.** Devuelve `null` cuando no
+ *   hay backend (modo web) o cuando el comando falla, de modo que ningún
+ *   llamador necesita `try/catch`. Los sondeos periódicos lo invocan con
+ *   `{ silent: true }` para no llenar la pantalla de avisos.
+ * - **Tauri traduce los nombres de parámetro**: `tool_id` en Rust se invoca como
+ *   `toolId` desde aquí.
+ * - **Hay cuatro temporizadores simultáneos**: estadísticas cada 3 s, salud cada
+ *   5 s, herramientas cada 8 s y procesos huérfanos cada 60 s, más un tick de
+ *   1 s mientras haya una instalación activa. Añadir otro tiene coste real en
+ *   batería.
+ * - **El progreso de instalación llega por eventos, no por el valor de retorno**,
+ *   porque una instalación puede durar veinte minutos.
+ *
+ * Documentación relacionada: `docs/system-documentation/04-code-map.md`.
+ */
+
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';

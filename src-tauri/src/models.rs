@@ -1,3 +1,22 @@
+//! Estructuras de datos que cruzan la frontera entre Rust y el frontend.
+//!
+//! Cada `struct` de este módulo tiene un espejo en `src/types.ts`. **Los dos
+//! archivos deben cambiarse juntos**: no hay generación automática, así que una
+//! divergencia entre ambos no la detecta el compilador y aparece como un campo
+//! `undefined` en la interfaz.
+//!
+//! Convenciones que sigue el módulo:
+//!
+//! - Los campos opcionales añadidos después de la primera versión llevan
+//!   `#[serde(default)]`, para que un `settings.json` antiguo se siga leyendo.
+//! - Las estructuras que sólo viajan hacia el frontend derivan `Serialize`;
+//!   las que además se leen de disco derivan también `Deserialize`.
+//! - Los tamaños van siempre en bytes y los tiempos en segundos: el formateo
+//!   para el usuario es responsabilidad del frontend (`src/utils.ts`).
+//!
+//! Documentación relacionada:
+//! `docs/system-documentation/05-technical-reference.md`, sección 2.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

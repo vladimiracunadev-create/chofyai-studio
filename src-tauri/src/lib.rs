@@ -1,3 +1,22 @@
+//! Arranque de la aplicación y registro de la API interna.
+//!
+//! Este módulo hace tres cosas, y sólo tres:
+//!
+//! 1. Declara el estado compartido: [`ProcessRegistry`], el mapa
+//!    `tool_id → PID` que sobrevive a toda la sesión.
+//! 2. Restaura ese registro desde disco al arrancar, descartando los procesos
+//!    que ya no están vivos. Es lo que permite recuperar el control de una
+//!    herramienta que siguió corriendo tras cerrar la ventana.
+//! 3. Registra los comandos que el frontend puede invocar. **Esa lista es la
+//!    superficie completa de lo que la interfaz puede hacer**: nada que no esté
+//!    aquí es alcanzable desde el WebView.
+//!
+//! Al añadir un comando nuevo en `system.rs` hay que añadirlo también aquí; si
+//! se olvida, el proyecto compila igual y el fallo sólo aparece en ejecución.
+//!
+//! Documentación relacionada:
+//! `docs/system-documentation/05-technical-reference.md`.
+
 mod models;
 mod system;
 
@@ -6,6 +25,9 @@ use std::sync::Mutex;
 use system::ProcessRegistry;
 use tauri::Manager;
 
+/// Construye y ejecuta la aplicación Tauri. No retorna hasta que se cierra la
+/// última ventana; si el runtime no puede arrancar, hace panic con un mensaje
+/// explícito, porque sin runtime no hay nada que degradar.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

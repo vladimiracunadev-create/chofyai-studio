@@ -1,3 +1,41 @@
+//! Núcleo funcional de ChofyAI Studio: todo lo que la aplicación sabe hacer.
+//!
+//! Aquí viven los 35 comandos que el frontend puede invocar y las funciones
+//! privadas que los sostienen. El módulo está organizado por bloques, en este
+//! orden: registro de procesos, modelos, procesos huérfanos, registro de
+//! fallos, marketplace, workflows, diagnóstico, manifiestos, resolución de
+//! rutas, instalación, estadísticas del sistema y comandos de herramientas.
+//!
+//! # Invariantes del módulo
+//!
+//! - **La verdad la tiene el disco.** Que una herramienta esté instalada no se
+//!   guarda en ninguna parte: se recalcula comprobando `installed_if` cada vez.
+//!   Un caché aquí sería una fuente permanente de inconsistencias.
+//! - **Nada se ejecuta sin resolver antes el Studio Home.** Toda operación pasa
+//!   por [`resolve_effective_home`], que puede montar un sparsebundle o caer a
+//!   una ruta de reserva. Saltarse ese paso hace que la aplicación escriba en
+//!   un volumen que puede no estar montado.
+//! - **El mismo binario se comporta distinto según cómo se ejecute.**
+//!   [`repo_root`] distingue entre correr desde el repositorio y correr desde el
+//!   `.app` empaquetado; de esa distinción dependen manifiestos, scripts y
+//!   configuración.
+//! - **Los procesos hijos sobreviven al cierre de la aplicación.** Es
+//!   deliberado, y es la razón de ser de [`restore_registry`] y de la detección
+//!   de huérfanos.
+//! - **Los errores son `String`.** Se muestran tal cual al usuario, en español y
+//!   con la ruta del log cuando existe. Cambiar un texto no rompe la
+//!   compilación, pero sí puede romper una comprobación del frontend.
+//!
+//! # Dependencias del sistema operativo
+//!
+//! Varias funciones invocan utilidades de macOS (`sysctl`, `vm_stat`, `top`,
+//! `df`, `lsof`, `osascript`, `open`, `hdiutil`). En otras plataformas fallan en
+//! silencio y devuelven valores neutros. Está documentado como riesgo en
+//! `docs/system-documentation/15-risks-and-technical-debt.md`.
+//!
+//! Documentación relacionada:
+//! `docs/system-documentation/06-deep-code-explanation.md`.
+
 use crate::models::{
     AppSettings, HealthResult, InstallEvent, SystemStats, SystemSummary, ToolSummary,
     VolumeCandidate,

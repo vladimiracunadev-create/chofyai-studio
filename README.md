@@ -229,6 +229,29 @@ Cada herramienta vive por defecto en `studio_home/tools/<id>`. La UI permite **m
 
 ---
 
+## 📚 Documentación del sistema
+
+La documentación técnica, funcional, arquitectónica y operativa completa del proyecto —20 documentos escritos analizando el repositorio desde cero, con versión en PDF— vive en [`docs/system-documentation/`](docs/system-documentation/README.md):
+
+- [Índice general de documentación](docs/system-documentation/README.md)
+- [Descripción general](docs/system-documentation/01-system-overview.md)
+- [Instalación y ejecución](docs/system-documentation/02-installation-and-execution.md)
+- [Arquitectura](docs/system-documentation/03-architecture.md)
+- [Mapa del código](docs/system-documentation/04-code-map.md)
+- [Referencia técnica](docs/system-documentation/05-technical-reference.md)
+- [Explicación profunda del código](docs/system-documentation/06-deep-code-explanation.md)
+- [Base de datos y persistencia](docs/system-documentation/07-database.md)
+- [Seguridad](docs/system-documentation/11-security.md)
+- [Riesgos y deuda técnica](docs/system-documentation/15-risks-and-technical-debt.md)
+- [Resumen ejecutivo](docs/system-documentation/17-executive-summary.md)
+- [Guía para nuevos desarrolladores](docs/system-documentation/18-new-developer-guide.md)
+- [Matriz de trazabilidad](docs/system-documentation/19-traceability-matrix.md)
+- [Documentos en PDF](docs/system-documentation/pdf/)
+
+> Los Markdown son la única fuente de verdad; los PDF se generan desde ellos con `node scripts/docs/build-pdf.mjs`.
+
+---
+
 ## 🧭 Por dónde empezar
 
 | Perfil | Ruta recomendada | Qué encontrarás |
